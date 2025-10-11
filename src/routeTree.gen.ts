@@ -15,6 +15,7 @@ import { Route as DemoTableRouteImport } from './routes/demo/table'
 import { Route as DemoStorybookRouteImport } from './routes/demo/storybook'
 import { Route as DemoStoreRouteImport } from './routes/demo/store'
 import { Route as DemoOrpcTodoRouteImport } from './routes/demo/orpc-todo'
+import { Route as DemoDbExampleRouteImport } from './routes/demo/db-example'
 import { Route as DemoDbChatApiRouteImport } from './routes/demo/db-chat-api'
 import { Route as DemoDbChatRouteImport } from './routes/demo/db-chat'
 import { Route as DemoClerkRouteImport } from './routes/demo/clerk'
@@ -59,6 +60,11 @@ const DemoStoreRoute = DemoStoreRouteImport.update({
 const DemoOrpcTodoRoute = DemoOrpcTodoRouteImport.update({
   id: '/demo/orpc-todo',
   path: '/demo/orpc-todo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoDbExampleRoute = DemoDbExampleRouteImport.update({
+  id: '/demo/db-example',
+  path: '/demo/db-example',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemoDbChatApiRoute = DemoDbChatApiRouteImport.update({
@@ -143,6 +149,7 @@ export interface FileRoutesByFullPath {
   '/demo/clerk': typeof DemoClerkRoute
   '/demo/db-chat': typeof DemoDbChatRoute
   '/demo/db-chat-api': typeof DemoDbChatApiRoute
+  '/demo/db-example': typeof DemoDbExampleRoute
   '/demo/orpc-todo': typeof DemoOrpcTodoRoute
   '/demo/store': typeof DemoStoreRoute
   '/demo/storybook': typeof DemoStorybookRoute
@@ -166,6 +173,7 @@ export interface FileRoutesByTo {
   '/demo/clerk': typeof DemoClerkRoute
   '/demo/db-chat': typeof DemoDbChatRoute
   '/demo/db-chat-api': typeof DemoDbChatApiRoute
+  '/demo/db-example': typeof DemoDbExampleRoute
   '/demo/orpc-todo': typeof DemoOrpcTodoRoute
   '/demo/store': typeof DemoStoreRoute
   '/demo/storybook': typeof DemoStorybookRoute
@@ -190,6 +198,7 @@ export interface FileRoutesById {
   '/demo/clerk': typeof DemoClerkRoute
   '/demo/db-chat': typeof DemoDbChatRoute
   '/demo/db-chat-api': typeof DemoDbChatApiRoute
+  '/demo/db-example': typeof DemoDbExampleRoute
   '/demo/orpc-todo': typeof DemoOrpcTodoRoute
   '/demo/store': typeof DemoStoreRoute
   '/demo/storybook': typeof DemoStorybookRoute
@@ -215,6 +224,7 @@ export interface FileRouteTypes {
     | '/demo/clerk'
     | '/demo/db-chat'
     | '/demo/db-chat-api'
+    | '/demo/db-example'
     | '/demo/orpc-todo'
     | '/demo/store'
     | '/demo/storybook'
@@ -238,6 +248,7 @@ export interface FileRouteTypes {
     | '/demo/clerk'
     | '/demo/db-chat'
     | '/demo/db-chat-api'
+    | '/demo/db-example'
     | '/demo/orpc-todo'
     | '/demo/store'
     | '/demo/storybook'
@@ -261,6 +272,7 @@ export interface FileRouteTypes {
     | '/demo/clerk'
     | '/demo/db-chat'
     | '/demo/db-chat-api'
+    | '/demo/db-example'
     | '/demo/orpc-todo'
     | '/demo/store'
     | '/demo/storybook'
@@ -285,6 +297,7 @@ export interface RootRouteChildren {
   DemoClerkRoute: typeof DemoClerkRoute
   DemoDbChatRoute: typeof DemoDbChatRoute
   DemoDbChatApiRoute: typeof DemoDbChatApiRoute
+  DemoDbExampleRoute: typeof DemoDbExampleRoute
   DemoOrpcTodoRoute: typeof DemoOrpcTodoRoute
   DemoStoreRoute: typeof DemoStoreRoute
   DemoStorybookRoute: typeof DemoStorybookRoute
@@ -345,6 +358,13 @@ declare module '@tanstack/react-router' {
       path: '/demo/orpc-todo'
       fullPath: '/demo/orpc-todo'
       preLoaderRoute: typeof DemoOrpcTodoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo/db-example': {
+      id: '/demo/db-example'
+      path: '/demo/db-example'
+      fullPath: '/demo/db-example'
+      preLoaderRoute: typeof DemoDbExampleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demo/db-chat-api': {
@@ -461,6 +481,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoClerkRoute: DemoClerkRoute,
   DemoDbChatRoute: DemoDbChatRoute,
   DemoDbChatApiRoute: DemoDbChatApiRoute,
+  DemoDbExampleRoute: DemoDbExampleRoute,
   DemoOrpcTodoRoute: DemoOrpcTodoRoute,
   DemoStoreRoute: DemoStoreRoute,
   DemoStorybookRoute: DemoStorybookRoute,
