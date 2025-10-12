@@ -1,8 +1,8 @@
+import { randomUUID } from 'crypto'
 import { db, client } from './index'
 import { users, posts } from './schema'
 
 async function seed() {
-
   // Clear existing data
   await db.delete(posts)
   await db.delete(users)
@@ -14,10 +14,12 @@ async function seed() {
       {
         email: 'john@example.com',
         name: 'John Doe',
+        id: randomUUID().toString(),
       },
       {
         email: 'jane@example.com',
         name: 'Jane Smith',
+        id: randomUUID().toString(),
       },
     ])
     .returning()

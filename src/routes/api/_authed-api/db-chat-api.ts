@@ -3,6 +3,7 @@ import { json } from '@tanstack/react-start'
 
 import { createCollection, localOnlyCollectionOptions } from '@tanstack/db'
 import { z } from 'zod'
+import { createProtectedHandler } from '@/auth/protected-handler'
 
 const IncomingMessageSchema = z.object({
   user: z.string(),
@@ -42,7 +43,7 @@ const sendMessage = (message: { user: string; text: string }) => {
   })
 }
 
-export const Route = createFileRoute('/demo/db-chat-api')({
+export const Route = createFileRoute('/api/_authed-api/db-chat-api')({
   server: {
     handlers: {
       GET: () => {
@@ -67,14 +68,15 @@ export const Route = createFileRoute('/demo/db-chat-api')({
           },
         })
       },
-      POST: async ({ request }) => {
+      // Protected POST handler - automatically checks authentication
+      POST: createProtectedHandler(async ({ user, session, request }) => {
         const message = IncomingMessageSchema.safeParse(await request.json())
         if (!message.success) {
           return new Response(message.error.message, { status: 400 })
         }
         sendMessage(message.data)
         return json(message.data)
-      },
+      }),
     },
   },
 })

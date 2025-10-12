@@ -1,0 +1,46 @@
+import { auth } from './auth-config'
+
+type SessionData = NonNullable<Awaited<ReturnType<typeof auth.api.getSession>>>
+
+type ProtectedHandlerContext = {
+  request: Request
+  session: SessionData['session']
+  user: SessionData['user']
+}
+
+type HandlerFunction = (
+  context: ProtectedHandlerContext,
+) => Response | Promise<Response>
+
+/**
+ * Creates a protected API route handler that automatically checks authentication
+ * @param handler - The handler function that receives session, user, and request
+ * @returns A wrapped handler that returns 401 if not authenticated
+ */
+export function createProtectedHandler(handler: HandlerFunction) {
+  return async ({ request }: { request: Request }) => {
+    // Get the session from better-auth
+    const sessionData = await auth.api.getSession({ headers: request.headers })
+
+    // Return 401 if no valid session
+    if (!sessionData) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized', message: 'Authentication required' }),
+        {
+          status: 401,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      )
+    }
+
+    // Call the handler with authenticated context
+    return handler({
+      request,
+      session: sessionData.session,
+      user: sessionData.user,
+    })
+  }
+}
+

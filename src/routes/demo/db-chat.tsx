@@ -3,6 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import ChatArea from '@/components/demo.chat-area'
 
 export const Route = createFileRoute('/demo/db-chat')({
+  ssr: false,
   component: App,
 })
 

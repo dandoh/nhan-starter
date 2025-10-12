@@ -24,7 +24,7 @@ function ORPCTodos() {
 
   const [todo, setTodo] = useState('')
   const { mutate: addTodo } = useMutation({
-    mutationFn: orpc.addTodo.call,
+    mutationFn: (args: { name: string }) => orpc.addTodo.call(args),
     onSuccess: () => {
       refetch()
       setTodo('')

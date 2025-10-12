@@ -39,10 +39,10 @@ function useStreamConnection(
 }
 
 export function useChat() {
-  useStreamConnection('/demo/db-chat-api', messagesCollection)
+  useStreamConnection('/api/db-chat-api', messagesCollection)
 
   const sendMessage = (message: string, user: string) => {
-    fetch('/demo/db-chat-api', {
+    fetch('/api/db-chat-api', {
       method: 'POST',
       body: JSON.stringify({ text: message.trim(), user: user.trim() }),
     })

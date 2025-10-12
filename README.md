@@ -42,9 +42,18 @@ pnpm check
 ```
 
 
-## Setting up Clerk
+## Authentication with better-auth
 
-- Set the `VITE_CLERK_PUBLISHABLE_KEY` in your `.env.local`.
+This project uses [better-auth](https://www.better-auth.com/) for authentication. The authentication is already configured with:
+
+- Email and password authentication
+- Database storage using Drizzle ORM
+- React Start integration with cookies
+
+To use authentication:
+1. Make sure your database is running (`pnpm setup-db-local`)
+2. Run migrations if needed (`pnpm db:push`)
+3. Visit `/demo/auth` to sign up or sign in
 
 
 ## Shadcn
