@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { AuthContext, useAuthContext } from '../_authed'
 
 export const Route = createFileRoute('/_authed/profile')({
   component: ProfilePage,
@@ -6,7 +7,7 @@ export const Route = createFileRoute('/_authed/profile')({
 
 function ProfilePage() {
   // Access user context from the parent _authed layout route
-  const { user, session } = Route.useRouteContext()
+  const { user, session } = useAuthContext()
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -16,7 +17,7 @@ function ProfilePage() {
             <h1 className="text-2xl font-bold text-gray-900 mb-6">
               Protected Profile Page
             </h1>
-            
+
             <div className="space-y-6">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-3">
@@ -32,7 +33,9 @@ function ProfilePage() {
                     <dd className="mt-1 text-sm text-gray-900">{user.email}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">User ID</dt>
+                    <dt className="text-sm font-medium text-gray-500">
+                      User ID
+                    </dt>
                     <dd className="mt-1 text-xs text-gray-900 font-mono">
                       {user.id}
                     </dd>
@@ -138,4 +141,3 @@ function ProfilePage() {
     </div>
   )
 }
-

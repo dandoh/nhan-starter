@@ -6,7 +6,7 @@ import { authClient } from '@/auth/auth-client'
 
 type SessionData = NonNullable<Awaited<ReturnType<typeof auth.api.getSession>>>
 
-type AuthContext = {
+export type AuthContext = {
   session: SessionData['session']
   user: SessionData['user']
 }
@@ -50,4 +50,8 @@ export const Route = createFileRoute('/_authed')({
 
 function AuthedLayout() {
   return <Outlet />
+}
+
+export function useAuthContext() {
+  return Route.useRouteContext()
 }
