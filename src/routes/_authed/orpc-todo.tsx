@@ -2,20 +2,23 @@ import { useCallback, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery } from '@tanstack/react-query'
 
-import { orpc } from '@/orpc/client'
+import { client, orpc } from '@/orpc/client'
 
-export const Route = createFileRoute('/demo/orpc-todo')({
+export const Route = createFileRoute('/_authed/orpc-todo')({
   component: ORPCTodos,
   loader: async ({ context }) => {
-    await context.queryClient.prefetchQuery(
+    const result = await context.queryClient.fetchQuery(
       orpc.listTodos.queryOptions({
         input: {},
       }),
     )
+    return { todos: result }
   },
 })
 
 function ORPCTodos() {
+  const { todos } = Route.useLoaderData()
+  console.log('todos', todos)
   const { data, refetch } = useQuery(
     orpc.listTodos.queryOptions({
       input: {},
@@ -24,9 +27,12 @@ function ORPCTodos() {
 
   const [todo, setTodo] = useState('')
   const { mutate: addTodo } = useMutation({
-    mutationFn: (args: { name: string }) => orpc.addTodo.call(args),
-    onSuccess: () => {
-      refetch()
+    mutationFn: async (args: { name: string }) => {
+      const result = await client.addTodo(args)
+      return result
+    },
+    onSuccess: async () => {
+      await refetch()
       setTodo('')
     },
   })

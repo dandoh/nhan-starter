@@ -15,12 +15,12 @@ import { Route as DemoTanstackQueryRouteImport } from './routes/demo/tanstack-qu
 import { Route as DemoTableRouteImport } from './routes/demo/table'
 import { Route as DemoStorybookRouteImport } from './routes/demo/storybook'
 import { Route as DemoStoreRouteImport } from './routes/demo/store'
-import { Route as DemoOrpcTodoRouteImport } from './routes/demo/orpc-todo'
 import { Route as DemoDbExampleRouteImport } from './routes/demo/db-example'
 import { Route as DemoDbChatRouteImport } from './routes/demo/db-chat'
 import { Route as DemoAuthRouteImport } from './routes/demo/auth'
-import { Route as ApiSplatRouteImport } from './routes/api/$'
 import { Route as AuthedProfileRouteImport } from './routes/_authed/profile'
+import { Route as AuthedOrpcTodoRouteImport } from './routes/_authed/orpc-todo'
+import { Route as AuthedNewChatRouteImport } from './routes/_authed/new-chat'
 import { Route as DemoStartServerFuncsRouteImport } from './routes/demo/start.server-funcs'
 import { Route as DemoStartApiRequestRouteImport } from './routes/demo/start.api-request'
 import { Route as DemoFormSimpleRouteImport } from './routes/demo/form.simple'
@@ -30,10 +30,12 @@ import { Route as DemoApiNamesRouteImport } from './routes/demo/api.names'
 import { Route as ApiRpcSplatRouteImport } from './routes/api/rpc.$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
 import { Route as ApiAuthedApiDbChatApiRouteImport } from './routes/api/_authed-api/db-chat-api'
+import { Route as AuthedConversationsConversationIdRouteImport } from './routes/_authed/conversations.$conversationId'
 import { Route as DemoStartSsrIndexRouteImport } from './routes/demo/start.ssr.index'
 import { Route as DemoStartSsrSpaModeRouteImport } from './routes/demo/start.ssr.spa-mode'
 import { Route as DemoStartSsrFullSsrRouteImport } from './routes/demo/start.ssr.full-ssr'
 import { Route as DemoStartSsrDataOnlyRouteImport } from './routes/demo/start.ssr.data-only'
+import { Route as ApiAuthedApiChatConversationIdRouteImport } from './routes/api/_authed-api/chat.$conversationId'
 
 const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
@@ -64,11 +66,6 @@ const DemoStoreRoute = DemoStoreRouteImport.update({
   path: '/demo/store',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DemoOrpcTodoRoute = DemoOrpcTodoRouteImport.update({
-  id: '/demo/orpc-todo',
-  path: '/demo/orpc-todo',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DemoDbExampleRoute = DemoDbExampleRouteImport.update({
   id: '/demo/db-example',
   path: '/demo/db-example',
@@ -84,14 +81,19 @@ const DemoAuthRoute = DemoAuthRouteImport.update({
   path: '/demo/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiSplatRoute = ApiSplatRouteImport.update({
-  id: '/api/$',
-  path: '/api/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthedProfileRoute = AuthedProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedOrpcTodoRoute = AuthedOrpcTodoRouteImport.update({
+  id: '/orpc-todo',
+  path: '/orpc-todo',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedNewChatRoute = AuthedNewChatRouteImport.update({
+  id: '/new-chat',
+  path: '/new-chat',
   getParentRoute: () => AuthedRoute,
 } as any)
 const DemoStartServerFuncsRoute = DemoStartServerFuncsRouteImport.update({
@@ -139,6 +141,12 @@ const ApiAuthedApiDbChatApiRoute = ApiAuthedApiDbChatApiRouteImport.update({
   path: '/api/db-chat-api',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedConversationsConversationIdRoute =
+  AuthedConversationsConversationIdRouteImport.update({
+    id: '/conversations/$conversationId',
+    path: '/conversations/$conversationId',
+    getParentRoute: () => AuthedRoute,
+  } as any)
 const DemoStartSsrIndexRoute = DemoStartSsrIndexRouteImport.update({
   id: '/demo/start/ssr/',
   path: '/demo/start/ssr/',
@@ -159,19 +167,26 @@ const DemoStartSsrDataOnlyRoute = DemoStartSsrDataOnlyRouteImport.update({
   path: '/demo/start/ssr/data-only',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthedApiChatConversationIdRoute =
+  ApiAuthedApiChatConversationIdRouteImport.update({
+    id: '/api/_authed-api/chat/$conversationId',
+    path: '/api/chat/$conversationId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/new-chat': typeof AuthedNewChatRoute
+  '/orpc-todo': typeof AuthedOrpcTodoRoute
   '/profile': typeof AuthedProfileRoute
-  '/api/$': typeof ApiSplatRoute
   '/demo/auth': typeof DemoAuthRoute
   '/demo/db-chat': typeof DemoDbChatRoute
   '/demo/db-example': typeof DemoDbExampleRoute
-  '/demo/orpc-todo': typeof DemoOrpcTodoRoute
   '/demo/store': typeof DemoStoreRoute
   '/demo/storybook': typeof DemoStorybookRoute
   '/demo/table': typeof DemoTableRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
+  '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/api/db-chat-api': typeof ApiAuthedApiDbChatApiRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
@@ -181,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/demo/form/simple': typeof DemoFormSimpleRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
+  '/api/chat/$conversationId': typeof ApiAuthedApiChatConversationIdRoute
   '/demo/start/ssr/data-only': typeof DemoStartSsrDataOnlyRoute
   '/demo/start/ssr/full-ssr': typeof DemoStartSsrFullSsrRoute
   '/demo/start/ssr/spa-mode': typeof DemoStartSsrSpaModeRoute
@@ -188,16 +204,17 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/new-chat': typeof AuthedNewChatRoute
+  '/orpc-todo': typeof AuthedOrpcTodoRoute
   '/profile': typeof AuthedProfileRoute
-  '/api/$': typeof ApiSplatRoute
   '/demo/auth': typeof DemoAuthRoute
   '/demo/db-chat': typeof DemoDbChatRoute
   '/demo/db-example': typeof DemoDbExampleRoute
-  '/demo/orpc-todo': typeof DemoOrpcTodoRoute
   '/demo/store': typeof DemoStoreRoute
   '/demo/storybook': typeof DemoStorybookRoute
   '/demo/table': typeof DemoTableRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
+  '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/api/db-chat-api': typeof ApiAuthedApiDbChatApiRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
@@ -207,6 +224,7 @@ export interface FileRoutesByTo {
   '/demo/form/simple': typeof DemoFormSimpleRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
+  '/api/chat/$conversationId': typeof ApiAuthedApiChatConversationIdRoute
   '/demo/start/ssr/data-only': typeof DemoStartSsrDataOnlyRoute
   '/demo/start/ssr/full-ssr': typeof DemoStartSsrFullSsrRoute
   '/demo/start/ssr/spa-mode': typeof DemoStartSsrSpaModeRoute
@@ -216,16 +234,17 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteWithChildren
+  '/_authed/new-chat': typeof AuthedNewChatRoute
+  '/_authed/orpc-todo': typeof AuthedOrpcTodoRoute
   '/_authed/profile': typeof AuthedProfileRoute
-  '/api/$': typeof ApiSplatRoute
   '/demo/auth': typeof DemoAuthRoute
   '/demo/db-chat': typeof DemoDbChatRoute
   '/demo/db-example': typeof DemoDbExampleRoute
-  '/demo/orpc-todo': typeof DemoOrpcTodoRoute
   '/demo/store': typeof DemoStoreRoute
   '/demo/storybook': typeof DemoStorybookRoute
   '/demo/table': typeof DemoTableRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
+  '/_authed/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/api/_authed-api/db-chat-api': typeof ApiAuthedApiDbChatApiRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
@@ -235,6 +254,7 @@ export interface FileRoutesById {
   '/demo/form/simple': typeof DemoFormSimpleRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
+  '/api/_authed-api/chat/$conversationId': typeof ApiAuthedApiChatConversationIdRoute
   '/demo/start/ssr/data-only': typeof DemoStartSsrDataOnlyRoute
   '/demo/start/ssr/full-ssr': typeof DemoStartSsrFullSsrRoute
   '/demo/start/ssr/spa-mode': typeof DemoStartSsrSpaModeRoute
@@ -244,16 +264,17 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/new-chat'
+    | '/orpc-todo'
     | '/profile'
-    | '/api/$'
     | '/demo/auth'
     | '/demo/db-chat'
     | '/demo/db-example'
-    | '/demo/orpc-todo'
     | '/demo/store'
     | '/demo/storybook'
     | '/demo/table'
     | '/demo/tanstack-query'
+    | '/conversations/$conversationId'
     | '/api/db-chat-api'
     | '/api/auth/$'
     | '/api/rpc/$'
@@ -263,6 +284,7 @@ export interface FileRouteTypes {
     | '/demo/form/simple'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
+    | '/api/chat/$conversationId'
     | '/demo/start/ssr/data-only'
     | '/demo/start/ssr/full-ssr'
     | '/demo/start/ssr/spa-mode'
@@ -270,16 +292,17 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/new-chat'
+    | '/orpc-todo'
     | '/profile'
-    | '/api/$'
     | '/demo/auth'
     | '/demo/db-chat'
     | '/demo/db-example'
-    | '/demo/orpc-todo'
     | '/demo/store'
     | '/demo/storybook'
     | '/demo/table'
     | '/demo/tanstack-query'
+    | '/conversations/$conversationId'
     | '/api/db-chat-api'
     | '/api/auth/$'
     | '/api/rpc/$'
@@ -289,6 +312,7 @@ export interface FileRouteTypes {
     | '/demo/form/simple'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
+    | '/api/chat/$conversationId'
     | '/demo/start/ssr/data-only'
     | '/demo/start/ssr/full-ssr'
     | '/demo/start/ssr/spa-mode'
@@ -297,16 +321,17 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authed'
+    | '/_authed/new-chat'
+    | '/_authed/orpc-todo'
     | '/_authed/profile'
-    | '/api/$'
     | '/demo/auth'
     | '/demo/db-chat'
     | '/demo/db-example'
-    | '/demo/orpc-todo'
     | '/demo/store'
     | '/demo/storybook'
     | '/demo/table'
     | '/demo/tanstack-query'
+    | '/_authed/conversations/$conversationId'
     | '/api/_authed-api/db-chat-api'
     | '/api/auth/$'
     | '/api/rpc/$'
@@ -316,6 +341,7 @@ export interface FileRouteTypes {
     | '/demo/form/simple'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
+    | '/api/_authed-api/chat/$conversationId'
     | '/demo/start/ssr/data-only'
     | '/demo/start/ssr/full-ssr'
     | '/demo/start/ssr/spa-mode'
@@ -325,11 +351,9 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthedRoute: typeof AuthedRouteWithChildren
-  ApiSplatRoute: typeof ApiSplatRoute
   DemoAuthRoute: typeof DemoAuthRoute
   DemoDbChatRoute: typeof DemoDbChatRoute
   DemoDbExampleRoute: typeof DemoDbExampleRoute
-  DemoOrpcTodoRoute: typeof DemoOrpcTodoRoute
   DemoStoreRoute: typeof DemoStoreRoute
   DemoStorybookRoute: typeof DemoStorybookRoute
   DemoTableRoute: typeof DemoTableRoute
@@ -343,6 +367,7 @@ export interface RootRouteChildren {
   DemoFormSimpleRoute: typeof DemoFormSimpleRoute
   DemoStartApiRequestRoute: typeof DemoStartApiRequestRoute
   DemoStartServerFuncsRoute: typeof DemoStartServerFuncsRoute
+  ApiAuthedApiChatConversationIdRoute: typeof ApiAuthedApiChatConversationIdRoute
   DemoStartSsrDataOnlyRoute: typeof DemoStartSsrDataOnlyRoute
   DemoStartSsrFullSsrRoute: typeof DemoStartSsrFullSsrRoute
   DemoStartSsrSpaModeRoute: typeof DemoStartSsrSpaModeRoute
@@ -393,13 +418,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoStoreRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/demo/orpc-todo': {
-      id: '/demo/orpc-todo'
-      path: '/demo/orpc-todo'
-      fullPath: '/demo/orpc-todo'
-      preLoaderRoute: typeof DemoOrpcTodoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/demo/db-example': {
       id: '/demo/db-example'
       path: '/demo/db-example'
@@ -421,18 +439,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoAuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/$': {
-      id: '/api/$'
-      path: '/api/$'
-      fullPath: '/api/$'
-      preLoaderRoute: typeof ApiSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_authed/profile': {
       id: '/_authed/profile'
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof AuthedProfileRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/orpc-todo': {
+      id: '/_authed/orpc-todo'
+      path: '/orpc-todo'
+      fullPath: '/orpc-todo'
+      preLoaderRoute: typeof AuthedOrpcTodoRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/new-chat': {
+      id: '/_authed/new-chat'
+      path: '/new-chat'
+      fullPath: '/new-chat'
+      preLoaderRoute: typeof AuthedNewChatRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/demo/start/server-funcs': {
@@ -498,6 +523,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthedApiDbChatApiRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed/conversations/$conversationId': {
+      id: '/_authed/conversations/$conversationId'
+      path: '/conversations/$conversationId'
+      fullPath: '/conversations/$conversationId'
+      preLoaderRoute: typeof AuthedConversationsConversationIdRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/demo/start/ssr/': {
       id: '/demo/start/ssr/'
       path: '/demo/start/ssr'
@@ -526,15 +558,29 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoStartSsrDataOnlyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/_authed-api/chat/$conversationId': {
+      id: '/api/_authed-api/chat/$conversationId'
+      path: '/api/chat/$conversationId'
+      fullPath: '/api/chat/$conversationId'
+      preLoaderRoute: typeof ApiAuthedApiChatConversationIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AuthedRouteChildren {
+  AuthedNewChatRoute: typeof AuthedNewChatRoute
+  AuthedOrpcTodoRoute: typeof AuthedOrpcTodoRoute
   AuthedProfileRoute: typeof AuthedProfileRoute
+  AuthedConversationsConversationIdRoute: typeof AuthedConversationsConversationIdRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
+  AuthedNewChatRoute: AuthedNewChatRoute,
+  AuthedOrpcTodoRoute: AuthedOrpcTodoRoute,
   AuthedProfileRoute: AuthedProfileRoute,
+  AuthedConversationsConversationIdRoute:
+    AuthedConversationsConversationIdRoute,
 }
 
 const AuthedRouteWithChildren =
@@ -543,11 +589,9 @@ const AuthedRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthedRoute: AuthedRouteWithChildren,
-  ApiSplatRoute: ApiSplatRoute,
   DemoAuthRoute: DemoAuthRoute,
   DemoDbChatRoute: DemoDbChatRoute,
   DemoDbExampleRoute: DemoDbExampleRoute,
-  DemoOrpcTodoRoute: DemoOrpcTodoRoute,
   DemoStoreRoute: DemoStoreRoute,
   DemoStorybookRoute: DemoStorybookRoute,
   DemoTableRoute: DemoTableRoute,
@@ -561,6 +605,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoFormSimpleRoute: DemoFormSimpleRoute,
   DemoStartApiRequestRoute: DemoStartApiRequestRoute,
   DemoStartServerFuncsRoute: DemoStartServerFuncsRoute,
+  ApiAuthedApiChatConversationIdRoute: ApiAuthedApiChatConversationIdRoute,
   DemoStartSsrDataOnlyRoute: DemoStartSsrDataOnlyRoute,
   DemoStartSsrFullSsrRoute: DemoStartSsrFullSsrRoute,
   DemoStartSsrSpaModeRoute: DemoStartSsrSpaModeRoute,
