@@ -30,9 +30,9 @@ export const Route = createFileRoute('/_authed')({
     const sessionData = await getAuthSession()
 
     if (!sessionData) {
-      // Redirect to auth page if not authenticated
+      // Redirect to login page if not authenticated
       throw redirect({
-        to: '/demo/auth',
+        to: '/login',
         search: {
           redirect: location.href,
         },
