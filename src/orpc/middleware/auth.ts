@@ -10,7 +10,9 @@ export const authMiddleware = os
   .$context<{ headers?: Headers }>()
   .middleware(async ({ context, next }) => {
     if (!context.headers) {
-      throw new ORPCError('NOT_IMPLEMENTED')
+      throw new ORPCError('UNAUTHORIZED', {
+        message: 'Auth headers missing',
+      })
     }
 
     // Get the session from better-auth
