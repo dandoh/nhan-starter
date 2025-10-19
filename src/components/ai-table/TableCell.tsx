@@ -109,7 +109,7 @@ export const TableCell = memo(function TableCell({
       onFocus={handleFocus}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
-      className="border-none bg-transparent focus-visible:ring-1"
+      className="border-none bg-transparent focus-visible:ring-1 focus-visible:ring-inset"
     />
   )
 })
