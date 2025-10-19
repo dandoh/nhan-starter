@@ -20,6 +20,15 @@ export default function Header() {
             {session?.user && (
               <nav className="flex items-center gap-4">
                 <Link
+                  to="/tables"
+                  className="px-3 py-2 rounded-md hover:bg-accent transition-colors"
+                  activeProps={{
+                    className: 'px-3 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors'
+                  }}
+                >
+                  Tables
+                </Link>
+                <Link
                   to="/app"
                   className="px-3 py-2 rounded-md hover:bg-accent transition-colors"
                   activeProps={{
@@ -48,7 +57,7 @@ export default function Header() {
                   {session.user.name || session.user.email}
                 </span>
                 <Button
-                  variant="destructive"
+                  variant="outline"
                   size="sm"
                   onClick={() => signOut()}
                 >

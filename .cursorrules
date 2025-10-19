@@ -45,14 +45,9 @@ ALWAYS use shadcn theme colors via CSS variables instead of hardcoded colors lik
 ```tsx
 // ✅ CORRECT - Use Tailwind classes
 <div className="bg-primary text-primary-foreground">
-<button className="bg-destructive text-destructive-foreground">Delete</button>
 <p className="text-muted-foreground">Subtitle text</p>
 <div className="bg-base-100 border-base-300">Light background</div>
 <div className="text-primary-600">Custom primary shade</div>
-
-// ✅ CORRECT - Use CSS variables for custom styles
-<div style={{ color: 'oklch(var(--primary-500))' }}>
-<span style={{ backgroundColor: 'oklch(var(--secondary))' }}>
 
 // ❌ WRONG - Do not use hardcoded colors
 <div className="bg-red-500 text-white">

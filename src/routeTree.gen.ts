@@ -12,13 +12,16 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthedTableExampleRouteImport } from './routes/_authed/table-example'
 import { Route as AuthedProfileRouteImport } from './routes/_authed/profile'
 import { Route as AuthedNewChatRouteImport } from './routes/_authed/new-chat'
 import { Route as AuthedAppRouteImport } from './routes/_authed/app'
+import { Route as AuthedTablesIndexRouteImport } from './routes/_authed/tables/index'
 import { Route as DemoApiTqTodosRouteImport } from './routes/demo/api.tq-todos'
 import { Route as ApiRpcSplatRouteImport } from './routes/api/rpc.$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
 import { Route as ApiAuthedApiDbChatApiRouteImport } from './routes/api/_authed-api/db-chat-api'
+import { Route as AuthedTablesTableIdRouteImport } from './routes/_authed/tables/$tableId'
 import { Route as AuthedConversationsConversationIdRouteImport } from './routes/_authed/conversations.$conversationId'
 import { Route as ApiAuthedApiChatConversationIdRouteImport } from './routes/api/_authed-api/chat.$conversationId'
 
@@ -36,6 +39,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedTableExampleRoute = AuthedTableExampleRouteImport.update({
+  id: '/table-example',
+  path: '/table-example',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedProfileRoute = AuthedProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -49,6 +57,11 @@ const AuthedNewChatRoute = AuthedNewChatRouteImport.update({
 const AuthedAppRoute = AuthedAppRouteImport.update({
   id: '/app',
   path: '/app',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedTablesIndexRoute = AuthedTablesIndexRouteImport.update({
+  id: '/tables/',
+  path: '/tables/',
   getParentRoute: () => AuthedRoute,
 } as any)
 const DemoApiTqTodosRoute = DemoApiTqTodosRouteImport.update({
@@ -71,6 +84,11 @@ const ApiAuthedApiDbChatApiRoute = ApiAuthedApiDbChatApiRouteImport.update({
   path: '/api/db-chat-api',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedTablesTableIdRoute = AuthedTablesTableIdRouteImport.update({
+  id: '/tables/$tableId',
+  path: '/tables/$tableId',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedConversationsConversationIdRoute =
   AuthedConversationsConversationIdRouteImport.update({
     id: '/conversations/$conversationId',
@@ -90,11 +108,14 @@ export interface FileRoutesByFullPath {
   '/app': typeof AuthedAppRoute
   '/new-chat': typeof AuthedNewChatRoute
   '/profile': typeof AuthedProfileRoute
+  '/table-example': typeof AuthedTableExampleRoute
   '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
+  '/tables/$tableId': typeof AuthedTablesTableIdRoute
   '/api/db-chat-api': typeof ApiAuthedApiDbChatApiRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
   '/demo/api/tq-todos': typeof DemoApiTqTodosRoute
+  '/tables': typeof AuthedTablesIndexRoute
   '/api/chat/$conversationId': typeof ApiAuthedApiChatConversationIdRoute
 }
 export interface FileRoutesByTo {
@@ -103,11 +124,14 @@ export interface FileRoutesByTo {
   '/app': typeof AuthedAppRoute
   '/new-chat': typeof AuthedNewChatRoute
   '/profile': typeof AuthedProfileRoute
+  '/table-example': typeof AuthedTableExampleRoute
   '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
+  '/tables/$tableId': typeof AuthedTablesTableIdRoute
   '/api/db-chat-api': typeof ApiAuthedApiDbChatApiRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
   '/demo/api/tq-todos': typeof DemoApiTqTodosRoute
+  '/tables': typeof AuthedTablesIndexRoute
   '/api/chat/$conversationId': typeof ApiAuthedApiChatConversationIdRoute
 }
 export interface FileRoutesById {
@@ -118,11 +142,14 @@ export interface FileRoutesById {
   '/_authed/app': typeof AuthedAppRoute
   '/_authed/new-chat': typeof AuthedNewChatRoute
   '/_authed/profile': typeof AuthedProfileRoute
+  '/_authed/table-example': typeof AuthedTableExampleRoute
   '/_authed/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
+  '/_authed/tables/$tableId': typeof AuthedTablesTableIdRoute
   '/api/_authed-api/db-chat-api': typeof ApiAuthedApiDbChatApiRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
   '/demo/api/tq-todos': typeof DemoApiTqTodosRoute
+  '/_authed/tables/': typeof AuthedTablesIndexRoute
   '/api/_authed-api/chat/$conversationId': typeof ApiAuthedApiChatConversationIdRoute
 }
 export interface FileRouteTypes {
@@ -133,11 +160,14 @@ export interface FileRouteTypes {
     | '/app'
     | '/new-chat'
     | '/profile'
+    | '/table-example'
     | '/conversations/$conversationId'
+    | '/tables/$tableId'
     | '/api/db-chat-api'
     | '/api/auth/$'
     | '/api/rpc/$'
     | '/demo/api/tq-todos'
+    | '/tables'
     | '/api/chat/$conversationId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -146,11 +176,14 @@ export interface FileRouteTypes {
     | '/app'
     | '/new-chat'
     | '/profile'
+    | '/table-example'
     | '/conversations/$conversationId'
+    | '/tables/$tableId'
     | '/api/db-chat-api'
     | '/api/auth/$'
     | '/api/rpc/$'
     | '/demo/api/tq-todos'
+    | '/tables'
     | '/api/chat/$conversationId'
   id:
     | '__root__'
@@ -160,11 +193,14 @@ export interface FileRouteTypes {
     | '/_authed/app'
     | '/_authed/new-chat'
     | '/_authed/profile'
+    | '/_authed/table-example'
     | '/_authed/conversations/$conversationId'
+    | '/_authed/tables/$tableId'
     | '/api/_authed-api/db-chat-api'
     | '/api/auth/$'
     | '/api/rpc/$'
     | '/demo/api/tq-todos'
+    | '/_authed/tables/'
     | '/api/_authed-api/chat/$conversationId'
   fileRoutesById: FileRoutesById
 }
@@ -202,6 +238,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed/table-example': {
+      id: '/_authed/table-example'
+      path: '/table-example'
+      fullPath: '/table-example'
+      preLoaderRoute: typeof AuthedTableExampleRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/profile': {
       id: '/_authed/profile'
       path: '/profile'
@@ -221,6 +264,13 @@ declare module '@tanstack/react-router' {
       path: '/app'
       fullPath: '/app'
       preLoaderRoute: typeof AuthedAppRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/tables/': {
+      id: '/_authed/tables/'
+      path: '/tables'
+      fullPath: '/tables'
+      preLoaderRoute: typeof AuthedTablesIndexRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/demo/api/tq-todos': {
@@ -251,6 +301,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthedApiDbChatApiRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed/tables/$tableId': {
+      id: '/_authed/tables/$tableId'
+      path: '/tables/$tableId'
+      fullPath: '/tables/$tableId'
+      preLoaderRoute: typeof AuthedTablesTableIdRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/conversations/$conversationId': {
       id: '/_authed/conversations/$conversationId'
       path: '/conversations/$conversationId'
@@ -272,15 +329,21 @@ interface AuthedRouteChildren {
   AuthedAppRoute: typeof AuthedAppRoute
   AuthedNewChatRoute: typeof AuthedNewChatRoute
   AuthedProfileRoute: typeof AuthedProfileRoute
+  AuthedTableExampleRoute: typeof AuthedTableExampleRoute
   AuthedConversationsConversationIdRoute: typeof AuthedConversationsConversationIdRoute
+  AuthedTablesTableIdRoute: typeof AuthedTablesTableIdRoute
+  AuthedTablesIndexRoute: typeof AuthedTablesIndexRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedAppRoute: AuthedAppRoute,
   AuthedNewChatRoute: AuthedNewChatRoute,
   AuthedProfileRoute: AuthedProfileRoute,
+  AuthedTableExampleRoute: AuthedTableExampleRoute,
   AuthedConversationsConversationIdRoute:
     AuthedConversationsConversationIdRoute,
+  AuthedTablesTableIdRoute: AuthedTablesTableIdRoute,
+  AuthedTablesIndexRoute: AuthedTablesIndexRoute,
 }
 
 const AuthedRouteWithChildren =
