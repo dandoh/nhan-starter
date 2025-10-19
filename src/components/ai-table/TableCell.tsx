@@ -110,7 +110,6 @@ export const TableCell = memo(function TableCell({
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
       className="border-none bg-transparent focus-visible:ring-1"
-      placeholder="Enter text..."
     />
   )
 })

@@ -17,6 +17,7 @@ import { Route as AuthedProfileRouteImport } from './routes/_authed/profile'
 import { Route as AuthedNewChatRouteImport } from './routes/_authed/new-chat'
 import { Route as AuthedAppRouteImport } from './routes/_authed/app'
 import { Route as AuthedTablesIndexRouteImport } from './routes/_authed/tables/index'
+import { Route as DemoFormAddressRouteImport } from './routes/demo/form.address'
 import { Route as DemoApiTqTodosRouteImport } from './routes/demo/api.tq-todos'
 import { Route as ApiRpcSplatRouteImport } from './routes/api/rpc.$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
@@ -63,6 +64,11 @@ const AuthedTablesIndexRoute = AuthedTablesIndexRouteImport.update({
   id: '/tables/',
   path: '/tables/',
   getParentRoute: () => AuthedRoute,
+} as any)
+const DemoFormAddressRoute = DemoFormAddressRouteImport.update({
+  id: '/demo/form/address',
+  path: '/demo/form/address',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DemoApiTqTodosRoute = DemoApiTqTodosRouteImport.update({
   id: '/demo/api/tq-todos',
@@ -115,6 +121,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
   '/demo/api/tq-todos': typeof DemoApiTqTodosRoute
+  '/demo/form/address': typeof DemoFormAddressRoute
   '/tables': typeof AuthedTablesIndexRoute
   '/api/chat/$conversationId': typeof ApiAuthedApiChatConversationIdRoute
 }
@@ -131,6 +138,7 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
   '/demo/api/tq-todos': typeof DemoApiTqTodosRoute
+  '/demo/form/address': typeof DemoFormAddressRoute
   '/tables': typeof AuthedTablesIndexRoute
   '/api/chat/$conversationId': typeof ApiAuthedApiChatConversationIdRoute
 }
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
   '/demo/api/tq-todos': typeof DemoApiTqTodosRoute
+  '/demo/form/address': typeof DemoFormAddressRoute
   '/_authed/tables/': typeof AuthedTablesIndexRoute
   '/api/_authed-api/chat/$conversationId': typeof ApiAuthedApiChatConversationIdRoute
 }
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/rpc/$'
     | '/demo/api/tq-todos'
+    | '/demo/form/address'
     | '/tables'
     | '/api/chat/$conversationId'
   fileRoutesByTo: FileRoutesByTo
@@ -183,6 +193,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/rpc/$'
     | '/demo/api/tq-todos'
+    | '/demo/form/address'
     | '/tables'
     | '/api/chat/$conversationId'
   id:
@@ -200,6 +211,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/rpc/$'
     | '/demo/api/tq-todos'
+    | '/demo/form/address'
     | '/_authed/tables/'
     | '/api/_authed-api/chat/$conversationId'
   fileRoutesById: FileRoutesById
@@ -212,6 +224,7 @@ export interface RootRouteChildren {
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiRpcSplatRoute: typeof ApiRpcSplatRoute
   DemoApiTqTodosRoute: typeof DemoApiTqTodosRoute
+  DemoFormAddressRoute: typeof DemoFormAddressRoute
   ApiAuthedApiChatConversationIdRoute: typeof ApiAuthedApiChatConversationIdRoute
 }
 
@@ -272,6 +285,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/tables'
       preLoaderRoute: typeof AuthedTablesIndexRouteImport
       parentRoute: typeof AuthedRoute
+    }
+    '/demo/form/address': {
+      id: '/demo/form/address'
+      path: '/demo/form/address'
+      fullPath: '/demo/form/address'
+      preLoaderRoute: typeof DemoFormAddressRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/demo/api/tq-todos': {
       id: '/demo/api/tq-todos'
@@ -357,6 +377,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiRpcSplatRoute: ApiRpcSplatRoute,
   DemoApiTqTodosRoute: DemoApiTqTodosRoute,
+  DemoFormAddressRoute: DemoFormAddressRoute,
   ApiAuthedApiChatConversationIdRoute: ApiAuthedApiChatConversationIdRoute,
 }
 export const routeTree = rootRouteImport

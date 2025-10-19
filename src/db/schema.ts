@@ -117,6 +117,7 @@ export const aiTableColumns = pgTable('ai_table_columns', {
     .notNull()
     .references(() => aiTables.id, { onDelete: 'cascade' }),
   name: varchar('name', { length: 255 }).notNull(),
+  type: text('type', { enum: ['manual', 'ai'] }).notNull().default('ai'),
   config: jsonb('config'),
   position: integer('position').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true })

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useLiveQuery } from '@tanstack/react-db'
 import {
   useReactTable,
@@ -8,9 +8,10 @@ import {
   flexRender,
   type ColumnDef,
 } from '@tanstack/react-table'
+import { Plus } from 'lucide-react'
 import { useTableSync } from '@/hooks/use-table-sync'
 import { TableCell } from '@/components/ai-table/TableCell'
-import { AddColumnDialog } from '@/components/ai-table/AddColumnDialog'
+import { ColumnHeaderPopover } from '@/components/ai-table/ColumnHeaderPopover'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -65,11 +66,9 @@ function TableEditorPage() {
       columnHelper.display({
         id: col.id,
         header: () => (
-          <div className="flex items-center gap-2">
-            <span>{col.name}</span>
-          </div>
+          <ColumnHeaderPopover column={col} collections={collections} />
         ),
-        cell: ({ row, column }) => (
+        cell: ({ row }) => (
           <TableCell
             recordId={row.original.id}
             columnId={col.id}
@@ -87,30 +86,16 @@ function TableEditorPage() {
   })
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="mx-auto max-w-7xl">
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-7xl py-8">
         {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <Link
-              to="/tables"
-              className="mb-2 inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
-            >
-              ← Back to Tables
-            </Link>
-            <h1 className="text-3xl font-bold text-foreground">Table Editor</h1>
-          </div>
-
-          <div className="flex gap-2">
-            <AddColumnDialog
-              tableId={tableId}
-              collections={collections}
-              columns={columns}
-            />
-            <Button variant="outline" onClick={addRow}>
-              Add Row
-            </Button>
-          </div>
+        <div className="mb-2">
+          <Link
+            to="/tables"
+            className="mb-2 inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+          >
+            ← Back to Tables
+          </Link>
         </div>
 
         {/* Table */}
@@ -128,7 +113,10 @@ function TableEditorPage() {
                   {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id}>
                       {headerGroup.headers.map((header) => (
-                        <TableHead key={header.id} className="bg-muted/50">
+                        <TableHead
+                          key={header.id}
+                          className="bg-muted/50 border-r border-border"
+                        >
                           {header.isPlaceholder
                             ? null
                             : flexRender(
@@ -137,6 +125,27 @@ function TableEditorPage() {
                               )}
                         </TableHead>
                       ))}
+                      <TableHead className="w-12 bg-muted/50">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          onClick={() => {
+                            collections.columns.insert({
+                              id: crypto.randomUUID(),
+                              tableId,
+                              name: 'Untitled',
+                              type: 'ai',
+                              config: {},
+                              position: columns.length,
+                              createdAt: new Date(),
+                              updatedAt: new Date(),
+                            })
+                          }}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </TableHead>
                     </TableRow>
                   ))}
                 </TableHeader>
@@ -144,23 +153,27 @@ function TableEditorPage() {
                   {table.getRowModel().rows.length === 0 ? (
                     <TableRow>
                       <TableCellUI
-                        colSpan={columns.length}
+                        colSpan={columns.length + 1}
                         className="h-24 text-center text-muted-foreground"
                       >
-                        No rows yet. Click "Add Row" to get started.
+                        No rows yet. Click "+" to add columns or rows.
                       </TableCellUI>
                     </TableRow>
                   ) : (
                     table.getRowModel().rows.map((row) => (
                       <TableRow key={row.id}>
                         {row.getVisibleCells().map((cell) => (
-                          <TableCellUI key={cell.id} className="p-0">
+                          <TableCellUI
+                            key={cell.id}
+                            className="p-0 border-r border-border"
+                          >
                             {flexRender(
                               cell.column.columnDef.cell,
                               cell.getContext(),
                             )}
                           </TableCellUI>
                         ))}
+                        <TableCellUI className="w-12" />
                       </TableRow>
                     ))
                   )}
@@ -170,11 +183,14 @@ function TableEditorPage() {
           </div>
         )}
 
-        {/* Stats */}
-        <div className="mt-4 flex gap-4 text-sm text-muted-foreground">
-          <span>{columns.length} columns</span>
-          <span>·</span>
-          <span>{records.length} rows</span>
+        {/* Add Row Button and Stats */}
+        <div className="mt-2 flex items-center gap-4">
+          {columns.length > 0 && (
+            <Button onClick={addRow} variant="ghost" size="sm">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Row
+            </Button>
+          )}
         </div>
       </div>
     </div>

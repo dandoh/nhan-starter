@@ -129,6 +129,7 @@ export function createTableCollections(tableId: string) {
             columnId: original.id,
             name: modified.name,
             config: modified.config as { [key: string]: any } | undefined,
+            type: modified.type,
           })
         }
       },

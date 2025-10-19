@@ -52,10 +52,11 @@ export const createTable = os
         })
         .returning()
 
-      // Create default "Main" column
+      // Create default "Subject" manual column
       await tx.insert(aiTableColumns).values({
-        name: 'Main',
+        name: 'Subject',
         tableId: newTable.id,
+        type: 'manual',
         position: 0,
         config: null,
       })
@@ -185,6 +186,7 @@ export const createColumn = os
     z.object({
       tableId: z.string().uuid(),
       name: z.string().min(1).max(255),
+      type: z.enum(['manual', 'ai']).default('ai'),
       config: z.record(z.string(), z.any()).optional(), // Allow arbitrary JSON object
     }),
   )
@@ -217,6 +219,7 @@ export const createColumn = os
         .values({
           tableId: input.tableId,
           name: input.name,
+          type: input.type,
           config: input.config ?? null,
           position: maxPosition + 1,
         })
@@ -254,7 +257,7 @@ export const createColumn = os
   })
 
 /**
- * Update column name or config
+ * Update column name, type, or config
  */
 export const updateColumn = os
   .use(authMiddleware)
@@ -262,6 +265,7 @@ export const updateColumn = os
     z.object({
       columnId: z.string().uuid(),
       name: z.string().min(1).max(255).optional(),
+      type: z.enum(['manual', 'ai']).optional(),
       config: z.record(z.string(), z.any()).optional(), // Allow arbitrary JSON object
     }),
   )
@@ -280,11 +284,32 @@ export const updateColumn = os
       })
     }
 
+    // Validate type change: prevent converting last manual column to AI
+    if (input.type === 'ai' && column.type === 'manual') {
+      const manualCount = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(aiTableColumns)
+        .where(
+          and(
+            eq(aiTableColumns.tableId, column.tableId),
+            eq(aiTableColumns.type, 'manual'),
+          ),
+        )
+        .then((result) => result[0]?.count ?? 0)
+
+      if (manualCount <= 1) {
+        throw new ORPCError('BAD_REQUEST', {
+          message: 'Cannot convert the last manual column to AI',
+        })
+      }
+    }
+
     const [updated] = await db
       .update(aiTableColumns)
       .set({
         ...(input.name && { name: input.name }),
-        ...(input.config && { config: input.config }),
+        ...(input.type && { type: input.type }),
+        ...(input.config !== undefined && { config: input.config }),
       })
       .where(eq(aiTableColumns.id, input.columnId))
       .returning()
@@ -328,6 +353,26 @@ export const deleteColumn = os
       throw new ORPCError('BAD_REQUEST', {
         message: 'Cannot delete the last column',
       })
+    }
+
+    // Prevent deleting the last manual column
+    if (column.type === 'manual') {
+      const manualCount = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(aiTableColumns)
+        .where(
+          and(
+            eq(aiTableColumns.tableId, column.tableId),
+            eq(aiTableColumns.type, 'manual'),
+          ),
+        )
+        .then((result) => result[0]?.count ?? 0)
+
+      if (manualCount <= 1) {
+        throw new ORPCError('BAD_REQUEST', {
+          message: 'Cannot delete the last manual column',
+        })
+      }
     }
 
     await db.delete(aiTableColumns).where(eq(aiTableColumns.id, input.columnId))
