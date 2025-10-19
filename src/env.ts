@@ -5,6 +5,8 @@ export const env = createEnv({
   server: {
     SERVER_URL: z.string().url().optional(),
     ANTHROPIC_API_KEY: z.string().min(1),
+    INNGEST_EVENT_KEY: z.string().optional(),
+    INNGEST_SIGNING_KEY: z.string().optional(),
   },
 
   /**
@@ -20,8 +22,11 @@ export const env = createEnv({
   /**
    * What object holds the environment variables at runtime. This is usually
    * `process.env` or `import.meta.env`.
+   * 
+   * In TanStack Start/React Router, we need to use process.env on the server
+   * and import.meta.env on the client.
    */
-  runtimeEnv: import.meta.env,
+  runtimeEnv: typeof process !== 'undefined' && process.env ? process.env : import.meta.env,
 
   /**
    * By default, this library will feed the environment variables directly to

@@ -8,7 +8,8 @@ import {
   aiTableRecords,
   aiTableCells,
 } from '@/db/schema'
-import { eq, and, gt, sql } from 'drizzle-orm'
+import { eq, and, gt, sql, inArray } from 'drizzle-orm'
+import { inngest } from '@/inngest/client'
 
 // ============================================================================
 // Table Management
@@ -187,7 +188,12 @@ export const createColumn = os
       tableId: z.string().uuid(),
       name: z.string().min(1).max(255),
       type: z.enum(['manual', 'ai']).default('ai'),
-      config: z.record(z.string(), z.any()).optional(), // Allow arbitrary JSON object
+      description: z.string().optional(),
+      config: z
+        .object({
+          aiPrompt: z.string().optional(),
+        })
+        .optional(),
     }),
   )
   .handler(async ({ input, context }) => {
@@ -220,6 +226,7 @@ export const createColumn = os
           tableId: input.tableId,
           name: input.name,
           type: input.type,
+          description: input.description,
           config: input.config ?? null,
           position: maxPosition + 1,
         })
@@ -266,7 +273,12 @@ export const updateColumn = os
       columnId: z.string().uuid(),
       name: z.string().min(1).max(255).optional(),
       type: z.enum(['manual', 'ai']).optional(),
-      config: z.record(z.string(), z.any()).optional(), // Allow arbitrary JSON object
+      description: z.string().optional(),
+      config: z
+        .object({
+          aiPrompt: z.string().optional(),
+        })
+        .optional(),
     }),
   )
   .handler(async ({ input, context }) => {
@@ -309,6 +321,7 @@ export const updateColumn = os
       .set({
         ...(input.name && { name: input.name }),
         ...(input.type && { type: input.type }),
+        ...(input.description !== undefined && { description: input.description }),
         ...(input.config !== undefined && { config: input.config }),
       })
       .where(eq(aiTableColumns.id, input.columnId))
@@ -555,7 +568,6 @@ export const getCells = os
         computeStatus: aiTableCells.computeStatus,
         computeError: aiTableCells.computeError,
         computeJobId: aiTableCells.computeJobId,
-        version: aiTableCells.version,
         createdAt: aiTableCells.createdAt,
         updatedAt: aiTableCells.updatedAt,
       })
@@ -567,7 +579,7 @@ export const getCells = os
   })
 
 /**
- * Update a cell value with optimistic locking
+ * Update a cell value
  */
 export const updateCell = os
   .use(authMiddleware)
@@ -575,7 +587,6 @@ export const updateCell = os
     z.object({
       cellId: z.string().uuid(),
       value: z.string().optional(),
-      version: z.number().optional(),
     }),
   )
   .handler(async ({ input, context }) => {
@@ -598,25 +609,19 @@ export const updateCell = os
       })
     }
 
-    // Update with version check (optimistic locking)
+    // Update cell value
     const [updated] = await db
       .update(aiTableCells)
       .set({
         ...(input.value && { value: input.value }),
-        version: sql`${aiTableCells.version} + 1`,
         updatedAt: new Date(),
       })
-      .where(
-        and(
-          eq(aiTableCells.id, input.cellId),
-          input.version ? eq(aiTableCells.version, input.version) : undefined,
-        ),
-      )
+      .where(eq(aiTableCells.id, input.cellId))
       .returning()
 
     if (!updated) {
-      throw new ORPCError('CONFLICT', {
-        message: 'Cell was modified by another user. Please refresh.',
+      throw new ORPCError('INTERNAL_SERVER_ERROR', {
+        message: 'Failed to update cell',
       })
     }
 
@@ -661,7 +666,6 @@ export const getTableUpdates = os
         computeStatus: aiTableCells.computeStatus,
         computeError: aiTableCells.computeError,
         computeJobId: aiTableCells.computeJobId,
-        version: aiTableCells.version,
         createdAt: aiTableCells.createdAt,
         updatedAt: aiTableCells.updatedAt,
       })
@@ -695,5 +699,94 @@ export const getTableUpdates = os
       records: updatedRecords,
       columns: updatedColumns,
       timestamp: new Date(),
+    }
+  })
+
+// ============================================================================
+// AI Computation Triggers
+// ============================================================================
+
+/**
+ * Manually trigger computation for all AI cells in a table
+ */
+export const triggerComputeAllCells = os
+  .use(authMiddleware)
+  .input(
+    z.object({
+      tableId: z.string().uuid(),
+    }),
+  )
+  .handler(async ({ input, context }) => {
+    console.log('triggerComputeAllCells', input)
+    // Verify table ownership
+    const table = await db.query.aiTables.findFirst({
+      where: and(
+        eq(aiTables.id, input.tableId),
+        eq(aiTables.userId, context.user.id),
+      ),
+    })
+
+    if (!table) {
+      throw new ORPCError('NOT_FOUND', {
+        message: 'Table not found',
+      })
+    }
+
+    // Get all AI columns for this table
+    const aiColumns = await db.query.aiTableColumns.findMany({
+      where: and(
+        eq(aiTableColumns.tableId, input.tableId),
+        eq(aiTableColumns.type, 'ai'),
+      ),
+    })
+
+    if (aiColumns.length === 0) {
+      return {
+        success: true,
+        triggered: 0,
+        message: 'No AI columns found in this table',
+      }
+    }
+
+    // Get all cells for AI columns
+    const aiColumnIds = aiColumns.map((col) => col.id)
+    const aiCells = await db
+      .select()
+      .from(aiTableCells)
+      .innerJoin(aiTableRecords, eq(aiTableCells.recordId, aiTableRecords.id))
+      .where(
+        and(
+          eq(aiTableRecords.tableId, input.tableId),
+          inArray(aiTableCells.columnId, aiColumnIds),
+        ),
+      )
+
+
+    // Set all cells to pending status
+    const cellIds = aiCells.map((row) => row.ai_table_cells.id)
+    if (cellIds.length > 0) {
+      await db
+        .update(aiTableCells)
+        .set({
+          computeStatus: 'pending',
+          updatedAt: new Date(),
+        })
+        .where(inArray(aiTableCells.id, cellIds))
+    }
+
+    // Send individual Inngest event for each cell
+    const events = cellIds.map((cellId) => ({
+      name: 'ai/cell.compute' as const,
+      data: { cellId },
+    }))
+
+    if (events.length > 0) {
+      await inngest.send(events)
+    }
+
+    return {
+      success: true,
+      triggered: cellIds.length,
+      message: `Triggered computation for ${cellIds.length} AI cells`,
     }
   })

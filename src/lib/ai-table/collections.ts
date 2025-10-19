@@ -30,8 +30,8 @@ export const tablesCollection = createCollection(
       const tables = await client.aiTables.list()
       return tables
     },
-    getKey: (table) => table.id,
-    onInsert: async ({ transaction, collection }) => {
+      getKey: (table) => table.id,
+    onInsert: async ({ transaction }) => {
       const { modified: newTable } = transaction.mutations[0]
       await client.aiTables.create({
         name: newTable.name,
@@ -105,7 +105,9 @@ export function createTableCollections(tableId: string) {
           const { cells } = await client.aiTables.createColumn({
             tableId,
             name: newColumn.name,
-            config: newColumn.config as { [key: string]: any } | undefined,
+            type: newColumn.type,
+            description: newColumn.description || undefined,
+            config: newColumn.config as { aiPrompt?: string } | undefined,
           })
 
           // Insert created cells into cells collection
@@ -128,8 +130,9 @@ export function createTableCollections(tableId: string) {
           await client.aiTables.updateColumn({
             columnId: original.id,
             name: modified.name,
-            config: modified.config as { [key: string]: any } | undefined,
             type: modified.type,
+            description: modified.description || undefined,
+            config: modified.config as { aiPrompt?: string } | undefined,
           })
         }
       },
@@ -150,13 +153,13 @@ export function createTableCollections(tableId: string) {
     queryCollectionOptions<Record>({
       queryClient,
       queryKey: ['ai-tables', tableId, 'records'],
-      queryFn: async ({ queryKey }) => {
+      queryFn: async () => {
         const records = await client.aiTables.getRecords({ tableId })
         return records as Record[]
       },
       getKey: (rec) => rec.id,
 
-      onInsert: async ({ transaction, collection }) => {
+      onInsert: async ({ transaction }) => {
         for (const mutation of transaction.mutations) {
           const { modified: newRecord } = mutation
           const { cells } = await client.aiTables.createRecord({

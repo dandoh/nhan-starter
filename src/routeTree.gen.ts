@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiInngestRouteImport } from './routes/api/inngest'
 import { Route as AuthedTableExampleRouteImport } from './routes/_authed/table-example'
 import { Route as AuthedProfileRouteImport } from './routes/_authed/profile'
 import { Route as AuthedNewChatRouteImport } from './routes/_authed/new-chat'
@@ -38,6 +39,11 @@ const AuthedRoute = AuthedRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiInngestRoute = ApiInngestRouteImport.update({
+  id: '/api/inngest',
+  path: '/api/inngest',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthedTableExampleRoute = AuthedTableExampleRouteImport.update({
@@ -115,6 +121,7 @@ export interface FileRoutesByFullPath {
   '/new-chat': typeof AuthedNewChatRoute
   '/profile': typeof AuthedProfileRoute
   '/table-example': typeof AuthedTableExampleRoute
+  '/api/inngest': typeof ApiInngestRoute
   '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/tables/$tableId': typeof AuthedTablesTableIdRoute
   '/api/db-chat-api': typeof ApiAuthedApiDbChatApiRoute
@@ -132,6 +139,7 @@ export interface FileRoutesByTo {
   '/new-chat': typeof AuthedNewChatRoute
   '/profile': typeof AuthedProfileRoute
   '/table-example': typeof AuthedTableExampleRoute
+  '/api/inngest': typeof ApiInngestRoute
   '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/tables/$tableId': typeof AuthedTablesTableIdRoute
   '/api/db-chat-api': typeof ApiAuthedApiDbChatApiRoute
@@ -151,6 +159,7 @@ export interface FileRoutesById {
   '/_authed/new-chat': typeof AuthedNewChatRoute
   '/_authed/profile': typeof AuthedProfileRoute
   '/_authed/table-example': typeof AuthedTableExampleRoute
+  '/api/inngest': typeof ApiInngestRoute
   '/_authed/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/_authed/tables/$tableId': typeof AuthedTablesTableIdRoute
   '/api/_authed-api/db-chat-api': typeof ApiAuthedApiDbChatApiRoute
@@ -170,6 +179,7 @@ export interface FileRouteTypes {
     | '/new-chat'
     | '/profile'
     | '/table-example'
+    | '/api/inngest'
     | '/conversations/$conversationId'
     | '/tables/$tableId'
     | '/api/db-chat-api'
@@ -187,6 +197,7 @@ export interface FileRouteTypes {
     | '/new-chat'
     | '/profile'
     | '/table-example'
+    | '/api/inngest'
     | '/conversations/$conversationId'
     | '/tables/$tableId'
     | '/api/db-chat-api'
@@ -205,6 +216,7 @@ export interface FileRouteTypes {
     | '/_authed/new-chat'
     | '/_authed/profile'
     | '/_authed/table-example'
+    | '/api/inngest'
     | '/_authed/conversations/$conversationId'
     | '/_authed/tables/$tableId'
     | '/api/_authed-api/db-chat-api'
@@ -220,6 +232,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthedRoute: typeof AuthedRouteWithChildren
   LoginRoute: typeof LoginRoute
+  ApiInngestRoute: typeof ApiInngestRoute
   ApiAuthedApiDbChatApiRoute: typeof ApiAuthedApiDbChatApiRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiRpcSplatRoute: typeof ApiRpcSplatRoute
@@ -249,6 +262,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/inngest': {
+      id: '/api/inngest'
+      path: '/api/inngest'
+      fullPath: '/api/inngest'
+      preLoaderRoute: typeof ApiInngestRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authed/table-example': {
@@ -373,6 +393,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthedRoute: AuthedRouteWithChildren,
   LoginRoute: LoginRoute,
+  ApiInngestRoute: ApiInngestRoute,
   ApiAuthedApiDbChatApiRoute: ApiAuthedApiDbChatApiRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiRpcSplatRoute: ApiRpcSplatRoute,

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useLiveQuery } from '@tanstack/react-db'
 import {
   useReactTable,
@@ -8,7 +8,7 @@ import {
   flexRender,
   type ColumnDef,
 } from '@tanstack/react-table'
-import { Plus } from 'lucide-react'
+import { Plus, Sparkles } from 'lucide-react'
 import { useTableSync } from '@/hooks/use-table-sync'
 import { TableCell } from '@/components/ai-table/TableCell'
 import { ColumnHeaderPopover } from '@/components/ai-table/ColumnHeaderPopover'
@@ -22,6 +22,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import type { Record as TableRecord } from '@/lib/ai-table/collections'
+import { client } from '@/orpc/client'
+import { toast } from 'sonner'
 
 export const Route = createFileRoute('/_authed/tables/$tableId')({
   ssr: false,
@@ -32,6 +34,7 @@ const columnHelper = createColumnHelper<TableRecord>()
 function TableEditorPage() {
   const { tableId } = Route.useParams()
   const collections = useTableSync(tableId)
+  const [isComputing, setIsComputing] = useState(false)
 
   // Live query for columns
   const { data: columns } = useLiveQuery((q) =>
@@ -58,6 +61,22 @@ function TableEditorPage() {
     collections.records.insert(newRecord)
   }
 
+  const handleComputeAllCells = async () => {
+    setIsComputing(true)
+    try {
+      const result = await client.aiTables.triggerComputeAllCells({ tableId })
+      toast.success(result.message || 'AI computation started', {
+        description: `Computing ${result.triggered} cells`,
+      })
+    } catch (error) {
+      toast.error('Failed to trigger AI computation', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      })
+    } finally {
+      setIsComputing(false)
+    }
+  }
+
   // TanStack Table setup with lazy cell rendering
   const tableData = useMemo(() => records, [records])
 
@@ -65,6 +84,7 @@ function TableEditorPage() {
     return columns.map((col) =>
       columnHelper.display({
         id: col.id,
+        maxSize: 400,
         header: () => (
           <ColumnHeaderPopover column={col} collections={collections} />
         ),
@@ -107,7 +127,7 @@ function TableEditorPage() {
           </div>
         ) : (
           <div className="overflow-hidden rounded-lg border border-border">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-hidden">
               <Table>
                 <TableHeader>
                   {table.getHeaderGroups().map((headerGroup) => (
@@ -115,7 +135,7 @@ function TableEditorPage() {
                       {headerGroup.headers.map((header) => (
                         <TableHead
                           key={header.id}
-                          className="bg-muted/50 border-r border-border"
+                          className="bg-muted/50 border-r border-border max-w-[400px]"
                         >
                           {header.isPlaceholder
                             ? null
@@ -125,7 +145,7 @@ function TableEditorPage() {
                               )}
                         </TableHead>
                       ))}
-                      <TableHead className="w-12 bg-muted/50">
+                      <TableHead className="w-12 sticky right-0 shadow-md z-10 bg-muted">
                         <Button
                           size="icon"
                           variant="ghost"
@@ -136,7 +156,8 @@ function TableEditorPage() {
                               tableId,
                               name: 'Untitled',
                               type: 'ai',
-                              config: {},
+                              description: '',
+                              config: { aiPrompt: '' },
                               position: columns.length,
                               createdAt: new Date(),
                               updatedAt: new Date(),
@@ -165,7 +186,7 @@ function TableEditorPage() {
                         {row.getVisibleCells().map((cell) => (
                           <TableCellUI
                             key={cell.id}
-                            className="p-0 border-r border-border"
+                            className="p-0 border-r border-border max-w-[400px] "
                           >
                             {flexRender(
                               cell.column.columnDef.cell,
@@ -173,7 +194,7 @@ function TableEditorPage() {
                             )}
                           </TableCellUI>
                         ))}
-                        <TableCellUI className="w-12" />
+                        <TableCellUI className="w-12 sticky right-0 z-10  border-l border-red-400" />
                       </TableRow>
                     ))
                   )}
@@ -184,14 +205,32 @@ function TableEditorPage() {
         )}
 
         {/* Add Row Button and Stats */}
-        <div className="mt-2 flex items-center gap-4">
-          {columns.length > 0 && (
+        {columns.length > 0 && (
+          <div className="mt-2 flex items-center justify-between gap-4">
             <Button onClick={addRow} variant="ghost" size="sm">
               <Plus className="mr-2 h-4 w-4" />
               Add Row
             </Button>
-          )}
-        </div>
+            <Button
+              onClick={handleComputeAllCells}
+              variant="default"
+              size="sm"
+              disabled={isComputing}
+            >
+              {isComputing ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                  Computing...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Compute All AI Cells
+                </>
+              )}
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   )

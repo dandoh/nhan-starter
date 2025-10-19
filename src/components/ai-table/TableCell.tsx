@@ -2,7 +2,6 @@ import { memo, useCallback, useState, useEffect, useRef } from 'react'
 import { useLiveQuery, eq, and } from '@tanstack/react-db'
 import { Input } from '@/components/ui/input'
 import type { TableCollections } from '@/lib/ai-table/collections'
-import { TableCell as TableCellUI } from '@/components/ui/table'
 
 type TableCellProps = {
   recordId: string
@@ -26,6 +25,14 @@ export const TableCell = memo(function TableCell({
       .where(({ cell }) =>
         and(eq(cell.recordId, recordId), eq(cell.columnId, columnId)),
       )
+      .findOne(),
+  )
+
+  // Query the column to check if it's an AI column
+  const { data: column } = useLiveQuery((q) =>
+    q
+      .from({ column: collections.columns })
+      .where(({ column }) => eq(column.id, columnId))
       .findOne(),
   )
 
@@ -100,7 +107,19 @@ export const TableCell = memo(function TableCell({
     )
   }
 
-  // Editable input
+  // Check if this is an AI column (non-editable)
+  const isAiColumn = column?.type === 'ai'
+
+  // AI columns are read-only - display value without input
+  if (isAiColumn) {
+    return (
+      <div className="px-3 py-2 text-sm overflow-scroll scrollbar-none">
+        {localValue}
+      </div>
+    )
+  }
+
+  // Manual columns are editable
   return (
     <Input
       ref={inputRef}

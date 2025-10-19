@@ -11,7 +11,6 @@ function getDatabaseUrl() {
   const database = process.env.POSTGRES_DB || 'nhan_starter_dev'
 
   const result = `postgresql://${user}:${password}@${host}:${port}/${database}`
-  console.log('Database URL:', result)
   return result
 }
 

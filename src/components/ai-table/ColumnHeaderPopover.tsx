@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronDown, Pencil, Sparkles } from 'lucide-react'
+import { ChevronDown, Pencil, Sparkles, Trash2 } from 'lucide-react'
 import {
   Popover,
   PopoverContent,
@@ -16,6 +16,7 @@ import {
 import { useLiveQuery, eq } from '@tanstack/react-db'
 import type { TableCollections, Column } from '@/lib/ai-table/collections'
 import { useAppForm } from '@/hooks/use-app-form'
+import { toast } from 'sonner'
 
 type ColumnHeaderPopoverProps = {
   column: Column
@@ -35,26 +36,29 @@ export function ColumnHeaderPopover({
       .where(({ col }) => eq(col.type, 'manual')),
   )
 
+  // Get all columns to check if this is the last one
+  const { data: allColumns = [] } = useLiveQuery((q) =>
+    q.from({ col: collections.columns }),
+  )
+
   const isLastManualColumn =
     column.type === 'manual' && manualColumns.length <= 1
+  const isLastColumn = allColumns.length <= 1
 
   const form = useAppForm({
     defaultValues: {
       name: column.name,
       type: (column.type || 'ai') as 'manual' | 'ai',
-      description: (column.config as any)?.description || '',
-      aiPrompt: (column.config as any)?.aiPrompt || '',
+      description: column.description || '',
+      aiPrompt: (column.config as { aiPrompt?: string })?.aiPrompt || '',
     },
     onSubmit: async ({ value }) => {
       console.log('value', value)
       collections.columns.update(column.id, (draft) => {
         draft.name = value.name
         draft.type = value.type
+        draft.description = value.description
         draft.config = {
-          ...(typeof draft.config === 'object' && draft.config !== null
-            ? draft.config
-            : {}),
-          description: value.description,
           aiPrompt: value.aiPrompt,
         }
       })
@@ -65,6 +69,22 @@ export function ColumnHeaderPopover({
   const handleCancel = () => {
     form.reset()
     setIsOpen(false)
+  }
+
+  const handleDelete = () => {
+    if (isLastColumn) {
+      toast.error('Cannot delete the last column')
+      return
+    }
+
+    if (isLastManualColumn) {
+      toast.error('Cannot delete the last manual column')
+      return
+    }
+
+    collections.columns.delete(column.id)
+    setIsOpen(false)
+    toast.success('Column deleted')
   }
 
   return (
@@ -172,20 +192,31 @@ export function ColumnHeaderPopover({
             </form.Subscribe>
 
             {/* Action Buttons */}
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" size="sm" onClick={handleCancel}>
-                Cancel
+            <div className="flex items-center justify-between gap-2">
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleDelete}
+                disabled={isLastColumn || isLastManualColumn}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
               </Button>
-              <form.AppForm>
-                <form.SubscribeButton
-                  label="Save"
-                  size="sm"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    form.handleSubmit()
-                  }}
-                />
-              </form.AppForm>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleCancel}>
+                  Cancel
+                </Button>
+                <form.AppForm>
+                  <form.SubscribeButton
+                    label="Save"
+                    size="sm"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      form.handleSubmit()
+                    }}
+                  />
+                </form.AppForm>
+              </div>
             </div>
           </div>
         </PopoverContent>

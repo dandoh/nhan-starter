@@ -118,7 +118,8 @@ export const aiTableColumns = pgTable('ai_table_columns', {
     .references(() => aiTables.id, { onDelete: 'cascade' }),
   name: varchar('name', { length: 255 }).notNull(),
   type: text('type', { enum: ['manual', 'ai'] }).notNull().default('ai'),
-  config: jsonb('config'),
+  description: text('description').default(''),
+  config: jsonb('config').$type<{ aiPrompt?: string }>(),
   position: integer('position').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
@@ -174,7 +175,6 @@ export const aiTableCells = pgTable(
       .default('idle'),
     computeError: text('compute_error'),
     computeJobId: text('compute_job_id'), // Inngest run ID for tracking
-    version: integer('version').notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

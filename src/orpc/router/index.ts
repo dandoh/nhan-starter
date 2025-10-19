@@ -31,5 +31,8 @@ export default {
     getCells: aiTables.getCells,
     updateCell: aiTables.updateCell,
     getUpdates: aiTables.getTableUpdates,
+    
+    // AI computation
+    triggerComputeAllCells: aiTables.triggerComputeAllCells,
   },
 }
