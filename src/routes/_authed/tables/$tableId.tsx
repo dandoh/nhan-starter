@@ -26,6 +26,7 @@ export const Route = createFileRoute('/_authed/tables/$tableId')({
   ssr: false,
   component: TableEditorPage,
 })
+const columnHelper = createColumnHelper<TableRecord>()
 
 function TableEditorPage() {
   const { tableId } = Route.useParams()
@@ -60,8 +61,6 @@ function TableEditorPage() {
   const tableData = useMemo(() => records, [records])
 
   const columnDefs = useMemo<ColumnDef<TableRecord>[]>(() => {
-    const columnHelper = createColumnHelper<TableRecord>()
-
     return columns.map((col) =>
       columnHelper.display({
         id: col.id,
@@ -70,7 +69,7 @@ function TableEditorPage() {
             <span>{col.name}</span>
           </div>
         ),
-        cell: ({ row }) => (
+        cell: ({ row, column }) => (
           <TableCell
             recordId={row.original.id}
             columnId={col.id}

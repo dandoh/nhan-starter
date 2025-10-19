@@ -150,7 +150,6 @@ export function createTableCollections(tableId: string) {
       queryClient,
       queryKey: ['ai-tables', tableId, 'records'],
       queryFn: async ({ queryKey }) => {
-        console.log('queryKey', queryKey)
         const records = await client.aiTables.getRecords({ tableId })
         return records as Record[]
       },

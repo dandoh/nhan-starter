@@ -2,6 +2,7 @@ import { memo, useCallback, useState, useEffect, useRef } from 'react'
 import { useLiveQuery, eq, and } from '@tanstack/react-db'
 import { Input } from '@/components/ui/input'
 import type { TableCollections } from '@/lib/ai-table/collections'
+import { TableCell as TableCellUI } from '@/components/ui/table'
 
 type TableCellProps = {
   recordId: string
