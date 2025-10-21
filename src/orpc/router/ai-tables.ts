@@ -10,6 +10,11 @@ import {
 } from '@/db/schema'
 import { eq, and, gt, sql, inArray } from 'drizzle-orm'
 import { inngest } from '@/inngest/client'
+import {
+  optionSchema,
+  validateConfig,
+  type OutputType,
+} from '@/lib/ai-table/output-types'
 
 // ============================================================================
 // Table Management
@@ -189,9 +194,13 @@ export const createColumn = os
       name: z.string().min(1).max(255),
       type: z.enum(['manual', 'ai']).default('ai'),
       description: z.string().optional(),
+      outputType: z.enum(['text', 'long_text', 'single_select', 'multi_select', 'date']).default('text'),
       config: z
         .object({
           aiPrompt: z.string().optional(),
+          options: z.array(optionSchema).optional(),
+          maxSelections: z.number().int().positive().optional(),
+          dateFormat: z.string().optional(),
         })
         .optional(),
     }),
@@ -211,6 +220,16 @@ export const createColumn = os
       })
     }
 
+    // Validate config matches outputType
+    if (input.config) {
+      const validation = validateConfig(input.outputType as OutputType, input.config)
+      if (!validation.success) {
+        throw new ORPCError('BAD_REQUEST', {
+          message: validation.error || 'Invalid configuration for output type',
+        })
+      }
+    }
+
     const result = await db.transaction(async (tx) => {
       // Get current max position
       const maxPosition = await tx
@@ -227,6 +246,7 @@ export const createColumn = os
           name: input.name,
           type: input.type,
           description: input.description,
+          outputType: input.outputType,
           config: input.config ?? null,
           position: maxPosition + 1,
         })
@@ -274,9 +294,13 @@ export const updateColumn = os
       name: z.string().min(1).max(255).optional(),
       type: z.enum(['manual', 'ai']).optional(),
       description: z.string().optional(),
+      outputType: z.enum(['text', 'long_text', 'single_select', 'multi_select', 'date']).optional(),
       config: z
         .object({
           aiPrompt: z.string().optional(),
+          options: z.array(optionSchema).optional(),
+          maxSelections: z.number().int().positive().optional(),
+          dateFormat: z.string().optional(),
         })
         .optional(),
     }),
@@ -316,12 +340,24 @@ export const updateColumn = os
       }
     }
 
+    // Validate config matches outputType
+    const finalOutputType = input.outputType || column.outputType
+    if (input.config) {
+      const validation = validateConfig(finalOutputType as OutputType, input.config)
+      if (!validation.success) {
+        throw new ORPCError('BAD_REQUEST', {
+          message: validation.error || 'Invalid configuration for output type',
+        })
+      }
+    }
+
     const [updated] = await db
       .update(aiTableColumns)
       .set({
         ...(input.name && { name: input.name }),
         ...(input.type && { type: input.type }),
         ...(input.description !== undefined && { description: input.description }),
+        ...(input.outputType && { outputType: input.outputType }),
         ...(input.config !== undefined && { config: input.config }),
       })
       .where(eq(aiTableColumns.id, input.columnId))

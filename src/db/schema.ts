@@ -119,7 +119,15 @@ export const aiTableColumns = pgTable('ai_table_columns', {
   name: varchar('name', { length: 255 }).notNull(),
   type: text('type', { enum: ['manual', 'ai'] }).notNull().default('ai'),
   description: text('description').default(''),
-  config: jsonb('config').$type<{ aiPrompt?: string }>(),
+  outputType: text('output_type', { 
+    enum: ['text', 'long_text', 'single_select', 'multi_select', 'date'] 
+  }).notNull().default('text'),
+  config: jsonb('config').$type<{
+    aiPrompt?: string
+    options?: Array<{ value: string; color?: string }>
+    maxSelections?: number
+    dateFormat?: string
+  }>(),
   position: integer('position').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()

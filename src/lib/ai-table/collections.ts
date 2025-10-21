@@ -9,6 +9,7 @@ import type {
   AiTableRecord,
   AiTableCell,
 } from '@/db/schema'
+import type { OutputTypeConfig } from '@/lib/ai-table/output-types'
 
 // Create a single query client instance for collections with no refetching
 
@@ -30,7 +31,7 @@ export const tablesCollection = createCollection(
       const tables = await client.aiTables.list()
       return tables
     },
-      getKey: (table) => table.id,
+    getKey: (table) => table.id,
     onInsert: async ({ transaction }) => {
       const { modified: newTable } = transaction.mutations[0]
       await client.aiTables.create({
@@ -102,12 +103,14 @@ export function createTableCollections(tableId: string) {
       onInsert: async ({ transaction }) => {
         for (const mutation of transaction.mutations) {
           const { modified: newColumn } = mutation
+          const config = newColumn.config as OutputTypeConfig | undefined
           const { cells } = await client.aiTables.createColumn({
             tableId,
             name: newColumn.name,
             type: newColumn.type,
             description: newColumn.description || undefined,
-            config: newColumn.config as { aiPrompt?: string } | undefined,
+            outputType: newColumn.outputType,
+            config,
           })
 
           // Insert created cells into cells collection
@@ -127,12 +130,14 @@ export function createTableCollections(tableId: string) {
       onUpdate: async ({ transaction }) => {
         for (const mutation of transaction.mutations) {
           const { original, modified } = mutation
+          const config = modified.config as OutputTypeConfig | undefined
           await client.aiTables.updateColumn({
             columnId: original.id,
             name: modified.name,
             type: modified.type,
             description: modified.description || undefined,
-            config: modified.config as { aiPrompt?: string } | undefined,
+            outputType: modified.outputType,
+            config,
           })
         }
       },
