@@ -3,7 +3,9 @@ import { db } from '@/db'
 import { aiTableCells, aiTableColumns } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { anthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
+import { generateObject } from 'ai'
+import type { OutputType } from '@/lib/ai-table/output-types'
+import { getOutputTypeDefinition } from '@/lib/ai-table/output-type-registry'
 
 /**
  * Compute a single AI cell value using Claude
@@ -55,8 +57,8 @@ export const computeAiCell = inngest.createFunction(
       throw new Error(`Cell ${cellId} is not an AI column`)
     }
 
-    const aiPrompt = (cell.column.config as { aiPrompt?: string })?.aiPrompt
-    if (!aiPrompt) {
+    const aiPrompt = cell.column.aiPrompt
+    if (!aiPrompt || aiPrompt.trim() === '') {
       throw new Error('AI column has no prompt configured')
     }
 
@@ -88,11 +90,26 @@ export const computeAiCell = inngest.createFunction(
       }
     }
 
-    // Build prompt
-    let contextString = `Column: ${cell.column.name}\nPrompt: ${aiPrompt}\n\nRow data:\n`
-    for (const [key, value] of Object.entries(rowContext)) {
-      contextString += `${key}: ${value}\n`
+    // Build context string for prompt
+    let contextString = `Column: ${cell.column.name}\n\n`
+
+    // Add row context
+    if (Object.keys(rowContext).length > 0) {
+      contextString += 'Row data:\n'
+      for (const [key, value] of Object.entries(rowContext)) {
+        contextString += `- ${key}: ${value}\n`
+      }
+      contextString += '\n'
     }
+
+    // Add the AI prompt
+    contextString += `Task: ${aiPrompt}`
+
+    // Get output type definition from registry
+    const outputType = cell.column.outputType as OutputType
+    const outputTypeConfig = cell.column.outputTypeConfig
+    const outputTypeDef = getOutputTypeDefinition(outputType)
+    const responseSchema = outputTypeDef.createAISchema(outputTypeConfig)
 
     // Step 1: Set status to computing
     await step.run('set-computing-status', async () => {
@@ -105,13 +122,24 @@ export const computeAiCell = inngest.createFunction(
         .where(eq(aiTableCells.id, cellId))
     })
 
-    // Step 2: Generate AI value (expensive operation)
+    // Step 2: Generate AI value with structured output (expensive operation)
     const aiResult = await step.run('generate-ai-value', async () => {
-      const response = await generateText({
-        model: anthropic('claude-3-5-sonnet-20241022'),
-        prompt: contextString,
-      })
-      return response.text.trim()
+      try {
+        const response = await generateObject({
+          model: anthropic('claude-3-5-sonnet-20241022'),
+          schema: responseSchema,
+          prompt: contextString,
+        })
+
+        // Serialize the response for storage using registry
+        const formattedValue = outputTypeDef.serialize(response.object)
+        return formattedValue
+      } catch (error: any) {
+        // If AI fails to follow schema, throw descriptive error
+        throw new Error(
+          `AI failed to generate valid ${outputType}: ${error.message}`,
+        )
+      }
     })
 
     // Step 3: Update cell with success

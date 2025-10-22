@@ -2,6 +2,8 @@ import { memo, useCallback, useState, useEffect, useRef } from 'react'
 import { useLiveQuery, eq, and } from '@tanstack/react-db'
 import { Input } from '@/components/ui/input'
 import type { TableCollections } from '@/lib/ai-table/collections'
+import type { OutputType } from '@/lib/ai-table/output-types'
+import { getOutputTypeDefinition } from '@/lib/ai-table/output-type-registry'
 
 type TableCellProps = {
   recordId: string
@@ -109,14 +111,18 @@ export const TableCell = memo(function TableCell({
 
   // Check if this is an AI column (non-editable)
   const isAiColumn = column?.type === 'ai'
+  const outputType = (column?.outputType || 'text') as OutputType
+  const outputTypeConfig = column?.outputTypeConfig
 
-  // AI columns are read-only - display value without input
+  // AI columns are read-only - display value with type-specific rendering
   if (isAiColumn) {
-    return (
-      <div className="px-3 py-2 text-sm overflow-scroll scrollbar-none">
-        {localValue}
-      </div>
-    )
+    // Use registry to render the cell
+    const outputTypeDef = getOutputTypeDefinition(outputType)
+    const displayValue = outputTypeDef.deserialize(localValue)
+    return outputTypeDef.renderCell({
+      value: displayValue,
+      config: outputTypeConfig,
+    })
   }
 
   // Manual columns are editable

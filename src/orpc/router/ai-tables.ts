@@ -10,6 +10,11 @@ import {
 } from '@/db/schema'
 import { eq, and, gt, sql, inArray } from 'drizzle-orm'
 import { inngest } from '@/inngest/client'
+import {
+  optionSchema,
+  type OutputType,
+} from '@/lib/ai-table/output-types'
+import { validateOutputTypeConfig } from '@/lib/ai-table/output-type-registry'
 
 // ============================================================================
 // Table Management
@@ -59,7 +64,8 @@ export const createTable = os
         tableId: newTable.id,
         type: 'manual',
         position: 0,
-        config: null,
+        aiPrompt: '',
+        outputTypeConfig: null,
       })
 
       return newTable
@@ -189,9 +195,13 @@ export const createColumn = os
       name: z.string().min(1).max(255),
       type: z.enum(['manual', 'ai']).default('ai'),
       description: z.string().optional(),
-      config: z
+      outputType: z.enum(['text', 'long_text', 'single_select', 'multi_select', 'date']).default('text'),
+      aiPrompt: z.string().default(''),
+      outputTypeConfig: z
         .object({
-          aiPrompt: z.string().optional(),
+          options: z.array(optionSchema).optional(),
+          maxSelections: z.number().int().positive().optional(),
+          dateFormat: z.string().optional(),
         })
         .optional(),
     }),
@@ -211,6 +221,16 @@ export const createColumn = os
       })
     }
 
+    // Validate outputTypeConfig matches outputType
+    if (input.outputTypeConfig) {
+      const validation = validateOutputTypeConfig(input.outputType as OutputType, input.outputTypeConfig)
+      if (!validation.success) {
+        throw new ORPCError('BAD_REQUEST', {
+          message: validation.error || 'Invalid configuration for output type',
+        })
+      }
+    }
+
     const result = await db.transaction(async (tx) => {
       // Get current max position
       const maxPosition = await tx
@@ -227,7 +247,9 @@ export const createColumn = os
           name: input.name,
           type: input.type,
           description: input.description,
-          config: input.config ?? null,
+          outputType: input.outputType,
+          aiPrompt: input.aiPrompt,
+          outputTypeConfig: input.outputTypeConfig ?? null,
           position: maxPosition + 1,
         })
         .returning()
@@ -274,11 +296,15 @@ export const updateColumn = os
       name: z.string().min(1).max(255).optional(),
       type: z.enum(['manual', 'ai']).optional(),
       description: z.string().optional(),
-      config: z
+      outputType: z.enum(['text', 'long_text', 'single_select', 'multi_select', 'date']).optional(),
+      aiPrompt: z.string().optional(),
+      outputTypeConfig: z
         .object({
-          aiPrompt: z.string().optional(),
+          options: z.array(optionSchema).optional(),
+          maxSelections: z.number().int().positive().optional(),
+          dateFormat: z.string().optional(),
         })
-        .optional(),
+        .optional().nullable(),
     }),
   )
   .handler(async ({ input, context }) => {
@@ -316,13 +342,26 @@ export const updateColumn = os
       }
     }
 
+    // Validate outputTypeConfig matches outputType
+    const finalOutputType = input.outputType || column.outputType
+    if (input.outputTypeConfig) {
+      const validation = validateOutputTypeConfig(finalOutputType as OutputType, input.outputTypeConfig)
+      if (!validation.success) {
+        throw new ORPCError('BAD_REQUEST', {
+          message: validation.error || 'Invalid configuration for output type',
+        })
+      }
+    }
+
     const [updated] = await db
       .update(aiTableColumns)
       .set({
         ...(input.name && { name: input.name }),
         ...(input.type && { type: input.type }),
         ...(input.description !== undefined && { description: input.description }),
-        ...(input.config !== undefined && { config: input.config }),
+        ...(input.outputType && { outputType: input.outputType }),
+        ...(input.aiPrompt !== undefined && { aiPrompt: input.aiPrompt }),
+        ...(input.outputTypeConfig !== undefined && { outputTypeConfig: input.outputTypeConfig }),
       })
       .where(eq(aiTableColumns.id, input.columnId))
       .returning()
