@@ -18,6 +18,7 @@ import type { TableCollections, Column } from '@/lib/ai-table/collections'
 import { useAppForm } from '@/hooks/use-app-form'
 import { toast } from 'sonner'
 import type { OutputType, OutputTypeConfig } from '@/lib/ai-table/output-types'
+import { getAllOutputTypes } from '@/lib/ai-table/output-type-registry'
 
 type ColumnHeaderPopoverProps = {
   column: Column
@@ -282,26 +283,7 @@ export function ColumnHeaderPopover({
                         <field.Select
                           label=""
                           placeholder="Select output type"
-                          values={[
-                            {
-                              value: 'text',
-                              label: '📝 Text - Brief single-line text',
-                            },
-                            {
-                              value: 'long_text',
-                              label: '📄 Long Text - Multi-paragraph text',
-                            },
-                            {
-                              value: 'single_select',
-                              label:
-                                '🏷️ Single Select - One choice from options',
-                            },
-                            {
-                              value: 'multi_select',
-                              label: '🏷️ Multi Select - Multiple choices',
-                            },
-                            { value: 'date', label: '📅 Date - Date values' },
-                          ]}
+                          values={getAllOutputTypes()}
                         />
                       </div>
                     )}

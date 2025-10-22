@@ -1,15 +1,9 @@
 import { memo, useCallback, useState, useEffect, useRef } from 'react'
 import { useLiveQuery, eq, and } from '@tanstack/react-db'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Calendar } from 'lucide-react'
 import type { TableCollections } from '@/lib/ai-table/collections'
 import type { OutputType } from '@/lib/ai-table/output-types'
-import {
-  getDisplayValue,
-  parseMultiSelectValue,
-  getBadgeColors,
-} from '@/lib/ai-table/formatters'
+import { getOutputTypeDefinition } from '@/lib/ai-table/output-type-registry'
 
 type TableCellProps = {
   recordId: string
@@ -122,91 +116,13 @@ export const TableCell = memo(function TableCell({
 
   // AI columns are read-only - display value with type-specific rendering
   if (isAiColumn) {
-    // Single select - display as badge
-    if (outputType === 'single_select') {
-      if (!localValue) {
-        return <div className="px-3 py-2 text-sm text-muted-foreground">-</div>
-      }
-      
-      const colors = getBadgeColors(localValue)
-      return (
-        <div className="px-3 py-2">
-          <Badge
-            style={{
-              backgroundColor: colors.backgroundColor,
-              color: colors.textColor,
-              borderColor: colors.borderColor,
-            }}
-          >
-            {localValue}
-          </Badge>
-        </div>
-      )
-    }
-
-    // Multi select - display as multiple badges
-    if (outputType === 'multi_select') {
-      const values = parseMultiSelectValue(localValue)
-      
-      if (values.length === 0) {
-        return <div className="px-3 py-2 text-sm text-muted-foreground">-</div>
-      }
-      
-      return (
-        <div className="flex flex-wrap gap-1 px-3 py-2">
-          {values.map((value, index) => {
-            const colors = getBadgeColors(value)
-            return (
-              <Badge
-                key={index}
-                style={{
-                  backgroundColor: colors.backgroundColor,
-                  color: colors.textColor,
-                  borderColor: colors.borderColor,
-                }}
-              >
-                {value}
-              </Badge>
-            )
-          })}
-        </div>
-      )
-    }
-
-    // Date - display with calendar icon
-    if (outputType === 'date') {
-      if (!localValue) {
-        return <div className="px-3 py-2 text-sm text-muted-foreground">-</div>
-      }
-      
-      const displayValue = getDisplayValue(localValue, outputType, outputTypeConfig)
-      return (
-        <div className="flex items-center gap-2 px-3 py-2 text-sm">
-          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-          <span>{displayValue}</span>
-        </div>
-      )
-    }
-
-    // Long text - display with scroll
-    if (outputType === 'long_text') {
-      if (!localValue) {
-        return <div className="px-3 py-2 text-sm text-muted-foreground"></div>
-      }
-      
-      return (
-        <div className="px-3 py-2 text-sm max-h-32 overflow-y-auto whitespace-pre-wrap scrollbar scrollbar-track-background scrollbar-thumb-primary-300 ">
-          {localValue}
-        </div>
-      )
-    }
-
-    // Text (default) - single line
-    return (
-      <div className="px-3 py-2 text-sm overflow-hidden text-ellipsis">
-        {localValue || <span className="text-muted-foreground"></span>}
-      </div>
-    )
+    // Use registry to render the cell
+    const outputTypeDef = getOutputTypeDefinition(outputType)
+    const displayValue = outputTypeDef.deserialize(localValue)
+    return outputTypeDef.renderCell({
+      value: displayValue,
+      config: outputTypeConfig,
+    })
   }
 
   // Manual columns are editable

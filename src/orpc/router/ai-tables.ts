@@ -12,9 +12,9 @@ import { eq, and, gt, sql, inArray } from 'drizzle-orm'
 import { inngest } from '@/inngest/client'
 import {
   optionSchema,
-  validateConfig,
   type OutputType,
 } from '@/lib/ai-table/output-types'
+import { validateOutputTypeConfig } from '@/lib/ai-table/output-type-registry'
 
 // ============================================================================
 // Table Management
@@ -223,7 +223,7 @@ export const createColumn = os
 
     // Validate outputTypeConfig matches outputType
     if (input.outputTypeConfig) {
-      const validation = validateConfig(input.outputType as OutputType, input.outputTypeConfig)
+      const validation = validateOutputTypeConfig(input.outputType as OutputType, input.outputTypeConfig)
       if (!validation.success) {
         throw new ORPCError('BAD_REQUEST', {
           message: validation.error || 'Invalid configuration for output type',
@@ -345,7 +345,7 @@ export const updateColumn = os
     // Validate outputTypeConfig matches outputType
     const finalOutputType = input.outputType || column.outputType
     if (input.outputTypeConfig) {
-      const validation = validateConfig(finalOutputType as OutputType, input.outputTypeConfig)
+      const validation = validateOutputTypeConfig(finalOutputType as OutputType, input.outputTypeConfig)
       if (!validation.success) {
         throw new ORPCError('BAD_REQUEST', {
           message: validation.error || 'Invalid configuration for output type',

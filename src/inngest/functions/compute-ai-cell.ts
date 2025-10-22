@@ -4,138 +4,8 @@ import { aiTableCells, aiTableColumns } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { anthropic } from '@ai-sdk/anthropic'
 import { generateObject } from 'ai'
-import { z } from 'zod'
 import type { OutputType } from '@/lib/ai-table/output-types'
-
-/**
- * Generate a Zod schema based on the output type and config
- */
-function generateResponseSchema(
-  outputType: OutputType,
-  config: any,
-): z.ZodObject<any> {
-  switch (outputType) {
-    case 'text':
-      return z.object({
-        value: z.string().describe('A brief single-line text response'),
-      })
-
-    case 'long_text':
-      return z.object({
-        value: z
-          .string()
-          .describe('A detailed multi-paragraph text response'),
-      })
-
-    case 'single_select': {
-      const options = config?.options as Array<{ value: string }> | undefined
-      if (options && options.length > 0) {
-        // With predefined options: validate against enum
-        const enumValues = options.map((opt) => opt.value) as [
-          string,
-          ...string[],
-        ]
-        return z.object({
-          value: z
-            .enum(enumValues)
-            .describe(
-              `Choose exactly ONE from these options: ${enumValues.join(', ')}`,
-            ),
-        })
-      } else {
-        // Free-form: any string value
-        return z.object({
-          value: z
-            .string()
-            .describe('A single appropriate value based on the context'),
-        })
-      }
-    }
-
-    case 'multi_select': {
-      const options = config?.options as Array<{ value: string }> | undefined
-      const maxSelections = config?.maxSelections as number | undefined
-
-      if (options && options.length > 0) {
-        // With predefined options: validate against enum array
-        const enumValues = options.map((opt) => opt.value) as [
-          string,
-          ...string[],
-        ]
-        let arraySchema = z.array(z.enum(enumValues))
-
-        if (maxSelections && maxSelections > 0) {
-          arraySchema = arraySchema
-            .max(maxSelections)
-            .describe(
-              `Choose up to ${maxSelections} values from: ${enumValues.join(', ')}`,
-            )
-        } else {
-          arraySchema = arraySchema.describe(
-            `Choose multiple values from: ${enumValues.join(', ')}`,
-          )
-        }
-
-        return z.object({
-          values: arraySchema,
-        })
-      } else {
-        // Free-form: array of strings
-        let arraySchema = z.array(z.string())
-
-        if (maxSelections && maxSelections > 0) {
-          arraySchema = arraySchema
-            .max(maxSelections)
-            .describe(
-              `Return up to ${maxSelections} appropriate values based on the context`,
-            )
-        } else {
-          arraySchema = arraySchema.describe(
-            'Return multiple appropriate values based on the context',
-          )
-        }
-
-        return z.object({
-          values: arraySchema,
-        })
-      }
-    }
-
-    case 'date': {
-      const dateFormat = (config?.dateFormat as string) || 'YYYY-MM-DD'
-      return z.object({
-        value: z
-          .string()
-          .describe(
-            `A date in ${dateFormat} format. Analyze the context and return an appropriate date.`,
-          ),
-      })
-    }
-
-    default:
-      // Fallback to text
-      return z.object({
-        value: z.string().describe('A text response'),
-      })
-  }
-}
-
-/**
- * Format the AI response based on output type for storage
- */
-function formatResponseValue(
-  outputType: OutputType,
-  responseObject: any,
-): string {
-  if (outputType === 'multi_select') {
-    // Store array as JSON string
-    const values = responseObject.values || []
-    return JSON.stringify(values)
-  } else {
-    // All other types store the value directly
-    return responseObject.value || ''
-  }
-}
+import { getOutputTypeDefinition } from '@/lib/ai-table/output-type-registry'
 
 /**
  * Compute a single AI cell value using Claude
@@ -235,10 +105,11 @@ export const computeAiCell = inngest.createFunction(
     // Add the AI prompt
     contextString += `Task: ${aiPrompt}`
 
-    // Generate response schema based on output type
+    // Get output type definition from registry
     const outputType = cell.column.outputType as OutputType
     const outputTypeConfig = cell.column.outputTypeConfig
-    const responseSchema = generateResponseSchema(outputType, outputTypeConfig)
+    const outputTypeDef = getOutputTypeDefinition(outputType)
+    const responseSchema = outputTypeDef.createAISchema(outputTypeConfig)
 
     // Step 1: Set status to computing
     await step.run('set-computing-status', async () => {
@@ -260,8 +131,8 @@ export const computeAiCell = inngest.createFunction(
           prompt: contextString,
         })
 
-        // Format the response for storage
-        const formattedValue = formatResponseValue(outputType, response.object)
+        // Serialize the response for storage using registry
+        const formattedValue = outputTypeDef.serialize(response.object)
         return formattedValue
       } catch (error: any) {
         // If AI fails to follow schema, throw descriptive error
