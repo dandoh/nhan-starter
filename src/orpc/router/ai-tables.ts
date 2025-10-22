@@ -64,7 +64,8 @@ export const createTable = os
         tableId: newTable.id,
         type: 'manual',
         position: 0,
-        config: null,
+        aiPrompt: '',
+        outputTypeConfig: null,
       })
 
       return newTable
@@ -195,9 +196,9 @@ export const createColumn = os
       type: z.enum(['manual', 'ai']).default('ai'),
       description: z.string().optional(),
       outputType: z.enum(['text', 'long_text', 'single_select', 'multi_select', 'date']).default('text'),
-      config: z
+      aiPrompt: z.string().default(''),
+      outputTypeConfig: z
         .object({
-          aiPrompt: z.string().optional(),
           options: z.array(optionSchema).optional(),
           maxSelections: z.number().int().positive().optional(),
           dateFormat: z.string().optional(),
@@ -220,9 +221,9 @@ export const createColumn = os
       })
     }
 
-    // Validate config matches outputType
-    if (input.config) {
-      const validation = validateConfig(input.outputType as OutputType, input.config)
+    // Validate outputTypeConfig matches outputType
+    if (input.outputTypeConfig) {
+      const validation = validateConfig(input.outputType as OutputType, input.outputTypeConfig)
       if (!validation.success) {
         throw new ORPCError('BAD_REQUEST', {
           message: validation.error || 'Invalid configuration for output type',
@@ -247,7 +248,8 @@ export const createColumn = os
           type: input.type,
           description: input.description,
           outputType: input.outputType,
-          config: input.config ?? null,
+          aiPrompt: input.aiPrompt,
+          outputTypeConfig: input.outputTypeConfig ?? null,
           position: maxPosition + 1,
         })
         .returning()
@@ -295,14 +297,14 @@ export const updateColumn = os
       type: z.enum(['manual', 'ai']).optional(),
       description: z.string().optional(),
       outputType: z.enum(['text', 'long_text', 'single_select', 'multi_select', 'date']).optional(),
-      config: z
+      aiPrompt: z.string().optional(),
+      outputTypeConfig: z
         .object({
-          aiPrompt: z.string().optional(),
           options: z.array(optionSchema).optional(),
           maxSelections: z.number().int().positive().optional(),
           dateFormat: z.string().optional(),
         })
-        .optional(),
+        .optional().nullable(),
     }),
   )
   .handler(async ({ input, context }) => {
@@ -340,10 +342,10 @@ export const updateColumn = os
       }
     }
 
-    // Validate config matches outputType
+    // Validate outputTypeConfig matches outputType
     const finalOutputType = input.outputType || column.outputType
-    if (input.config) {
-      const validation = validateConfig(finalOutputType as OutputType, input.config)
+    if (input.outputTypeConfig) {
+      const validation = validateConfig(finalOutputType as OutputType, input.outputTypeConfig)
       if (!validation.success) {
         throw new ORPCError('BAD_REQUEST', {
           message: validation.error || 'Invalid configuration for output type',
@@ -358,7 +360,8 @@ export const updateColumn = os
         ...(input.type && { type: input.type }),
         ...(input.description !== undefined && { description: input.description }),
         ...(input.outputType && { outputType: input.outputType }),
-        ...(input.config !== undefined && { config: input.config }),
+        ...(input.aiPrompt !== undefined && { aiPrompt: input.aiPrompt }),
+        ...(input.outputTypeConfig !== undefined && { outputTypeConfig: input.outputTypeConfig }),
       })
       .where(eq(aiTableColumns.id, input.columnId))
       .returning()

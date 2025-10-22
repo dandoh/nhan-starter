@@ -3,7 +3,139 @@ import { db } from '@/db'
 import { aiTableCells, aiTableColumns } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { anthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
+import { generateObject } from 'ai'
+import { z } from 'zod'
+import type { OutputType } from '@/lib/ai-table/output-types'
+
+/**
+ * Generate a Zod schema based on the output type and config
+ */
+function generateResponseSchema(
+  outputType: OutputType,
+  config: any,
+): z.ZodObject<any> {
+  switch (outputType) {
+    case 'text':
+      return z.object({
+        value: z.string().describe('A brief single-line text response'),
+      })
+
+    case 'long_text':
+      return z.object({
+        value: z
+          .string()
+          .describe('A detailed multi-paragraph text response'),
+      })
+
+    case 'single_select': {
+      const options = config?.options as Array<{ value: string }> | undefined
+      if (options && options.length > 0) {
+        // With predefined options: validate against enum
+        const enumValues = options.map((opt) => opt.value) as [
+          string,
+          ...string[],
+        ]
+        return z.object({
+          value: z
+            .enum(enumValues)
+            .describe(
+              `Choose exactly ONE from these options: ${enumValues.join(', ')}`,
+            ),
+        })
+      } else {
+        // Free-form: any string value
+        return z.object({
+          value: z
+            .string()
+            .describe('A single appropriate value based on the context'),
+        })
+      }
+    }
+
+    case 'multi_select': {
+      const options = config?.options as Array<{ value: string }> | undefined
+      const maxSelections = config?.maxSelections as number | undefined
+
+      if (options && options.length > 0) {
+        // With predefined options: validate against enum array
+        const enumValues = options.map((opt) => opt.value) as [
+          string,
+          ...string[],
+        ]
+        let arraySchema = z.array(z.enum(enumValues))
+
+        if (maxSelections && maxSelections > 0) {
+          arraySchema = arraySchema
+            .max(maxSelections)
+            .describe(
+              `Choose up to ${maxSelections} values from: ${enumValues.join(', ')}`,
+            )
+        } else {
+          arraySchema = arraySchema.describe(
+            `Choose multiple values from: ${enumValues.join(', ')}`,
+          )
+        }
+
+        return z.object({
+          values: arraySchema,
+        })
+      } else {
+        // Free-form: array of strings
+        let arraySchema = z.array(z.string())
+
+        if (maxSelections && maxSelections > 0) {
+          arraySchema = arraySchema
+            .max(maxSelections)
+            .describe(
+              `Return up to ${maxSelections} appropriate values based on the context`,
+            )
+        } else {
+          arraySchema = arraySchema.describe(
+            'Return multiple appropriate values based on the context',
+          )
+        }
+
+        return z.object({
+          values: arraySchema,
+        })
+      }
+    }
+
+    case 'date': {
+      const dateFormat = (config?.dateFormat as string) || 'YYYY-MM-DD'
+      return z.object({
+        value: z
+          .string()
+          .describe(
+            `A date in ${dateFormat} format. Analyze the context and return an appropriate date.`,
+          ),
+      })
+    }
+
+    default:
+      // Fallback to text
+      return z.object({
+        value: z.string().describe('A text response'),
+      })
+  }
+}
+
+/**
+ * Format the AI response based on output type for storage
+ */
+function formatResponseValue(
+  outputType: OutputType,
+  responseObject: any,
+): string {
+  if (outputType === 'multi_select') {
+    // Store array as JSON string
+    const values = responseObject.values || []
+    return JSON.stringify(values)
+  } else {
+    // All other types store the value directly
+    return responseObject.value || ''
+  }
+}
 
 /**
  * Compute a single AI cell value using Claude
@@ -55,8 +187,8 @@ export const computeAiCell = inngest.createFunction(
       throw new Error(`Cell ${cellId} is not an AI column`)
     }
 
-    const aiPrompt = (cell.column.config as { aiPrompt?: string })?.aiPrompt
-    if (!aiPrompt) {
+    const aiPrompt = cell.column.aiPrompt
+    if (!aiPrompt || aiPrompt.trim() === '') {
       throw new Error('AI column has no prompt configured')
     }
 
@@ -88,11 +220,25 @@ export const computeAiCell = inngest.createFunction(
       }
     }
 
-    // Build prompt
-    let contextString = `Column: ${cell.column.name}\nPrompt: ${aiPrompt}\n\nRow data:\n`
-    for (const [key, value] of Object.entries(rowContext)) {
-      contextString += `${key}: ${value}\n`
+    // Build context string for prompt
+    let contextString = `Column: ${cell.column.name}\n\n`
+
+    // Add row context
+    if (Object.keys(rowContext).length > 0) {
+      contextString += 'Row data:\n'
+      for (const [key, value] of Object.entries(rowContext)) {
+        contextString += `- ${key}: ${value}\n`
+      }
+      contextString += '\n'
     }
+
+    // Add the AI prompt
+    contextString += `Task: ${aiPrompt}`
+
+    // Generate response schema based on output type
+    const outputType = cell.column.outputType as OutputType
+    const outputTypeConfig = cell.column.outputTypeConfig
+    const responseSchema = generateResponseSchema(outputType, outputTypeConfig)
 
     // Step 1: Set status to computing
     await step.run('set-computing-status', async () => {
@@ -105,13 +251,24 @@ export const computeAiCell = inngest.createFunction(
         .where(eq(aiTableCells.id, cellId))
     })
 
-    // Step 2: Generate AI value (expensive operation)
+    // Step 2: Generate AI value with structured output (expensive operation)
     const aiResult = await step.run('generate-ai-value', async () => {
-      const response = await generateText({
-        model: anthropic('claude-3-5-sonnet-20241022'),
-        prompt: contextString,
-      })
-      return response.text.trim()
+      try {
+        const response = await generateObject({
+          model: anthropic('claude-3-5-sonnet-20241022'),
+          schema: responseSchema,
+          prompt: contextString,
+        })
+
+        // Format the response for storage
+        const formattedValue = formatResponseValue(outputType, response.object)
+        return formattedValue
+      } catch (error: any) {
+        // If AI fails to follow schema, throw descriptive error
+        throw new Error(
+          `AI failed to generate valid ${outputType}: ${error.message}`,
+        )
+      }
     })
 
     // Step 3: Update cell with success

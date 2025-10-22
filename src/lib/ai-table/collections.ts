@@ -103,14 +103,15 @@ export function createTableCollections(tableId: string) {
       onInsert: async ({ transaction }) => {
         for (const mutation of transaction.mutations) {
           const { modified: newColumn } = mutation
-          const config = newColumn.config as OutputTypeConfig | undefined
+          const outputTypeConfig = newColumn.outputTypeConfig as OutputTypeConfig | undefined
           const { cells } = await client.aiTables.createColumn({
             tableId,
             name: newColumn.name,
             type: newColumn.type,
             description: newColumn.description || undefined,
             outputType: newColumn.outputType,
-            config,
+            aiPrompt: newColumn.aiPrompt || '',
+            outputTypeConfig,
           })
 
           // Insert created cells into cells collection
@@ -130,14 +131,15 @@ export function createTableCollections(tableId: string) {
       onUpdate: async ({ transaction }) => {
         for (const mutation of transaction.mutations) {
           const { original, modified } = mutation
-          const config = modified.config as OutputTypeConfig | undefined
+          const outputTypeConfig = modified.outputTypeConfig as OutputTypeConfig | undefined
           await client.aiTables.updateColumn({
             columnId: original.id,
             name: modified.name,
             type: modified.type,
             description: modified.description || undefined,
             outputType: modified.outputType,
-            config,
+            aiPrompt: modified.aiPrompt,
+            outputTypeConfig,
           })
         }
       },

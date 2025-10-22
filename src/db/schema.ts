@@ -122,8 +122,8 @@ export const aiTableColumns = pgTable('ai_table_columns', {
   outputType: text('output_type', { 
     enum: ['text', 'long_text', 'single_select', 'multi_select', 'date'] 
   }).notNull().default('text'),
-  config: jsonb('config').$type<{
-    aiPrompt?: string
+  aiPrompt: text('ai_prompt').notNull().default(''),
+  outputTypeConfig: jsonb('output_type_config').$type<{
     options?: Array<{ value: string; color?: string }>
     maxSelections?: number
     dateFormat?: string
@@ -175,7 +175,7 @@ export const aiTableCells = pgTable(
     columnId: uuid('column_id')
       .notNull()
       .references(() => aiTableColumns.id, { onDelete: 'cascade' }),
-    value: text('value'),
+    value: text('value').default(''),
     computeStatus: text('compute_status', {
       enum: ['idle', 'pending', 'computing', 'completed', 'error'],
     })

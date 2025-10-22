@@ -23,27 +23,20 @@ export const optionSchema = z.object({
   color: z.string().optional(),
 })
 
-export const textConfigSchema = z.object({
-  aiPrompt: z.string().optional(),
-})
+export const textConfigSchema = z.object({})
 
-export const longTextConfigSchema = z.object({
-  aiPrompt: z.string().optional(),
-})
+export const longTextConfigSchema = z.object({})
 
 export const singleSelectConfigSchema = z.object({
-  aiPrompt: z.string().optional(),
   options: z.array(optionSchema).optional(),
 })
 
 export const multiSelectConfigSchema = z.object({
-  aiPrompt: z.string().optional(),
   options: z.array(optionSchema).optional(),
   maxSelections: z.number().int().positive().optional(),
 })
 
 export const dateConfigSchema = z.object({
-  aiPrompt: z.string().optional(),
   dateFormat: z.string().optional(),
 })
 

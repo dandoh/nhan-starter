@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "dotenv -e .env.local -- vite dev --port 3000",
+    "inngest:dev": "npx inngest-cli@latest dev -u http://localhost:3000/api/inngest",
     "build": "vite build",
     "serve": "vite preview",
     "test": "vitest run",
