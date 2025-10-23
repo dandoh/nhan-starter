@@ -6,6 +6,9 @@ import { anthropic } from '@ai-sdk/anthropic'
 import { generateObject } from 'ai'
 import type { OutputType } from '@/lib/ai-table/output-types'
 import { getOutputTypeDefinition } from '@/lib/ai-table/output-type-registry'
+import { trace } from '@opentelemetry/api'
+import { wrapAISDKModel } from 'axiom/ai'
+import { getTracer } from '@lmnr-ai/lmnr'
 
 /**
  * Compute a single AI cell value using Claude
@@ -106,7 +109,7 @@ export const computeAiCell = inngest.createFunction(
     contextString += `Task: ${aiPrompt}`
 
     // Get output type definition from registry
-    const outputType = cell.column.outputType as OutputType
+    const outputType = cell.column.outputType
     const outputTypeConfig = cell.column.outputTypeConfig
     const outputTypeDef = getOutputTypeDefinition(outputType)
     const responseSchema = outputTypeDef.createAISchema(outputTypeConfig)
@@ -129,6 +132,10 @@ export const computeAiCell = inngest.createFunction(
           model: anthropic('claude-3-5-sonnet-20241022'),
           schema: responseSchema,
           prompt: contextString,
+          experimental_telemetry: {
+            isEnabled: true,
+            tracer: getTracer(),
+          },
         })
 
         // Serialize the response for storage using registry
