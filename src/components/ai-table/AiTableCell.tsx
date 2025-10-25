@@ -15,7 +15,7 @@ type TableCellProps = {
  * Memoized table cell component that queries its own data
  * Only re-renders when the specific cell data changes
  */
-export const TableCell = memo(function TableCell({
+export const AiTableCell = memo(function TableCell({
   recordId,
   columnId,
   collections,

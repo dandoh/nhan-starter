@@ -8,12 +8,18 @@ import {
   flexRender,
   type ColumnDef,
 } from '@tanstack/react-table'
-import { Plus, Sparkles, MessageSquare, X } from 'lucide-react'
+import { Plus, Sparkles, Bot, X } from 'lucide-react'
 import { useTableSync } from '@/hooks/use-table-sync'
-import { TableCell } from '@/components/ai-table/TableCell'
-import { ColumnHeaderPopover } from '@/components/ai-table/ColumnHeaderPopover'
+import { AiTableCell } from '@/components/ai-table/AiTableCell'
+import { AiColumnHeader } from '@/components/ai-table/AiColumnHeader'
 import { AIChat } from '@/components/ai-table/AIChat'
 import { Button } from '@/components/ui/button'
+import { Toggle } from '@/components/ui/toggle'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Table,
@@ -37,6 +43,7 @@ import {
   AppPageContentWrapper,
 } from '@/components/AppPageWrapper'
 import { Card, CardContent, CardTitle } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
 
 export const Route = createFileRoute('/_authed/tables/$tableId')({
   ssr: false,
@@ -98,7 +105,6 @@ function TableEditorPage() {
   const columnDefs = useMemo<ColumnDef<TableRecord>[]>(() => {
     const selectColumn = columnHelper.display({
       id: 'select',
-      size: 40,
       header: ({ table }) => (
         <Checkbox
           checked={
@@ -121,12 +127,9 @@ function TableEditorPage() {
     const dataColumns = columns.map((col) =>
       columnHelper.display({
         id: col.id,
-        maxSize: 400,
-        header: () => (
-          <ColumnHeaderPopover column={col} collections={collections} />
-        ),
+        header: () => <AiColumnHeader column={col} collections={collections} />,
         cell: ({ row }) => (
-          <TableCell
+          <AiTableCell
             recordId={row.original.id}
             columnId={col.id}
             collections={collections}
@@ -162,14 +165,21 @@ function TableEditorPage() {
           <div className="px-6 py-4 border-b border-border">
             <CardTitle className="flex justify-between items-center mb-0">
               <span>Company stock analysis</span>
-              <Button
-                onClick={() => setIsAIChatOpen(!isAIChatOpen)}
-                variant={isAIChatOpen ? 'default' : 'ghost'}
-                size="icon"
-                className="h-8 w-8"
-              >
-                <MessageSquare className="h-4 w-4" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Toggle
+                    pressed={isAIChatOpen}
+                    onPressedChange={setIsAIChatOpen}
+                    size="sm"
+                    aria-label="Toggle AI Assistant"
+                  >
+                    <Sparkles />
+                  </Toggle>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  {isAIChatOpen ? 'Close AI Assistant' : 'Open AI Assistant'}
+                </TooltipContent>
+              </Tooltip>
             </CardTitle>
           </div>
           <CardContent className="p-0">
@@ -212,9 +222,9 @@ function TableEditorPage() {
                             </TableRow>
                           ) : (
                             table.getRowModel().rows.map((row) => (
-                              <TableRow 
+                              <TableRow
                                 key={row.id}
-                                data-state={row.getIsSelected() && "selected"}
+                                data-state={row.getIsSelected() && 'selected'}
                               >
                                 {row.getVisibleCells().map((cell) => (
                                   <TableCellUI key={cell.id}>
@@ -231,7 +241,7 @@ function TableEditorPage() {
                       </Table>
                     </div>
                     {/* Add Column Button */}
-                    <div className="flex items-start pt-1">
+                    <div className="flex items-start pt-2">
                       <Button
                         size="icon"
                         variant="secondary"
@@ -289,7 +299,7 @@ function TableEditorPage() {
               {/* AI Chat Sidebar */}
               {isAIChatOpen && (
                 <>
-                  <ResizableHandle withHandle className="w-[0.5px]"/>
+                  <ResizableHandle withHandle className="w-[0.5px]" />
                   <ResizablePanel defaultSize={30} minSize={20} maxSize={50}>
                     <div className="h-full flex flex-col border-l border-border bg-muted/10">
                       {/* Sidebar Header */}

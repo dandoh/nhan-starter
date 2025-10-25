@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { ChevronDown, Edit, Edit2, Pencil, Sparkles, Trash2 } from 'lucide-react'
+import { Edit2, Trash2 } from 'lucide-react'
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import {
@@ -20,15 +22,15 @@ import { toast } from 'sonner'
 import type { OutputType, OutputTypeConfig } from '@/lib/ai-table/output-types'
 import { getAllOutputTypes } from '@/lib/ai-table/output-type-registry'
 
-type ColumnHeaderPopoverProps = {
+type ColumnHeaderProps = {
   column: Column
   collections: TableCollections
 }
 
-export function ColumnHeaderPopover({
+export function AiColumnHeader({
   column,
   collections,
-}: ColumnHeaderPopoverProps) {
+}: ColumnHeaderProps) {
   const [isOpen, setIsOpen] = useState(false)
 
   // Check if this is the last manual column to disable type change
@@ -165,31 +167,37 @@ export function ColumnHeaderPopover({
   }
 
   return (
-    <div className="flex w-full items-center justify-between gap-2">
-      <div className="flex items-center gap-2">
-        <span>{column.name}</span>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-            </TooltipTrigger>
-            <TooltipContent>
-              {column.type === 'manual' ? 'Manual Column' : 'AI Column'}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
-        <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-6 w-6">
-            <Edit2 className="h-4 w-4 opacity-30" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent
-          className="w-96 max-h-[600px] overflow-y-auto"
-          align="start"
-          onOpenAutoFocus={(e) => e.preventDefault()}
+    <>
+      <div className="flex w-full items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span>{column.name}</span>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+              </TooltipTrigger>
+              <TooltipContent>
+                {column.type === 'manual' ? 'Manual Column' : 'AI Column'}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-6 w-6"
+          onClick={() => setIsOpen(true)}
         >
-          <div className="grid gap-4">
+          <Edit2 className="h-4 w-4 opacity-30" />
+        </Button>
+      </div>
+
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Column</DialogTitle>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
             {/* Column Name */}
             <form.AppField
               name="name"
@@ -363,37 +371,37 @@ export function ColumnHeaderPopover({
                 )
               }
             </form.Subscribe>
-
-            {/* Action Buttons */}
-            <div className="flex items-center justify-between gap-2">
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleDelete}
-                disabled={isLastColumn || isLastManualColumn}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </Button>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={handleCancel}>
-                  Cancel
-                </Button>
-                <form.AppForm>
-                  <form.SubscribeButton
-                    label="Save"
-                    size="sm"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      form.handleSubmit()
-                    }}
-                  />
-                </form.AppForm>
-              </div>
-            </div>
           </div>
-        </PopoverContent>
-      </Popover>
-    </div>
+
+          <DialogFooter className="flex items-center justify-between gap-2 sm:justify-between">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDelete}
+              disabled={isLastColumn || isLastManualColumn}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={handleCancel}>
+                Cancel
+              </Button>
+              <form.AppForm>
+                <form.SubscribeButton
+                  label="Save"
+                  size="sm"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    form.handleSubmit()
+                  }}
+                />
+              </form.AppForm>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
+

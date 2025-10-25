@@ -6,11 +6,11 @@ function Table({ className, ...props }: React.ComponentProps<'table'>) {
   return (
     <div
       data-slot="table-container"
-      className="relative w-full overflow-x-auto scrollbar scrollbar-track-transparent scrollbar-thumb-transparent hover:scrollbar-thumb-interactive"
+      className="relative w-full overflow-x-auto scrollbar scrollbar-track-transparent scrollbar-thumb-transparent hover:scrollbar-thumb-interactive border-border border-1"
     >
       <table
         data-slot="table"
-        className={cn('w-full caption-bottom text-sm border-separate border-spacing-y-1', className)}
+        className={cn('w-full caption-bottom text-sm', className)}
         {...props}
       />
     </div>
@@ -32,11 +32,12 @@ function TableBody({ className, ...props }: React.ComponentProps<'tbody'>) {
     <tbody
       data-slot="table-body"
       className={cn(
+        '[&_tr]:border-b border-border',
         '[&_tr:last-child]:border-0',
         // '[&_tr]:bg-background',
         '[&_tr:hover]:bg-interactive',
         '[&_tr[data-state=selected]]:bg-interactive',
-        className
+        className,
       )}
       {...props}
     />
@@ -61,7 +62,11 @@ function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
     <tr
       data-slot="table-row"
       className={cn(
-        'border-0 transition-colors',
+        'transition-colors',
+        '[&_th]:border-r border-border',
+        '[&_th:last-child]:border-r-0',
+        '[&_td]:border-r border-border',
+        '[&_td:last-child]:border-r-0',
         className,
       )}
       {...props}
@@ -74,7 +79,8 @@ function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
     <th
       data-slot="table-head"
       className={cn(
-        'text-table-header-foreground h-10 px-2 text-left align-middle text-xs font-medium uppercase tracking-wide whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
+        'text-table-header-foreground h-10 px-2 text-left align-middle text-xs font-medium uppercase tracking-wide whitespace-nowrap ',
+        '[&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
         className,
       )}
       {...props}
@@ -88,8 +94,8 @@ function TableCell({ className, ...props }: React.ComponentProps<'td'>) {
       data-slot="table-cell"
       className={cn(
         'py-2 px-2 align-middle whitespace-nowrap',
-        'first:rounded-l-lg last:rounded-r-lg',
-        '[&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
+        // 'first:rounded-l-lg last:rounded-r-lg',
+        // '[&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
         className,
       )}
       {...props}
