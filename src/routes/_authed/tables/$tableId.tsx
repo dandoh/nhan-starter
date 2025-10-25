@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from '@tanstack/react-db'
 import {
@@ -8,11 +8,13 @@ import {
   flexRender,
   type ColumnDef,
 } from '@tanstack/react-table'
-import { Plus, Sparkles } from 'lucide-react'
+import { Plus, Sparkles, MessageSquare, X } from 'lucide-react'
 import { useTableSync } from '@/hooks/use-table-sync'
 import { TableCell } from '@/components/ai-table/TableCell'
 import { ColumnHeaderPopover } from '@/components/ai-table/ColumnHeaderPopover'
+import { AIChat } from '@/components/ai-table/AIChat'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Table,
   TableBody,
@@ -21,6 +23,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from '@/components/ui/resizable'
 import type { Record as TableRecord } from '@/lib/ai-table/collections'
 import { client } from '@/orpc/client'
 import { toast } from 'sonner'
@@ -29,7 +36,7 @@ import {
   AppPageWrapper,
   AppPageContentWrapper,
 } from '@/components/AppPageWrapper'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardTitle } from '@/components/ui/card'
 
 export const Route = createFileRoute('/_authed/tables/$tableId')({
   ssr: false,
@@ -41,6 +48,8 @@ function TableEditorPage() {
   const { tableId } = Route.useParams()
   const collections = useTableSync(tableId)
   const [isComputing, setIsComputing] = useState(false)
+  const [isAIChatOpen, setIsAIChatOpen] = useState(false)
+  const [rowSelection, setRowSelection] = useState({})
 
   // Live query for columns
   const { data: columns } = useLiveQuery((q) =>
@@ -87,7 +96,29 @@ function TableEditorPage() {
   const tableData = useMemo(() => records, [records])
 
   const columnDefs = useMemo<ColumnDef<TableRecord>[]>(() => {
-    return columns.map((col) =>
+    const selectColumn = columnHelper.display({
+      id: 'select',
+      size: 40,
+      header: ({ table }) => (
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && 'indeterminate')
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+        />
+      ),
+    })
+
+    const dataColumns = columns.map((col) =>
       columnHelper.display({
         id: col.id,
         maxSize: 400,
@@ -103,12 +134,19 @@ function TableEditorPage() {
         ),
       }),
     )
+
+    return [selectColumn, ...dataColumns]
   }, [columns, collections])
 
   const table = useReactTable({
     data: tableData,
     columns: columnDefs,
     getCoreRowModel: getCoreRowModel(),
+    enableRowSelection: true,
+    onRowSelectionChange: setRowSelection,
+    state: {
+      rowSelection,
+    },
   })
 
   return (
@@ -118,116 +156,165 @@ function TableEditorPage() {
           { label: 'AI Tables', href: '/tables' },
           { label: 'Table Details' },
         ]}
-      >
-        <Button
-          onClick={handleComputeAllCells}
-          variant="default"
-          size="sm"
-          disabled={isComputing}
-        >
-          {isComputing ? (
-            <>
-              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-              Computing...
-            </>
-          ) : (
-            <>
-              <Sparkles className="mr-2 h-4 w-4" />
-              Compute All AI Cells
-            </>
-          )}
-        </Button>
-      </TopNav>
+      ></TopNav>
       <AppPageContentWrapper>
-        <Card className="">
-          <CardContent>
-            {/* Table */}
-            {columns.length === 0 ? (
-              <div className="flex min-h-[400px] items-center justify-center rounded-lg border border-dashed">
-                <div className="text-center">
-                  <p className="mb-4 text-muted-foreground">Loading table...</p>
-                </div>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <TableRow key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <TableHead key={header.id}>
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(
-                                header.column.columnDef.header,
-                                header.getContext(),
-                              )}
-                        </TableHead>
-                      ))}
-                      <TableHead className="w-16">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="size-8"
-                          onClick={() => {
-                            collections.columns.insert({
-                              id: crypto.randomUUID(),
-                              tableId,
-                              name: 'Untitled',
-                              type: 'ai',
-                              description: '',
-                              outputType: 'text',
-                              aiPrompt: '',
-                              outputTypeConfig: {},
-                              position: columns.length,
-                              createdAt: new Date(),
-                              updatedAt: new Date(),
-                            })
-                          }}
-                        >
-                          <Plus className="size-4" />
-                        </Button>
-                      </TableHead>
-                    </TableRow>
-                  ))}
-                </TableHeader>
-                <TableBody>
-                  {table.getRowModel().rows.length === 0 ? (
-                    <TableRow>
-                      <TableCellUI
-                        colSpan={columns.length + 1}
-                        className="h-24 text-center text-muted-foreground"
+        <Card className="gap-0 p-0">
+          <div className="px-6 py-4 border-b border-border">
+            <CardTitle className="flex justify-between items-center mb-0">
+              <span>Company stock analysis</span>
+              <Button
+                onClick={() => setIsAIChatOpen(!isAIChatOpen)}
+                variant={isAIChatOpen ? 'default' : 'ghost'}
+                size="icon"
+                className="h-8 w-8"
+              >
+                <MessageSquare className="h-4 w-4" />
+              </Button>
+            </CardTitle>
+          </div>
+          <CardContent className="p-0">
+            <ResizablePanelGroup
+              direction="horizontal"
+              className="min-h-[600px]"
+            >
+              {/* Main Table Panel */}
+              <ResizablePanel defaultSize={70} minSize={30}>
+                <div className="h-full flex flex-col px-6 py-4">
+                  {/* Table and Add Column Button */}
+                  <div className="flex space-x-2 flex-1 overflow-hidden">
+                    <div className="flex-1 overflow-auto">
+                      <Table>
+                        <TableHeader>
+                          {table.getHeaderGroups().map((headerGroup) => (
+                            <TableRow key={headerGroup.id}>
+                              {headerGroup.headers.map((header) => (
+                                <TableHead key={header.id}>
+                                  {header.isPlaceholder
+                                    ? null
+                                    : flexRender(
+                                        header.column.columnDef.header,
+                                        header.getContext(),
+                                      )}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          ))}
+                        </TableHeader>
+                        <TableBody>
+                          {table.getRowModel().rows.length === 0 ? (
+                            <TableRow>
+                              <TableCellUI
+                                colSpan={columns.length + 1}
+                                className="h-24 text-center text-muted-foreground"
+                              >
+                                No rows yet. Click "+" to add columns or rows.
+                              </TableCellUI>
+                            </TableRow>
+                          ) : (
+                            table.getRowModel().rows.map((row) => (
+                              <TableRow 
+                                key={row.id}
+                                data-state={row.getIsSelected() && "selected"}
+                              >
+                                {row.getVisibleCells().map((cell) => (
+                                  <TableCellUI key={cell.id}>
+                                    {flexRender(
+                                      cell.column.columnDef.cell,
+                                      cell.getContext(),
+                                    )}
+                                  </TableCellUI>
+                                ))}
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    {/* Add Column Button */}
+                    <div className="flex items-start pt-1">
+                      <Button
+                        size="icon"
+                        variant="secondary"
+                        className="size-8"
+                        onClick={() => {
+                          collections.columns.insert({
+                            id: crypto.randomUUID(),
+                            tableId,
+                            name: 'Untitled',
+                            type: 'ai',
+                            description: '',
+                            outputType: 'text',
+                            aiPrompt: '',
+                            outputTypeConfig: {},
+                            position: columns.length,
+                            createdAt: new Date(),
+                            updatedAt: new Date(),
+                          })
+                        }}
                       >
-                        No rows yet. Click "+" to add columns or rows.
-                      </TableCellUI>
-                    </TableRow>
-                  ) : (
-                    table.getRowModel().rows.map((row) => (
-                      <TableRow key={row.id}>
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCellUI key={cell.id}>
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext(),
-                            )}
-                          </TableCellUI>
-                        ))}
-                        <TableCellUI className="w-16" />
-                      </TableRow>
-                    ))
+                        <Plus className="size-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  {/* Add Row and Compute Buttons */}
+                  {columns.length > 0 && (
+                    <div className="flex items-center gap-2 mt-4">
+                      <Button onClick={addRow} variant="secondary" size="sm">
+                        <Plus className="size-4 mr-2" />
+                        Add row
+                      </Button>
+                      <Button
+                        onClick={handleComputeAllCells}
+                        variant="outline"
+                        size="sm"
+                        disabled={isComputing}
+                      >
+                        {isComputing ? (
+                          <>
+                            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                            Computing...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="mr-2 h-4 w-4" />
+                            Compute All AI Cells
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   )}
-                </TableBody>
-              </Table>
-            )}
+                </div>
+              </ResizablePanel>
 
-            {/* Add Row Button */}
-            {columns.length > 0 && (
-              <div className="mt-4">
-                <Button onClick={addRow} variant="ghost" size="sm">
-                  <Plus className="mr-2 size-4" />
-                  Add Row
-                </Button>
-              </div>
-            )}
+              {/* AI Chat Sidebar */}
+              {isAIChatOpen && (
+                <>
+                  <ResizableHandle withHandle className="w-[0.5px]"/>
+                  <ResizablePanel defaultSize={30} minSize={20} maxSize={50}>
+                    <div className="h-full flex flex-col border-l border-border bg-muted/10">
+                      {/* Sidebar Header */}
+                      {/* <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                        <h3 className="font-medium text-sm text-muted-foreground">
+                          AI Assistant
+                        </h3>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 hover:bg-muted"
+                          onClick={() => setIsAIChatOpen(false)}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div> */}
+                      {/* Chat Content */}
+                      <div className="flex-1 overflow-hidden">
+                        <AIChat tableId={tableId} />
+                      </div>
+                    </div>
+                  </ResizablePanel>
+                </>
+              )}
+            </ResizablePanelGroup>
           </CardContent>
         </Card>
       </AppPageContentWrapper>

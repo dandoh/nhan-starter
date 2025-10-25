@@ -179,7 +179,7 @@ const LONG_TEXT_TYPE: OutputTypeDefinition = {
     }
 
     return (
-      <div className="text-sm max-h-32 overflow-y-auto whitespace-pre-wrap scrollbar scrollbar-track-background scrollbar-thumb-primary-300">
+      <div className="text-sm max-h-32 overflow-y-auto whitespace-pre-wrap scrollbar scrollbar-track-transparent hover:scrollbar-thumb-gray-300">
         {value}
       </div>
     )

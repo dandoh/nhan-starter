@@ -10,7 +10,7 @@ function Table({ className, ...props }: React.ComponentProps<'table'>) {
     >
       <table
         data-slot="table"
-        className={cn('w-full caption-bottom text-sm', className)}
+        className={cn('w-full caption-bottom text-sm border-separate border-spacing-y-1', className)}
         {...props}
       />
     </div>
@@ -36,8 +36,6 @@ function TableBody({ className, ...props }: React.ComponentProps<'tbody'>) {
         // '[&_tr]:bg-background',
         '[&_tr:hover]:bg-interactive',
         '[&_tr[data-state=selected]]:bg-interactive',
-        '[&_tr:not(:first-child)]:border-t-[8px]',
-        '[&_tr:not(:first-child)]:border-t-transparent',
         className
       )}
       {...props}
@@ -89,7 +87,7 @@ function TableCell({ className, ...props }: React.ComponentProps<'td'>) {
     <td
       data-slot="table-cell"
       className={cn(
-        'py-4 px-2 align-middle whitespace-nowrap',
+        'py-2 px-2 align-middle whitespace-nowrap',
         'first:rounded-l-lg last:rounded-r-lg',
         '[&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
         className,

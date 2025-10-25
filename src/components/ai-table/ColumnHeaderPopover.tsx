@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronDown, Pencil, Sparkles, Trash2 } from 'lucide-react'
+import { ChevronDown, Edit, Edit2, Pencil, Sparkles, Trash2 } from 'lucide-react'
 import {
   Popover,
   PopoverContent,
@@ -171,13 +171,6 @@ export function ColumnHeaderPopover({
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="inline-flex opacity-30">
-                {column.type === 'manual' ? (
-                  <Pencil className="h-3.5 w-3.5" />
-                ) : (
-                  <Sparkles className="h-3.5 w-3.5" />
-                )}
-              </div>
             </TooltipTrigger>
             <TooltipContent>
               {column.type === 'manual' ? 'Manual Column' : 'AI Column'}
@@ -188,7 +181,7 @@ export function ColumnHeaderPopover({
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
           <Button variant="ghost" size="icon" className="h-6 w-6">
-            <ChevronDown className="h-4 w-4" />
+            <Edit2 className="h-4 w-4 opacity-30" />
           </Button>
         </PopoverTrigger>
         <PopoverContent
