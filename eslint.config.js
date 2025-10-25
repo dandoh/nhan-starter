@@ -12,6 +12,9 @@ export default [
       'simple-import-sort/exports': 'off',
       'sort/imports': 'off',
       'sort-imports': 'off',
+      // Disable type specifier and array type rules
+      'import/consistent-type-specifier-style': 'off',
+      '@typescript-eslint/array-type': 'off',
     },
   },
 ]

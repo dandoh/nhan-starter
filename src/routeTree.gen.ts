@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DemoTeamRouteImport } from './routes/demo/team'
+import { Route as DemoCareerRouteImport } from './routes/demo/career'
 import { Route as ApiInngestRouteImport } from './routes/api/inngest'
 import { Route as AuthedTableExampleRouteImport } from './routes/_authed/table-example'
 import { Route as AuthedProfileRouteImport } from './routes/_authed/profile'
@@ -39,6 +41,16 @@ const AuthedRoute = AuthedRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoTeamRoute = DemoTeamRouteImport.update({
+  id: '/demo/team',
+  path: '/demo/team',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoCareerRoute = DemoCareerRouteImport.update({
+  id: '/demo/career',
+  path: '/demo/career',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiInngestRoute = ApiInngestRouteImport.update({
@@ -122,6 +134,8 @@ export interface FileRoutesByFullPath {
   '/profile': typeof AuthedProfileRoute
   '/table-example': typeof AuthedTableExampleRoute
   '/api/inngest': typeof ApiInngestRoute
+  '/demo/career': typeof DemoCareerRoute
+  '/demo/team': typeof DemoTeamRoute
   '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/tables/$tableId': typeof AuthedTablesTableIdRoute
   '/api/db-chat-api': typeof ApiAuthedApiDbChatApiRoute
@@ -140,6 +154,8 @@ export interface FileRoutesByTo {
   '/profile': typeof AuthedProfileRoute
   '/table-example': typeof AuthedTableExampleRoute
   '/api/inngest': typeof ApiInngestRoute
+  '/demo/career': typeof DemoCareerRoute
+  '/demo/team': typeof DemoTeamRoute
   '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/tables/$tableId': typeof AuthedTablesTableIdRoute
   '/api/db-chat-api': typeof ApiAuthedApiDbChatApiRoute
@@ -160,6 +176,8 @@ export interface FileRoutesById {
   '/_authed/profile': typeof AuthedProfileRoute
   '/_authed/table-example': typeof AuthedTableExampleRoute
   '/api/inngest': typeof ApiInngestRoute
+  '/demo/career': typeof DemoCareerRoute
+  '/demo/team': typeof DemoTeamRoute
   '/_authed/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/_authed/tables/$tableId': typeof AuthedTablesTableIdRoute
   '/api/_authed-api/db-chat-api': typeof ApiAuthedApiDbChatApiRoute
@@ -180,6 +198,8 @@ export interface FileRouteTypes {
     | '/profile'
     | '/table-example'
     | '/api/inngest'
+    | '/demo/career'
+    | '/demo/team'
     | '/conversations/$conversationId'
     | '/tables/$tableId'
     | '/api/db-chat-api'
@@ -198,6 +218,8 @@ export interface FileRouteTypes {
     | '/profile'
     | '/table-example'
     | '/api/inngest'
+    | '/demo/career'
+    | '/demo/team'
     | '/conversations/$conversationId'
     | '/tables/$tableId'
     | '/api/db-chat-api'
@@ -217,6 +239,8 @@ export interface FileRouteTypes {
     | '/_authed/profile'
     | '/_authed/table-example'
     | '/api/inngest'
+    | '/demo/career'
+    | '/demo/team'
     | '/_authed/conversations/$conversationId'
     | '/_authed/tables/$tableId'
     | '/api/_authed-api/db-chat-api'
@@ -233,6 +257,8 @@ export interface RootRouteChildren {
   AuthedRoute: typeof AuthedRouteWithChildren
   LoginRoute: typeof LoginRoute
   ApiInngestRoute: typeof ApiInngestRoute
+  DemoCareerRoute: typeof DemoCareerRoute
+  DemoTeamRoute: typeof DemoTeamRoute
   ApiAuthedApiDbChatApiRoute: typeof ApiAuthedApiDbChatApiRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiRpcSplatRoute: typeof ApiRpcSplatRoute
@@ -262,6 +288,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo/team': {
+      id: '/demo/team'
+      path: '/demo/team'
+      fullPath: '/demo/team'
+      preLoaderRoute: typeof DemoTeamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo/career': {
+      id: '/demo/career'
+      path: '/demo/career'
+      fullPath: '/demo/career'
+      preLoaderRoute: typeof DemoCareerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/inngest': {
@@ -394,6 +434,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthedRoute: AuthedRouteWithChildren,
   LoginRoute: LoginRoute,
   ApiInngestRoute: ApiInngestRoute,
+  DemoCareerRoute: DemoCareerRoute,
+  DemoTeamRoute: DemoTeamRoute,
   ApiAuthedApiDbChatApiRoute: ApiAuthedApiDbChatApiRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiRpcSplatRoute: ApiRpcSplatRoute,

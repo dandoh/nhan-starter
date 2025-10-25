@@ -20,6 +20,11 @@ import {
 } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { formatDistanceToNow } from 'date-fns'
+import { TopNav } from '@/components/TopNav'
+import {
+  AppPageWrapper,
+  AppPageContentWrapper,
+} from '@/components/AppPageWrapper'
 
 export const Route = createFileRoute('/_authed/tables/')({
   component: TablesListPage,
@@ -39,19 +44,20 @@ function TablesListPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-8">
+    <AppPageWrapper>
+      <TopNav title="AI Tables" />
+      <AppPageContentWrapper className="bg-background">
       <div className="mx-auto max-w-7xl">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">AI Tables</h1>
-            <p className="mt-2 text-muted-foreground">
+            <p className="text-muted-foreground">
               Create and manage your dynamic tables with AI-powered columns
             </p>
           </div>
 
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="lg">Create New Table</Button>
+              <Button>Create New Table</Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
@@ -133,7 +139,8 @@ function TablesListPage() {
           </div>
         )}
       </div>
-    </div>
+      </AppPageContentWrapper>
+    </AppPageWrapper>
   )
 }
 
