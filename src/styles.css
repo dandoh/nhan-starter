@@ -1,5 +1,5 @@
-/* Import Google Fonts for Figtree, Merriweather, and IBM Plex Mono */
-@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;700&family=Merriweather:wght@400;700&display=swap');
+/* Import Google Fonts for Onest */
+@import url('https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap');
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
@@ -19,82 +19,92 @@
 }
 
 :root {
-  --font-sans: Plus Jakarta Sans, ui-sans-serif, sans-serif;
-  --font-serif: Merriweather, ui-serif, serif;
-  --font-mono: JetBrains Mono, ui-monospace, monospace;
+  --font-sans: "Onest", "Onest Placeholder", sans-serif;
+  --font-serif: "Onest", "Onest Placeholder", sans-serif;
+  --font-mono: ui-monospace, monospace;
 
-  --radius: 0rem;
-  --background: rgb(244, 244, 245);
-  --foreground: rgb(9, 9, 11);
-  --card: rgb(241, 241, 241);
-  --card-foreground: rgb(9, 9, 11);
-  --popover: rgb(241, 241, 241);
-  --popover-foreground: rgb(9, 9, 11);
-  --primary: rgb(201, 100, 66);
+  --radius: 0.5rem;
+  --background: rgb(249 250 250);
+  --foreground: rgb(32, 34, 34);
+  --card: rgb(255, 255, 255);
+  --card-foreground: rgb(32, 34, 34);
+  --popover: rgb(255, 255, 255);
+  --popover-foreground: rgb(32, 34, 34);
+  --primary: rgb(32, 34, 34);
   --primary-foreground: rgb(255, 255, 255);
-  --secondary: rgb(233, 230, 220);
-  --secondary-foreground: rgb(83, 81, 70);
-  --muted: rgb(228, 228, 231);
-  --muted-foreground: rgb(82, 82, 92);
-  --accent: rgb(228, 228, 231);
-  --accent-foreground: rgb(9, 9, 11);
-  --destructive: rgb(20, 20, 19);
-  --border: rgb(212, 212, 216);
-  --input: rgb(212, 212, 216);
-  --ring: rgb(250, 99, 49);
-  --chart-1: rgb(176, 87, 48);
-  --chart-2: rgb(156, 135, 245);
-  --chart-3: rgb(222, 216, 196);
-  --chart-4: rgb(219, 211, 240);
-  --chart-5: rgb(180, 85, 45);
-  --sidebar: rgb(237, 237, 238);
-  --sidebar-foreground: rgb(9, 9, 11);
-  --sidebar-primary: rgb(201, 100, 66);
-  --sidebar-primary-foreground: rgb(251, 251, 251);
-  --sidebar-accent: rgb(228, 228, 231);
-  --sidebar-accent-foreground: rgb(9, 9, 11);
-  --sidebar-border: rgb(212, 212, 216);
-  --sidebar-ring: rgb(250, 99, 49);
+  --secondary: rgb(240, 240, 242);
+  --secondary-foreground: rgb(32, 34, 34);
+  --muted: rgb(245, 245, 245);
+  --muted-foreground: rgb(115, 115, 115);
+  --table-header-foreground: rgb(84, 111, 125);
+  --accent: rgb(245, 245, 245);
+  --accent-foreground: rgb(32, 34, 34);
+  --destructive: rgb(239, 68, 68);
+  --destructive-foreground: rgb(255, 255, 255);
+  --interactive: rgb(242 243 243);
+  --border: rgb(229, 229, 229);
+  --input: rgb(229, 229, 229);
+  --ring: rgb(32, 34, 34);
+  --chart-1: rgb(99, 102, 241);
+  --chart-2: rgb(168, 85, 247);
+  --chart-3: rgb(236, 72, 153);
+  --chart-4: rgb(251, 146, 60);
+  --chart-5: rgb(34, 197, 94);
+  --sidebar: rgb(255, 255, 255);
+  --sidebar-foreground: rgb(32, 34, 34);
+  --sidebar-primary: rgb(32, 34, 34);
+  --sidebar-primary-foreground: rgb(255, 255, 255);
+  --sidebar-accent: rgb(250, 250, 250);
+  --sidebar-accent-foreground: rgb(32, 34, 34);
+  --sidebar-border: rgb(229, 229, 229);
+  --sidebar-ring: rgb(32, 34, 34);
+  --tech-badge: rgb(212, 255, 0);
+  --tech-badge-foreground: rgb(0, 0, 0);
 }
 
 .dark {
-  --background: rgb(24, 24, 27);
+  --background: rgb(10, 10, 10);
   --foreground: rgb(250, 250, 250);
-  --card: rgb(39, 39, 42);
+  --card: rgb(23, 23, 23);
   --card-foreground: rgb(250, 250, 250);
-  --popover: rgb(39, 39, 42);
+  --popover: rgb(23, 23, 23);
   --popover-foreground: rgb(250, 250, 250);
-  --primary: rgb(217, 119, 87);
-  --primary-foreground: rgb(255, 255, 255);
-  --secondary: rgb(250, 249, 245);
-  --secondary-foreground: rgb(48, 48, 46);
-  --muted: rgb(63, 63, 70);
-  --muted-foreground: rgb(159, 159, 169);
-  --accent: rgb(63, 63, 70);
+  --primary: rgb(250, 250, 250);
+  --primary-foreground: rgb(23, 23, 23);
+  --secondary: rgb(38, 38, 38);
+  --secondary-foreground: rgb(250, 250, 250);
+  --muted: rgb(38, 38, 38);
+  --muted-foreground: rgb(163, 163, 163);
+  --table-header-foreground: rgb(115, 142, 156);
+  --accent: rgb(38, 38, 38);
   --accent-foreground: rgb(250, 250, 250);
-  --destructive: rgb(209, 61, 61);
-  --border: rgba(250, 250, 250, 0.1);
-  --input: rgba(250, 250, 250, 0.15);
-  --ring: rgb(255, 155, 121);
-  --chart-1: rgb(176, 87, 48);
-  --chart-2: rgb(156, 135, 245);
-  --chart-3: rgb(26, 25, 21);
-  --chart-4: rgb(47, 43, 72);
-  --chart-5: rgb(180, 85, 45);
-  --sidebar: rgb(39, 39, 42);
+  --destructive: rgb(239, 68, 68);
+  --destructive-foreground: rgb(255, 255, 255);
+  --interactive: rgb(38, 38, 38);
+  --border: rgb(38, 38, 38);
+  --input: rgb(38, 38, 38);
+  --ring: rgb(250, 250, 250);
+  --chart-1: rgb(99, 102, 241);
+  --chart-2: rgb(168, 85, 247);
+  --chart-3: rgb(236, 72, 153);
+  --chart-4: rgb(251, 146, 60);
+  --chart-5: rgb(34, 197, 94);
+  --sidebar: rgb(23, 23, 23);
   --sidebar-foreground: rgb(250, 250, 250);
-  --sidebar-primary: rgb(217, 119, 87);
-  --sidebar-primary-foreground: rgb(251, 251, 251);
-  --sidebar-accent: rgb(63, 63, 70);
+  --sidebar-primary: rgb(250, 250, 250);
+  --sidebar-primary-foreground: rgb(23, 23, 23);
+  --sidebar-accent: rgb(38, 38, 38);
   --sidebar-accent-foreground: rgb(250, 250, 250);
-  --sidebar-border: rgba(250, 250, 250, 0.1);
-  --sidebar-ring: rgb(255, 155, 121);
+  --sidebar-border: rgb(38, 38, 38);
+  --sidebar-ring: rgb(250, 250, 250);
+  --tech-badge: rgb(212, 255, 0);
+  --tech-badge-foreground: rgb(0, 0, 0);
 }
 
 @theme inline {
-  --font-sans: Plus Jakarta Sans, ui-sans-serif, sans-serif;
-  --font-serif: Merriweather, ui-serif, serif;
-  --font-mono: JetBrains Mono, ui-monospace, monospace;
+  --font-sans: "Onest", "Onest Placeholder", sans-serif;
+  --font-serif: "Onest", "Onest Placeholder", sans-serif;
+  --font-mono: ui-monospace, monospace;
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -112,9 +122,11 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-table-header-foreground: var(--table-header-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-interactive: var(--interactive);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -131,6 +143,8 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-tech-badge: var(--tech-badge);
+  --color-tech-badge-foreground: var(--tech-badge-foreground);
 }
 
 

@@ -24,6 +24,12 @@ import {
 import type { Record as TableRecord } from '@/lib/ai-table/collections'
 import { client } from '@/orpc/client'
 import { toast } from 'sonner'
+import {
+  TopNav,
+  AppPageWrapper,
+  AppPageContentWrapper,
+} from '@/components/AppPageWrapper'
+import { Card, CardContent } from '@/components/ui/card'
 
 export const Route = createFileRoute('/_authed/tables/$tableId')({
   ssr: false,
@@ -106,37 +112,49 @@ function TableEditorPage() {
   })
 
   return (
-    <div className="min-h-screen">
-      <div className="mx-auto max-w-7xl py-8">
-        {/* Header */}
-        <div className="mb-2">
-          <Link
-            to="/tables"
-            className="mb-2 inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
-          >
-            ← Back to Tables
-          </Link>
-        </div>
-
-        {/* Table */}
-        {columns.length === 0 ? (
-          <div className="flex min-h-[400px] items-center justify-center rounded-lg border border-dashed border-border">
-            <div className="text-center">
-              <p className="mb-4 text-muted-foreground">Loading table...</p>
-            </div>
-          </div>
-        ) : (
-          <div className="overflow-hidden rounded-lg border border-border">
-            <div className="overflow-x-hidden">
+    <AppPageWrapper>
+      <TopNav
+        breadcrumbs={[
+          { label: 'AI Tables', href: '/tables' },
+          { label: 'Table Details' },
+        ]}
+      >
+        <Button
+          onClick={handleComputeAllCells}
+          variant="default"
+          size="sm"
+          disabled={isComputing}
+        >
+          {isComputing ? (
+            <>
+              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+              Computing...
+            </>
+          ) : (
+            <>
+              <Sparkles className="mr-2 h-4 w-4" />
+              Compute All AI Cells
+            </>
+          )}
+        </Button>
+      </TopNav>
+      <AppPageContentWrapper>
+        <Card className="">
+          <CardContent>
+            {/* Table */}
+            {columns.length === 0 ? (
+              <div className="flex min-h-[400px] items-center justify-center rounded-lg border border-dashed">
+                <div className="text-center">
+                  <p className="mb-4 text-muted-foreground">Loading table...</p>
+                </div>
+              </div>
+            ) : (
               <Table>
                 <TableHeader>
                   {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id}>
                       {headerGroup.headers.map((header) => (
-                        <TableHead
-                          key={header.id}
-                          className="bg-muted/50 border-r border-border max-w-[400px]"
-                        >
+                        <TableHead key={header.id}>
                           {header.isPlaceholder
                             ? null
                             : flexRender(
@@ -145,11 +163,11 @@ function TableEditorPage() {
                               )}
                         </TableHead>
                       ))}
-                      <TableHead className="w-12 sticky right-0 shadow-md z-10 bg-muted">
+                      <TableHead className="w-16">
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="h-8 w-8"
+                          className="size-8"
                           onClick={() => {
                             collections.columns.insert({
                               id: crypto.randomUUID(),
@@ -157,14 +175,16 @@ function TableEditorPage() {
                               name: 'Untitled',
                               type: 'ai',
                               description: '',
-                              config: { aiPrompt: '' },
+                              outputType: 'text',
+                              aiPrompt: '',
+                              outputTypeConfig: {},
                               position: columns.length,
                               createdAt: new Date(),
                               updatedAt: new Date(),
                             })
                           }}
                         >
-                          <Plus className="h-4 w-4" />
+                          <Plus className="size-4" />
                         </Button>
                       </TableHead>
                     </TableRow>
@@ -184,54 +204,33 @@ function TableEditorPage() {
                     table.getRowModel().rows.map((row) => (
                       <TableRow key={row.id}>
                         {row.getVisibleCells().map((cell) => (
-                          <TableCellUI
-                            key={cell.id}
-                            className="p-0 border-r border-border max-w-[400px] "
-                          >
+                          <TableCellUI key={cell.id}>
                             {flexRender(
                               cell.column.columnDef.cell,
                               cell.getContext(),
                             )}
                           </TableCellUI>
                         ))}
-                        <TableCellUI className="w-12 sticky right-0 z-10  border-l border-red-400" />
+                        <TableCellUI className="w-16" />
                       </TableRow>
                     ))
                   )}
                 </TableBody>
               </Table>
-            </div>
-          </div>
-        )}
+            )}
 
-        {/* Add Row Button and Stats */}
-        {columns.length > 0 && (
-          <div className="mt-2 flex items-center justify-between gap-4">
-            <Button onClick={addRow} variant="ghost" size="sm">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Row
-            </Button>
-            <Button
-              onClick={handleComputeAllCells}
-              variant="default"
-              size="sm"
-              disabled={isComputing}
-            >
-              {isComputing ? (
-                <>
-                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                  Computing...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Compute All AI Cells
-                </>
-              )}
-            </Button>
-          </div>
-        )}
-      </div>
-    </div>
+            {/* Add Row Button */}
+            {columns.length > 0 && (
+              <div className="mt-4">
+                <Button onClick={addRow} variant="ghost" size="sm">
+                  <Plus className="mr-2 size-4" />
+                  Add Row
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </AppPageContentWrapper>
+    </AppPageWrapper>
   )
 }

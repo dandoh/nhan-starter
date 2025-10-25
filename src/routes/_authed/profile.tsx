@@ -1,6 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useAuthContext } from '../_authed'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  TopNav,
+  AppPageWrapper,
+  AppPageContentWrapper,
+} from '@/components/AppPageWrapper'
 
 export const Route = createFileRoute('/_authed/profile')({
   component: ProfilePage,
@@ -11,7 +16,9 @@ function ProfilePage() {
   const { user, session } = useAuthContext()
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4 sm:px-6 lg:px-8">
+    <AppPageWrapper>
+      <TopNav breadcrumbs={[{ label: 'Profile' }]} />
+      <AppPageContentWrapper className="bg-background py-12">
       <div className="max-w-3xl mx-auto">
         <Card>
           <CardHeader>
@@ -138,6 +145,7 @@ function ProfilePage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+      </AppPageContentWrapper>
+    </AppPageWrapper>
   )
 }
