@@ -20,8 +20,8 @@ import {
 } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { formatDistanceToNow } from 'date-fns'
-import { TopNav } from '@/components/TopNav'
 import {
+  TopNav,
   AppPageWrapper,
   AppPageContentWrapper,
 } from '@/components/AppPageWrapper'
@@ -45,7 +45,7 @@ function TablesListPage() {
 
   return (
     <AppPageWrapper>
-      <TopNav title="AI Tables" />
+      <TopNav breadcrumbs={[{ label: 'AI Tables' }]} />
       <AppPageContentWrapper className="bg-background">
       <div className="mx-auto max-w-7xl">
         <div className="mb-8 flex items-center justify-between">

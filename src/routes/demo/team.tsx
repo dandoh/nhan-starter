@@ -87,8 +87,8 @@ import {
 } from '@/components/ui/tooltip'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Separator } from '@/components/ui/separator'
-import { TopNav } from '@/components/TopNav'
 import {
+  TopNav,
   AppPageWrapper,
   AppPageContentWrapper,
 } from '@/components/AppPageWrapper'
@@ -188,15 +188,12 @@ function ComponentShowcase() {
 
   return (
     <AppPageWrapper>
-      <TopNav>
-        <div className="flex items-center gap-2">
-          <Avatar className="size-8">
-            <AvatarFallback className="bg-primary text-primary-foreground">
-              JH
-            </AvatarFallback>
-          </Avatar>
-          <span className="text-sm font-medium">Component Showcase</span>
-        </div>
+      <TopNav
+        breadcrumbs={[
+          { label: 'Demo' },
+          { label: 'Team Management' },
+        ]}
+      >
         <div className="flex gap-2">
           <TooltipProvider>
             <Tooltip>
@@ -216,7 +213,6 @@ function ComponentShowcase() {
           </Button>
         </div>
       </TopNav>
-
       <AppPageContentWrapper>
         <Tabs defaultValue="buttons" className="space-y-6">
           <TabsList>

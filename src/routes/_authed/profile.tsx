@@ -1,8 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useAuthContext } from '../_authed'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { TopNav } from '@/components/TopNav'
 import {
+  TopNav,
   AppPageWrapper,
   AppPageContentWrapper,
 } from '@/components/AppPageWrapper'
@@ -17,7 +17,7 @@ function ProfilePage() {
 
   return (
     <AppPageWrapper>
-      <TopNav title="Profile" />
+      <TopNav breadcrumbs={[{ label: 'Profile' }]} />
       <AppPageContentWrapper className="bg-background py-12">
       <div className="max-w-3xl mx-auto">
         <Card>

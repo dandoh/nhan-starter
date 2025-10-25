@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Users, TrendingUp, ArrowRight } from 'lucide-react'
-import { TopNav } from '@/components/TopNav'
 import {
+  TopNav,
   AppPageWrapper,
   AppPageContentWrapper,
 } from '@/components/AppPageWrapper'
@@ -14,7 +14,7 @@ export const Route = createFileRoute('/')({
 function HomePage() {
   return (
     <AppPageWrapper>
-      <TopNav title="Home" />
+      <TopNav breadcrumbs={[{ label: 'Home' }]} />
       <AppPageContentWrapper className="flex items-center justify-center">
       <div className="mx-auto w-full max-w-4xl">
         <div className="mb-12 text-center">

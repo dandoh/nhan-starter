@@ -10,8 +10,8 @@ import {
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
-import { TopNav } from '@/components/TopNav'
 import {
+  TopNav,
   AppPageWrapper,
   AppPageContentWrapper,
 } from '@/components/AppPageWrapper'
@@ -119,7 +119,7 @@ function CareerPage() {
 
   return (
     <AppPageWrapper>
-      <TopNav title="Career Development" />
+      <TopNav breadcrumbs={[{ label: 'Demo' }, { label: 'Career Development' }]} />
       <AppPageContentWrapper className="p-0">
         <div className="flex h-full">
         {/* Left Section - Hero */}

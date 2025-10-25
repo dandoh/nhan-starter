@@ -148,7 +148,7 @@ const TEXT_TYPE: OutputTypeDefinition = {
   deserialize: (value) => value || '',
 
   renderCell: ({ value }) => (
-    <div className="px-3 py-2 text-sm overflow-hidden text-ellipsis">
+    <div className="text-sm overflow-hidden text-ellipsis">
       {value || <span className="text-muted-foreground"></span>}
     </div>
   ),
@@ -175,11 +175,11 @@ const LONG_TEXT_TYPE: OutputTypeDefinition = {
 
   renderCell: ({ value }) => {
     if (!value) {
-      return <div className="px-3 py-2 text-sm text-muted-foreground"></div>
+      return <div className="text-sm text-muted-foreground"></div>
     }
 
     return (
-      <div className="px-3 py-2 text-sm max-h-32 overflow-y-auto whitespace-pre-wrap scrollbar scrollbar-track-background scrollbar-thumb-primary-300">
+      <div className="text-sm max-h-32 overflow-y-auto whitespace-pre-wrap scrollbar scrollbar-track-background scrollbar-thumb-primary-300">
         {value}
       </div>
     )
@@ -227,12 +227,12 @@ const SINGLE_SELECT_TYPE: OutputTypeDefinition = {
 
   renderCell: ({ value }) => {
     if (!value) {
-      return <div className="px-3 py-2 text-sm text-muted-foreground"></div>
+      return <div className="text-sm text-muted-foreground"></div>
     }
 
     const colors = getBadgeColors(value)
     return (
-      <div className="px-3 py-2">
+      <div className="">
         <Badge
           style={{
             backgroundColor: colors.backgroundColor,
@@ -316,11 +316,11 @@ const MULTI_SELECT_TYPE: OutputTypeDefinition = {
     const values = Array.isArray(value) ? value : []
 
     if (values.length === 0) {
-      return <div className="px-3 py-2 text-sm text-muted-foreground"></div>
+      return <div className="text-sm text-muted-foreground"></div>
     }
 
     return (
-      <div className="flex flex-wrap gap-1 px-3 py-2">
+      <div className="flex flex-wrap gap-1">
         {values.map((val, index) => {
           const colors = getBadgeColors(val)
           return (
@@ -367,14 +367,14 @@ const DATE_TYPE: OutputTypeDefinition = {
 
   renderCell: ({ value, config }) => {
     if (!value) {
-      return <div className="px-3 py-2 text-sm text-muted-foreground"></div>
+      return <div className="text-sm text-muted-foreground"></div>
     }
 
     const dateConfig = config as DateConfig | null
     const displayValue = formatDateValue(value, dateConfig?.dateFormat)
 
     return (
-      <div className="flex items-center gap-2 px-3 py-2 text-sm">
+      <div className="flex items-center gap-2 text-sm">
         <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
         <span>{displayValue}</span>
       </div>

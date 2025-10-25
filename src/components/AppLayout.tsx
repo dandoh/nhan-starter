@@ -22,6 +22,7 @@ import {
   SidebarInset,
   SidebarFooter,
   SidebarSeparator,
+  SidebarTrigger,
 } from '@/components/ui/sidebar'
 
 const navigation = [
@@ -65,20 +66,18 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider>
-      <Sidebar>
+      <Sidebar collapsible="icon">
         <SidebarHeader className="h-14 justify-center">
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton size="lg" asChild>
+              <SidebarMenuButton size="lg" asChild tooltip="Workspace">
                 <Link to="/">
-                  <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                     <LayoutDashboard className="size-4" />
                   </div>
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-semibold">Workspace</span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      Company Inc.
-                    </span>
+                    <span className="truncate text-xs">Company Inc.</span>
                   </div>
                 </Link>
               </SidebarMenuButton>
@@ -95,6 +94,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     <SidebarMenuButton
                       asChild
                       isActive={location.pathname === item.url}
+                      tooltip={item.title}
                     >
                       <Link to={item.url}>
                         <item.icon />
@@ -114,6 +114,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <SidebarMenuButton
                   asChild
                   isActive={location.pathname === item.url}
+                  tooltip={item.title}
                 >
                   <Link to={item.url}>
                     <item.icon />
@@ -125,7 +126,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset>
+      <SidebarInset className="overflow-x-hidden">
         <div className="flex flex-1 flex-col">{children}</div>
       </SidebarInset>
     </SidebarProvider>

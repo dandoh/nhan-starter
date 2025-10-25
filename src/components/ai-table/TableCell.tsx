@@ -93,7 +93,7 @@ export const TableCell = memo(function TableCell({
   // Show spinner for computing cells
   if (cell?.computeStatus === 'computing') {
     return (
-      <div className="flex items-center gap-2 px-3 py-2">
+      <div className="flex items-center gap-2">
         <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         <span className="text-sm text-muted-foreground">Generating...</span>
       </div>
@@ -103,7 +103,7 @@ export const TableCell = memo(function TableCell({
   // Show error state
   if (cell?.computeStatus === 'error' && cell.computeError) {
     return (
-      <div className="flex items-center gap-2 px-3 py-2 text-destructive">
+      <div className="flex items-center gap-2 text-destructive">
         <span className="text-sm">⚠️ {cell.computeError}</span>
       </div>
     )

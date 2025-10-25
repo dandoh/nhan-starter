@@ -6,7 +6,7 @@ function Table({ className, ...props }: React.ComponentProps<'table'>) {
   return (
     <div
       data-slot="table-container"
-      className="relative w-full overflow-x-auto scrollbar scrollbar-track-background scrollbar-thumb-gray-300"
+      className="relative w-full overflow-x-auto scrollbar scrollbar-track-transparent scrollbar-thumb-transparent hover:scrollbar-thumb-interactive"
     >
       <table
         data-slot="table"
@@ -33,7 +33,7 @@ function TableBody({ className, ...props }: React.ComponentProps<'tbody'>) {
       data-slot="table-body"
       className={cn(
         '[&_tr:last-child]:border-0',
-        '[&_tr]:bg-background',
+        // '[&_tr]:bg-background',
         '[&_tr:hover]:bg-interactive',
         '[&_tr[data-state=selected]]:bg-interactive',
         '[&_tr:not(:first-child)]:border-t-[8px]',
