@@ -6,7 +6,9 @@ function Table({ className, ...props }: React.ComponentProps<'table'>) {
   return (
     <div
       data-slot="table-container"
-      className="relative w-full overflow-x-auto scrollbar scrollbar-track-transparent scrollbar-thumb-transparent hover:scrollbar-thumb-interactive border-border border-1"
+      className="relative w-full overflow-x-auto scrollbar scrollbar-track-transparent 
+      scrollbar-thumb-transparent hover:scrollbar-thumb-interactive
+      "
     >
       <table
         data-slot="table"
@@ -32,8 +34,8 @@ function TableBody({ className, ...props }: React.ComponentProps<'tbody'>) {
     <tbody
       data-slot="table-body"
       className={cn(
-        '[&_tr]:border-b border-border',
-        '[&_tr:last-child]:border-0',
+        // '[&_tr]:border-b border-border',
+        // '[&_tr:last-child]:border-0',
         // '[&_tr]:bg-background',
         '[&_tr:hover]:bg-interactive',
         '[&_tr[data-state=selected]]:bg-interactive',
@@ -63,10 +65,10 @@ function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
       data-slot="table-row"
       className={cn(
         'transition-colors',
-        '[&_th]:border-r border-border',
-        '[&_th:last-child]:border-r-0',
-        '[&_td]:border-r border-border',
-        '[&_td:last-child]:border-r-0',
+        // '[&_th]:border-r border-border',
+        // '[&_th:last-child]:border-r-0',
+        // '[&_td]:border-r border-border',
+        // '[&_td:last-child]:border-r-0',
         className,
       )}
       {...props}

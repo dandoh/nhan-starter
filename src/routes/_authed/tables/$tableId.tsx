@@ -161,7 +161,7 @@ function TableEditorPage() {
       ></TopNav>
       <AppPageContentWrapper>
         <Card className="gap-0 p-0">
-          <div className="px-6 py-4 border-b border-border">
+          <div className="px-6 py-4">
             <CardTitle className="flex justify-between items-center mb-0">
               <span>Company stock analysis</span>
               <Tooltip>
@@ -186,21 +186,16 @@ function TableEditorPage() {
               direction="horizontal"
               className="min-h-[300px] max-h-[600px]"
             >
-              {/* Main Table Panel */}
               <ResizablePanel defaultSize={70} minSize={30}>
                 <div className="h-full flex flex-col px-6 py-4 overflow-hidden">
-                  {/* Table and Add Column Button */}
                   <div className="flex space-x-2 flex-1 overflow-hidden">
                     <div className="flex-1 overflow-auto scrollbar scrollbar-track-transparent scrollbar-thumb-transparent hover:scrollbar-thumb-interactive">
-                      <Table>
+                      <Table className="relative">
                         <TableHeader className="">
                           {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id}>
                               {headerGroup.headers.map((header) => (
-                                <TableHead
-                                  key={header.id}
-                                  className="sticky top-0 z-10 bg-background"
-                                >
+                                <TableHead key={header.id} className="">
                                   {header.isPlaceholder
                                     ? null
                                     : flexRender(
@@ -242,8 +237,7 @@ function TableEditorPage() {
                         </TableBody>
                       </Table>
                     </div>
-                    {/* Add Column Button */}
-                    <div className="flex items-start pt-2">
+                    <div className="flex items-start pt-1">
                       <Button
                         size="icon"
                         variant="secondary"

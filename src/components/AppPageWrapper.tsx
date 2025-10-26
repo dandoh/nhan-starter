@@ -24,10 +24,10 @@ interface TopNavProps {
 
 export function TopNav({ breadcrumbs, children }: TopNavProps) {
   return (
-    <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between gap-2 border-b bg-sidebar px-4 py-4">
+    <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between gap-2 bg-background px-4 py-4">
       <div className="flex items-center gap-2 h-full">
-        <SidebarTrigger />
-        <Separator orientation="vertical" className="h-full" />
+        {/* <SidebarTrigger /> */}
+        {/* <Separator orientation="vertical" className="h-full" /> */}
         <Breadcrumb className="ml-2">
           <BreadcrumbList>
             {breadcrumbs.map((item, index) => {
