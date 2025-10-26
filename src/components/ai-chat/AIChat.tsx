@@ -128,7 +128,7 @@ function AIChatInternal({
             <>
               {messages.map((message) => (
                 <Message key={message.id} from={message.role}>
-                  <MessageContent>
+                  <MessageContent variant="flat">
                     {message.parts.map((part, index) => {
                       // Handle text parts
                       if (part.type === 'text') {

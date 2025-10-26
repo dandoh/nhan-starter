@@ -12,7 +12,7 @@ import { Plus, Sparkles } from 'lucide-react'
 import { useTableSync } from '@/hooks/use-table-sync'
 import { AiTableCell } from '@/components/ai-table/AiTableCell'
 import { AiColumnHeader } from '@/components/ai-table/AiColumnHeader'
-import { AIChat } from '@/components/ai-table/AIChat'
+import { AIChat } from '@/components/ai-chat/AIChat'
 import { Button } from '@/components/ui/button'
 import {
   Tooltip,

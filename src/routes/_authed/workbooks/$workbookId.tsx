@@ -6,7 +6,7 @@ import { AddBlockButton } from '@/components/workbook/AddBlockButton'
 import { TextBlock } from '@/components/workbook/blocks/TextBlock'
 import { CodeBlock } from '@/components/workbook/blocks/CodeBlock'
 import { TableBlock } from '@/components/workbook/blocks/TableBlock'
-import { AIChat } from '@/components/ai-table/AIChat'
+import { AIChat } from '@/components/ai-chat/AIChat'
 import { Input } from '@/components/ui/input'
 import type { BlockType } from '@/components/workbook/WorkbookBlock'
 
