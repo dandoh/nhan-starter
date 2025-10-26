@@ -3,7 +3,7 @@
 import { Suspense } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport, type UIMessage } from 'ai'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, CheckCircle2, XCircle, Columns3 } from 'lucide-react'
 import { orpc } from '@/orpc/client'
 import {
   Conversation,
@@ -24,7 +24,15 @@ import {
 import { Suggestion } from '@/components/ai-elements/suggestion'
 import { Response } from '@/components/ai-elements/response'
 import { Loader } from '@/components/ai-elements/loader'
+import {
+  Tool,
+  ToolContent,
+  ToolHeader,
+  ToolInput,
+  ToolOutput,
+} from '@/components/ai-elements/tool'
 import { useSuspenseQuery } from '@tanstack/react-query'
+import type { ToolUIPart } from 'ai'
 
 interface AIChatProps {
   tableId: string
@@ -45,9 +53,7 @@ function AIChatLoading() {
   return (
     <div className="flex flex-col h-full items-center justify-center p-4">
       <Loader size={24} />
-      <p className="text-sm text-muted-foreground mt-2">
-        Initializing chat...
-      </p>
+      <p className="text-sm text-muted-foreground mt-2">Initializing chat...</p>
     </div>
   )
 }
@@ -117,9 +123,36 @@ function AIChatInternal({ tableId }: AIChatProps) {
                 <Message key={message.id} from={message.role}>
                   <MessageContent>
                     {message.parts.map((part, index) => {
+                      // Handle text parts
                       if (part.type === 'text') {
                         return <Response key={index}>{part.text}</Response>
                       }
+
+                      // Handle tool calls
+                      if (part.type.startsWith('tool-')) {
+                        const toolPart = part as ToolUIPart
+                        // Auto-open tools that are completed or errored
+                        // const shouldDefaultOpen =
+                        //   toolPart.state === 'output-available' ||
+                        //   toolPart.state === 'output-error'
+
+                        return (
+                          <Tool key={index} open={false} >
+                            <ToolHeader
+                              type={toolPart.type}
+                              state={toolPart.state}
+                            />
+                            <ToolContent>
+                              <ToolInput input={toolPart.input} />
+                              <ToolOutput
+                                output={toolPart.output}
+                                errorText={toolPart.errorText}
+                              />
+                            </ToolContent>
+                          </Tool>
+                        )
+                      }
+
                       return null
                     })}
                   </MessageContent>
