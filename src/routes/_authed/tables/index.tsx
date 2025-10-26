@@ -47,7 +47,6 @@ function TablesListPage() {
     <AppPageWrapper>
       <TopNav breadcrumbs={[{ label: 'AI Tables' }]} />
       <AppPageContentWrapper className="bg-background">
-      <div className="mx-auto max-w-7xl">
         <div className="mb-8 flex items-center justify-between">
           <div>
             <p className="text-muted-foreground">
@@ -138,7 +137,6 @@ function TablesListPage() {
             ))}
           </div>
         )}
-      </div>
       </AppPageContentWrapper>
     </AppPageWrapper>
   )

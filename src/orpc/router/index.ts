@@ -6,6 +6,7 @@ import {
   getConversationsForContext 
 } from './conversations'
 import * as aiTables from './ai-tables'
+import * as workbooksRouter from './workbooks'
 
 export default {
   listTodos,
@@ -22,6 +23,15 @@ export default {
   // Deprecated - kept for backward compatibility
   createConversation,
   getConversation,
+  
+  // Workbooks
+  workbooks: {
+    list: workbooksRouter.listWorkbooks,
+    create: workbooksRouter.createWorkbook,
+    get: workbooksRouter.getWorkbook,
+    update: workbooksRouter.updateWorkbook,
+    delete: workbooksRouter.deleteWorkbook,
+  },
   
   // AI Tables
   aiTables: {

@@ -19,12 +19,14 @@ import { Route as AuthedTableExampleRouteImport } from './routes/_authed/table-e
 import { Route as AuthedProfileRouteImport } from './routes/_authed/profile'
 import { Route as AuthedNewChatRouteImport } from './routes/_authed/new-chat'
 import { Route as AuthedAppRouteImport } from './routes/_authed/app'
+import { Route as AuthedWorkbooksIndexRouteImport } from './routes/_authed/workbooks/index'
 import { Route as AuthedTablesIndexRouteImport } from './routes/_authed/tables/index'
 import { Route as DemoFormAddressRouteImport } from './routes/demo/form.address'
 import { Route as DemoApiTqTodosRouteImport } from './routes/demo/api.tq-todos'
 import { Route as ApiRpcSplatRouteImport } from './routes/api/rpc.$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
 import { Route as ApiAuthedApiDbChatApiRouteImport } from './routes/api/_authed-api/db-chat-api'
+import { Route as AuthedWorkbooksWorkbookIdRouteImport } from './routes/_authed/workbooks/$workbookId'
 import { Route as AuthedTablesTableIdRouteImport } from './routes/_authed/tables/$tableId'
 import { Route as AuthedConversationsConversationIdRouteImport } from './routes/_authed/conversations.$conversationId'
 import { Route as ApiAuthedApiChatConversationIdRouteImport } from './routes/api/_authed-api/chat.$conversationId'
@@ -78,6 +80,11 @@ const AuthedAppRoute = AuthedAppRouteImport.update({
   path: '/app',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedWorkbooksIndexRoute = AuthedWorkbooksIndexRouteImport.update({
+  id: '/workbooks/',
+  path: '/workbooks/',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedTablesIndexRoute = AuthedTablesIndexRouteImport.update({
   id: '/tables/',
   path: '/tables/',
@@ -108,6 +115,12 @@ const ApiAuthedApiDbChatApiRoute = ApiAuthedApiDbChatApiRouteImport.update({
   path: '/api/db-chat-api',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedWorkbooksWorkbookIdRoute =
+  AuthedWorkbooksWorkbookIdRouteImport.update({
+    id: '/workbooks/$workbookId',
+    path: '/workbooks/$workbookId',
+    getParentRoute: () => AuthedRoute,
+  } as any)
 const AuthedTablesTableIdRoute = AuthedTablesTableIdRouteImport.update({
   id: '/tables/$tableId',
   path: '/tables/$tableId',
@@ -138,12 +151,14 @@ export interface FileRoutesByFullPath {
   '/demo/team': typeof DemoTeamRoute
   '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/tables/$tableId': typeof AuthedTablesTableIdRoute
+  '/workbooks/$workbookId': typeof AuthedWorkbooksWorkbookIdRoute
   '/api/db-chat-api': typeof ApiAuthedApiDbChatApiRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
   '/demo/api/tq-todos': typeof DemoApiTqTodosRoute
   '/demo/form/address': typeof DemoFormAddressRoute
   '/tables': typeof AuthedTablesIndexRoute
+  '/workbooks': typeof AuthedWorkbooksIndexRoute
   '/api/chat/$conversationId': typeof ApiAuthedApiChatConversationIdRoute
 }
 export interface FileRoutesByTo {
@@ -158,12 +173,14 @@ export interface FileRoutesByTo {
   '/demo/team': typeof DemoTeamRoute
   '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/tables/$tableId': typeof AuthedTablesTableIdRoute
+  '/workbooks/$workbookId': typeof AuthedWorkbooksWorkbookIdRoute
   '/api/db-chat-api': typeof ApiAuthedApiDbChatApiRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
   '/demo/api/tq-todos': typeof DemoApiTqTodosRoute
   '/demo/form/address': typeof DemoFormAddressRoute
   '/tables': typeof AuthedTablesIndexRoute
+  '/workbooks': typeof AuthedWorkbooksIndexRoute
   '/api/chat/$conversationId': typeof ApiAuthedApiChatConversationIdRoute
 }
 export interface FileRoutesById {
@@ -180,12 +197,14 @@ export interface FileRoutesById {
   '/demo/team': typeof DemoTeamRoute
   '/_authed/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/_authed/tables/$tableId': typeof AuthedTablesTableIdRoute
+  '/_authed/workbooks/$workbookId': typeof AuthedWorkbooksWorkbookIdRoute
   '/api/_authed-api/db-chat-api': typeof ApiAuthedApiDbChatApiRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
   '/demo/api/tq-todos': typeof DemoApiTqTodosRoute
   '/demo/form/address': typeof DemoFormAddressRoute
   '/_authed/tables/': typeof AuthedTablesIndexRoute
+  '/_authed/workbooks/': typeof AuthedWorkbooksIndexRoute
   '/api/_authed-api/chat/$conversationId': typeof ApiAuthedApiChatConversationIdRoute
 }
 export interface FileRouteTypes {
@@ -202,12 +221,14 @@ export interface FileRouteTypes {
     | '/demo/team'
     | '/conversations/$conversationId'
     | '/tables/$tableId'
+    | '/workbooks/$workbookId'
     | '/api/db-chat-api'
     | '/api/auth/$'
     | '/api/rpc/$'
     | '/demo/api/tq-todos'
     | '/demo/form/address'
     | '/tables'
+    | '/workbooks'
     | '/api/chat/$conversationId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -222,12 +243,14 @@ export interface FileRouteTypes {
     | '/demo/team'
     | '/conversations/$conversationId'
     | '/tables/$tableId'
+    | '/workbooks/$workbookId'
     | '/api/db-chat-api'
     | '/api/auth/$'
     | '/api/rpc/$'
     | '/demo/api/tq-todos'
     | '/demo/form/address'
     | '/tables'
+    | '/workbooks'
     | '/api/chat/$conversationId'
   id:
     | '__root__'
@@ -243,12 +266,14 @@ export interface FileRouteTypes {
     | '/demo/team'
     | '/_authed/conversations/$conversationId'
     | '/_authed/tables/$tableId'
+    | '/_authed/workbooks/$workbookId'
     | '/api/_authed-api/db-chat-api'
     | '/api/auth/$'
     | '/api/rpc/$'
     | '/demo/api/tq-todos'
     | '/demo/form/address'
     | '/_authed/tables/'
+    | '/_authed/workbooks/'
     | '/api/_authed-api/chat/$conversationId'
   fileRoutesById: FileRoutesById
 }
@@ -339,6 +364,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedAppRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/workbooks/': {
+      id: '/_authed/workbooks/'
+      path: '/workbooks'
+      fullPath: '/workbooks'
+      preLoaderRoute: typeof AuthedWorkbooksIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/tables/': {
       id: '/_authed/tables/'
       path: '/tables'
@@ -381,6 +413,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthedApiDbChatApiRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed/workbooks/$workbookId': {
+      id: '/_authed/workbooks/$workbookId'
+      path: '/workbooks/$workbookId'
+      fullPath: '/workbooks/$workbookId'
+      preLoaderRoute: typeof AuthedWorkbooksWorkbookIdRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/tables/$tableId': {
       id: '/_authed/tables/$tableId'
       path: '/tables/$tableId'
@@ -412,7 +451,9 @@ interface AuthedRouteChildren {
   AuthedTableExampleRoute: typeof AuthedTableExampleRoute
   AuthedConversationsConversationIdRoute: typeof AuthedConversationsConversationIdRoute
   AuthedTablesTableIdRoute: typeof AuthedTablesTableIdRoute
+  AuthedWorkbooksWorkbookIdRoute: typeof AuthedWorkbooksWorkbookIdRoute
   AuthedTablesIndexRoute: typeof AuthedTablesIndexRoute
+  AuthedWorkbooksIndexRoute: typeof AuthedWorkbooksIndexRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
@@ -423,7 +464,9 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedConversationsConversationIdRoute:
     AuthedConversationsConversationIdRoute,
   AuthedTablesTableIdRoute: AuthedTablesTableIdRoute,
+  AuthedWorkbooksWorkbookIdRoute: AuthedWorkbooksWorkbookIdRoute,
   AuthedTablesIndexRoute: AuthedTablesIndexRoute,
+  AuthedWorkbooksIndexRoute: AuthedWorkbooksIndexRoute,
 }
 
 const AuthedRouteWithChildren =

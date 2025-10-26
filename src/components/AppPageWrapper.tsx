@@ -1,8 +1,6 @@
 import { cn } from '@/lib/utils'
 import { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
-import { SidebarTrigger } from '@/components/ui/sidebar'
-import { Separator } from './ui/separator'
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -73,11 +71,13 @@ export function AppPageWrapper({ children }: AppPageWrapperProps) {
 interface AppPageContentWrapperProps {
   children: ReactNode
   className?: string
+  fullWidth?: boolean
 }
 
 export function AppPageContentWrapper({
   children,
   className = '',
+  fullWidth = false,
 }: AppPageContentWrapperProps) {
   return (
     <div
@@ -86,7 +86,7 @@ export function AppPageContentWrapper({
         className,
       )}
     >
-      {children}
+      <div className={cn(!fullWidth && 'mx-auto max-w-7xl')}>{children}</div>
     </div>
   )
 }

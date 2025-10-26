@@ -11,6 +11,7 @@ import {
   index,
 } from 'drizzle-orm/pg-core'
 import { relations, sql } from 'drizzle-orm'
+import { z } from 'zod'
 
 // Export auth schema
 import { users, sessions, accounts, verifications } from '../auth/auth-schema'
@@ -50,6 +51,28 @@ export const posts = pgTable('posts', {
 export type Post = typeof posts.$inferSelect
 export type NewPost = typeof posts.$inferInsert
 
+// Workbooks - The main working unit containing multiple blocks
+export const workbooks = pgTable('workbooks', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+}, (table) => [
+  index('workbooks_user_id_idx').on(table.userId),
+])
+
+export type Workbook = typeof workbooks.$inferSelect
+export type NewWorkbook = typeof workbooks.$inferInsert
+
 // AI Conversations table
 export const aiConversations = pgTable('ai_conversations', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -60,8 +83,8 @@ export const aiConversations = pgTable('ai_conversations', {
   status: text('status', { enum: ['idle', 'generating'] })
     .notNull()
     .default('idle'),
-  // Context - allows conversation to be scoped to different entities (table, project, document, etc.)
-  contextType: text('context_type', { enum: ['general', 'table', 'project', 'document'] })
+  // Context - allows conversation to be scoped to different entities (workbook, table, project, document, etc.)
+  contextType: text('context_type', { enum: ['general', 'workbook', 'table', 'project', 'document'] })
     .default('general'),
   contextId: uuid('context_id'), // Nullable UUID - reference to the context entity
   createdAt: timestamp('created_at', { withTimezone: true })
@@ -79,20 +102,28 @@ export const aiConversations = pgTable('ai_conversations', {
 export type AiConversation = typeof aiConversations.$inferSelect
 export type NewAiConversation = typeof aiConversations.$inferInsert
 
-// Helper type for conversation context
-export type ConversationContext = 
-  | { type: 'general' }
-  | { type: 'table'; tableId: string }
-  | { type: 'project'; projectId: string }
-  | { type: 'document'; documentId: string }
+// Zod schema for conversation context (single source of truth)
+export const conversationContextSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('general') }),
+  z.object({ type: z.literal('workbook'), workbookId: z.string().uuid() }),
+  z.object({ type: z.literal('table'), tableId: z.string().uuid() }),
+  z.object({ type: z.literal('project'), projectId: z.string().uuid() }),
+  z.object({ type: z.literal('document'), documentId: z.string().uuid() }),
+])
+
+// Helper type for conversation context (inferred from schema)
+export type ConversationContext = z.infer<typeof conversationContextSchema>
 
 // Helper to create context fields from ConversationContext
 export function conversationContextToFields(context: ConversationContext): {
-  contextType: 'general' | 'table' | 'project' | 'document'
+  contextType: 'general' | 'workbook' | 'table' | 'project' | 'document'
   contextId: string | null
 } {
   if (context.type === 'general') {
     return { contextType: 'general', contextId: null }
+  }
+  if (context.type === 'workbook') {
+    return { contextType: 'workbook', contextId: context.workbookId }
   }
   if (context.type === 'table') {
     return { contextType: 'table', contextId: context.tableId }
@@ -108,6 +139,9 @@ export function fieldsToConversationContext(
   contextType: string | null,
   contextId: string | null,
 ): ConversationContext {
+  if (contextType === 'workbook' && contextId) {
+    return { type: 'workbook', workbookId: contextId }
+  }
   if (contextType === 'table' && contextId) {
     return { type: 'table', tableId: contextId }
   }
@@ -264,8 +298,17 @@ export const postsRelations = relations(posts, ({ one }) => ({
 
 export const usersRelations = relations(users, ({ many }) => ({
   posts: many(posts),
+  workbooks: many(workbooks),
   aiConversations: many(aiConversations),
   aiTables: many(aiTables),
+}))
+
+export const workbooksRelations = relations(workbooks, ({ one }) => ({
+  user: one(users, {
+    fields: [workbooks.userId],
+    references: [users.id],
+  }),
+  // Note: conversations are linked via contextType='workbook' + contextId (polymorphic)
 }))
 
 export const aiConversationsRelations = relations(

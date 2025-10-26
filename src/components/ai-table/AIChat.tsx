@@ -3,7 +3,7 @@
 import { Suspense } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport, type UIMessage } from 'ai'
-import { Sparkles, CheckCircle2, XCircle, Columns3 } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import { orpc } from '@/orpc/client'
 import {
   Conversation,
@@ -33,9 +33,13 @@ import {
 } from '@/components/ai-elements/tool'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import type { ToolUIPart } from 'ai'
+import type { ConversationContext } from '@/db/schema'
 
 interface AIChatProps {
-  tableId: string
+  context: Exclude<ConversationContext, { type: 'general' }>
+  title?: string
+  description?: string
+  quickActions?: string[]
 }
 
 // Helper function to transform messages to UI format
@@ -59,12 +63,22 @@ function AIChatLoading() {
 }
 
 // Internal component that uses Suspense
-function AIChatInternal({ tableId }: AIChatProps) {
+function AIChatInternal({ 
+  context,
+  title = 'AI Assistant',
+  description = 'Ask me to help with your data. I can analyze, generate insights, or perform calculations.',
+  quickActions = [
+    'Analyze the data',
+    'Summarize key insights',
+    'What trends do you see?',
+    'Generate a report',
+  ],
+}: AIChatProps) {
   // Use oRPC's auto-generated query hook with Suspense
   const { data: conversations } = useSuspenseQuery(
     orpc.conversations.getForContext.queryOptions({
       input: {
-        context: { type: 'table', tableId },
+        context,
         limit: 10,
       },
     }),
@@ -91,13 +105,6 @@ function AIChatInternal({ tableId }: AIChatProps) {
 
   const isLoading = status === 'submitted' || status === 'streaming'
 
-  const quickActions = [
-    'Add a new column',
-    'Analyze sentiment trends',
-    'Calculate P/E ratio',
-    'Export to CSV',
-  ]
-
   const handleSuggestionClick = (suggestion: string) => {
     handleSubmit({ text: suggestion })
   }
@@ -114,8 +121,8 @@ function AIChatInternal({ tableId }: AIChatProps) {
                   <Sparkles className="h-6 w-6 text-primary" />
                 </div>
               }
-              title="AI Assistant"
-              description="Ask me to help with your table. I can add columns, analyze data, or perform calculations."
+              title={title}
+              description={description}
             />
           ) : (
             <>
@@ -217,10 +224,10 @@ function AIChatInternal({ tableId }: AIChatProps) {
 }
 
 // Exported component with Suspense boundary
-export function AIChat({ tableId }: AIChatProps) {
+export function AIChat(props: AIChatProps) {
   return (
     <Suspense fallback={<AIChatLoading />}>
-      <AIChatInternal tableId={tableId} />
+      <AIChatInternal {...props} />
     </Suspense>
   )
 }

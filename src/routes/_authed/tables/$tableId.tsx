@@ -299,7 +299,17 @@ function TableEditorPage() {
                 maxSize={50}
                 className={cn(isAIChatOpen ? 'max-h-full' : 'hidden')}
               >
-                <AIChat tableId={tableId} />
+                <AIChat
+                  context={{ type: 'table', tableId }}
+                  title="Table AI Assistant"
+                  description="Ask me to help with your table. I can add columns, analyze data, or perform calculations."
+                  quickActions={[
+                    'Add a new column',
+                    'Analyze sentiment trends',
+                    'Calculate statistics',
+                    'Export to CSV',
+                  ]}
+                />
               </ResizablePanel>
             </ResizablePanelGroup>
           </CardContent>
