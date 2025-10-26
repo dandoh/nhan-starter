@@ -1,10 +1,25 @@
 import { addTodo, listTodos } from './todos'
-import { createConversation, getConversation } from './conversations'
+import { 
+  createConversation, 
+  getConversation, 
+  findOrCreateConversationForContext,
+  getConversationsForContext 
+} from './conversations'
 import * as aiTables from './ai-tables'
 
 export default {
   listTodos,
   addTodo,
+  
+  // Conversations
+  conversations: {
+    create: createConversation,
+    get: getConversation,
+    findOrCreateForContext: findOrCreateConversationForContext,
+    getForContext: getConversationsForContext,
+  },
+  
+  // Deprecated - kept for backward compatibility
   createConversation,
   getConversation,
   

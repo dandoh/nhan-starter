@@ -2,13 +2,27 @@ import { os, ORPCError } from '@orpc/server'
 import * as z from 'zod'
 import { authMiddleware } from '../middleware/auth'
 import { db } from '@/db'
-import { aiConversations, aiMessages } from '@/db/schema'
-import { eq } from 'drizzle-orm'
+import { 
+  aiConversations, 
+  aiMessages, 
+  aiTables,
+  conversationContextToFields,
+} from '@/db/schema'
+import { eq, and, isNull } from 'drizzle-orm'
 import { getRequestHeaders } from '@tanstack/react-start/server'
+
+// Zod schema for conversation context
+const conversationContextSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('general') }),
+  z.object({ type: z.literal('table'), tableId: z.string().uuid() }),
+  z.object({ type: z.literal('project'), projectId: z.string().uuid() }),
+  z.object({ type: z.literal('document'), documentId: z.string().uuid() }),
+])
 
 /**
  * Create a new conversation
  * - Requires authentication
+ * - Optionally accepts context (table, project, document) to scope the conversation
  * - Optionally accepts an initial prompt which will be saved as the first user message
  * - Returns new conversation object
  */
@@ -18,15 +32,42 @@ export const createConversation = os
     z.object({
       title: z.string().optional(),
       initialPrompt: z.string().optional(),
+      context: conversationContextSchema.optional(),
     }),
   )
   .handler(async ({ input, context }) => {
+    // Validate context if provided
+    if (input.context) {
+      if (input.context.type === 'table') {
+        // Verify table exists and user has access
+        const table = await db.query.aiTables.findFirst({
+          where: and(
+            eq(aiTables.id, input.context.tableId),
+            eq(aiTables.userId, context.user.id),
+          ),
+        })
+        if (!table) {
+          throw new ORPCError('NOT_FOUND', {
+            message: 'Table not found or access denied',
+          })
+        }
+      }
+      // Add validation for other context types (project, document) when implemented
+    }
+
+    // Convert context to database fields
+    const contextFields = input.context 
+      ? conversationContextToFields(input.context)
+      : { contextType: 'general' as const, contextId: null }
+
     const [newConversation] = await db
       .insert(aiConversations)
       .values({
         userId: context.user.id,
         status: 'idle',
         title: input.title || null,
+        contextType: contextFields.contextType,
+        contextId: contextFields.contextId,
       })
       .returning()
 
@@ -62,6 +103,8 @@ export const getConversation = os
       status: z.enum(['idle', 'generating']),
       title: z.string().nullable(),
       userId: z.string().uuid(),
+      contextType: z.enum(['general', 'table', 'project', 'document']).nullable(),
+      contextId: z.string().uuid().nullable(),
       messages: z.array(z.any()),
     }),
   )
@@ -91,6 +134,156 @@ export const getConversation = os
     }
 
     return conversation
+  })
+  .callable({
+    context: () => ({
+      headers: getRequestHeaders(),
+    }),
+  })
+
+/**
+ * Find or create a conversation for a specific context
+ * - Useful for table/project/document chat where we want one conversation per context
+ * - Returns existing conversation if found, creates new one if not
+ */
+export const findOrCreateConversationForContext = os
+  .use(authMiddleware)
+  .input(
+    z.object({
+      context: conversationContextSchema,
+      title: z.string().optional(),
+    }),
+  )
+  .handler(async ({ input, context }) => {
+    // Validate context access
+    if (input.context.type === 'table') {
+      const table = await db.query.aiTables.findFirst({
+        where: and(
+          eq(aiTables.id, input.context.tableId),
+          eq(aiTables.userId, context.user.id),
+        ),
+      })
+      if (!table) {
+        throw new ORPCError('NOT_FOUND', {
+          message: 'Table not found or access denied',
+        })
+      }
+    }
+
+    // Convert context to fields
+    const contextFields = conversationContextToFields(input.context)
+
+    // Try to find existing conversation for this context
+    const existing = await db.query.aiConversations.findFirst({
+      where: and(
+        eq(aiConversations.userId, context.user.id),
+        eq(aiConversations.contextType, contextFields.contextType),
+        contextFields.contextId 
+          ? eq(aiConversations.contextId, contextFields.contextId)
+          : isNull(aiConversations.contextId),
+      ),
+      with: {
+        messages: {
+          orderBy: (messages, { asc }) => [asc(messages.createdAt)],
+        },
+      },
+    })
+
+    if (existing) {
+      return existing
+    }
+
+    // Create new conversation
+    const [newConversation] = await db
+      .insert(aiConversations)
+      .values({
+        userId: context.user.id,
+        status: 'idle',
+        title: input.title || null,
+        contextType: contextFields.contextType,
+        contextId: contextFields.contextId,
+      })
+      .returning()
+
+    return {
+      ...newConversation,
+      messages: [],
+    }
+  })
+
+/**
+ * Get conversations for a specific context
+ * - Returns last 10 conversations for the given context
+ * - Creates a new conversation if none exist
+ * - Optimized for React Query / Suspense usage
+ */
+export const getConversationsForContext = os
+  .use(authMiddleware)
+  .input(
+    z.object({
+      context: conversationContextSchema,
+      limit: z.number().min(1).max(50).default(10),
+    }),
+  )
+  .handler(async ({ input, context }) => {
+    // Validate context access
+    if (input.context.type === 'table') {
+      const table = await db.query.aiTables.findFirst({
+        where: and(
+          eq(aiTables.id, input.context.tableId),
+          eq(aiTables.userId, context.user.id),
+        ),
+      })
+      if (!table) {
+        throw new ORPCError('NOT_FOUND', {
+          message: 'Table not found or access denied',
+        })
+      }
+    }
+
+    // Convert context to fields
+    const contextFields = conversationContextToFields(input.context)
+
+    // Fetch existing conversations for this context
+    const conversations = await db.query.aiConversations.findMany({
+      where: and(
+        eq(aiConversations.userId, context.user.id),
+        eq(aiConversations.contextType, contextFields.contextType),
+        contextFields.contextId 
+          ? eq(aiConversations.contextId, contextFields.contextId)
+          : isNull(aiConversations.contextId),
+      ),
+      with: {
+        messages: {
+          orderBy: (messages, { asc }) => [asc(messages.createdAt)],
+        },
+      },
+      orderBy: (conv, { desc }) => [desc(conv.createdAt)],
+      limit: input.limit,
+    })
+
+    // If no conversations exist, create one
+    if (conversations.length === 0) {
+      const [newConversation] = await db
+        .insert(aiConversations)
+        .values({
+          userId: context.user.id,
+          status: 'idle',
+          title: null,
+          contextType: contextFields.contextType,
+          contextId: contextFields.contextId,
+        })
+        .returning()
+
+      return [
+        {
+          ...newConversation,
+          messages: [],
+        },
+      ]
+    }
+
+    return conversations
   })
   .callable({
     context: () => ({

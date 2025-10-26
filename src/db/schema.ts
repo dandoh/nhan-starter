@@ -60,6 +60,10 @@ export const aiConversations = pgTable('ai_conversations', {
   status: text('status', { enum: ['idle', 'generating'] })
     .notNull()
     .default('idle'),
+  // Context - allows conversation to be scoped to different entities (table, project, document, etc.)
+  contextType: text('context_type', { enum: ['general', 'table', 'project', 'document'] })
+    .default('general'),
+  contextId: uuid('context_id'), // Nullable UUID - reference to the context entity
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -67,10 +71,54 @@ export const aiConversations = pgTable('ai_conversations', {
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
-})
+}, (table) => [
+  index('ai_conversations_user_id_idx').on(table.userId),
+  index('ai_conversations_context_idx').on(table.contextType, table.contextId),
+])
 
 export type AiConversation = typeof aiConversations.$inferSelect
 export type NewAiConversation = typeof aiConversations.$inferInsert
+
+// Helper type for conversation context
+export type ConversationContext = 
+  | { type: 'general' }
+  | { type: 'table'; tableId: string }
+  | { type: 'project'; projectId: string }
+  | { type: 'document'; documentId: string }
+
+// Helper to create context fields from ConversationContext
+export function conversationContextToFields(context: ConversationContext): {
+  contextType: 'general' | 'table' | 'project' | 'document'
+  contextId: string | null
+} {
+  if (context.type === 'general') {
+    return { contextType: 'general', contextId: null }
+  }
+  if (context.type === 'table') {
+    return { contextType: 'table', contextId: context.tableId }
+  }
+  if (context.type === 'project') {
+    return { contextType: 'project', contextId: context.projectId }
+  }
+  return { contextType: 'document', contextId: context.documentId }
+}
+
+// Helper to parse context fields back to ConversationContext
+export function fieldsToConversationContext(
+  contextType: string | null,
+  contextId: string | null,
+): ConversationContext {
+  if (contextType === 'table' && contextId) {
+    return { type: 'table', tableId: contextId }
+  }
+  if (contextType === 'project' && contextId) {
+    return { type: 'project', projectId: contextId }
+  }
+  if (contextType === 'document' && contextId) {
+    return { type: 'document', documentId: contextId }
+  }
+  return { type: 'general' }
+}
 
 // AI Messages table (follows AI SDK UIMessage format)
 export const aiMessages = pgTable('ai_messages', {
@@ -228,6 +276,8 @@ export const aiConversationsRelations = relations(
       references: [users.id],
     }),
     messages: many(aiMessages),
+    // Note: table relationship is polymorphic via contextType='table' + contextId
+    // We handle this at the application level rather than database level
   }),
 )
 
@@ -246,6 +296,7 @@ export const aiTablesRelations = relations(aiTables, ({ one, many }) => ({
   }),
   columns: many(aiTableColumns),
   records: many(aiTableRecords),
+  // Note: conversations are linked via contextType='table' + contextId (polymorphic)
 }))
 
 export const aiTableColumnsRelations = relations(
