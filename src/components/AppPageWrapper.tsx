@@ -9,6 +9,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
+import { SidebarTrigger } from './ui/sidebar'
+import { Separator } from './ui/separator'
 
 interface BreadcrumbItem {
   label: string
@@ -24,13 +26,13 @@ export function TopNav({ breadcrumbs, children }: TopNavProps) {
   return (
     <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between gap-2 bg-background px-4 py-4 border-b border-border">
       <div className="flex items-center gap-2 h-full">
-        {/* <SidebarTrigger /> */}
-        {/* <Separator orientation="vertical" className="h-full" /> */}
+        {/* <SidebarTrigger />
+        <Separator orientation="vertical" className="h-full" /> */}
         <Breadcrumb className="ml-2">
           <BreadcrumbList>
             {breadcrumbs.map((item, index) => {
               const isLast = index === breadcrumbs.length - 1
-              
+
               return (
                 <div key={index} className="contents">
                   <BreadcrumbItem>
@@ -41,7 +43,9 @@ export function TopNav({ breadcrumbs, children }: TopNavProps) {
                         <Link to={item.href}>{item.label}</Link>
                       </BreadcrumbLink>
                     ) : (
-                      <span className="text-muted-foreground">{item.label}</span>
+                      <span className="text-muted-foreground">
+                        {item.label}
+                      </span>
                     )}
                   </BreadcrumbItem>
                   {!isLast && <BreadcrumbSeparator />}
@@ -51,9 +55,7 @@ export function TopNav({ breadcrumbs, children }: TopNavProps) {
           </BreadcrumbList>
         </Breadcrumb>
       </div>
-      {children && (
-        <div className="flex items-center gap-2">{children}</div>
-      )}
+      {children && <div className="flex items-center gap-2">{children}</div>}
     </header>
   )
 }

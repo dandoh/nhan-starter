@@ -1,66 +1,53 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { client } from '@/orpc/client'
+import { useLiveQuery } from '@tanstack/react-db'
+import { workbooksCollection } from '@/lib/ai-table/collections'
 
+/**
+ * Hook to get and manage the list of user's workbooks
+ */
 export function useWorkbooksList() {
-  const queryClient = useQueryClient()
+  // Live query for all workbooks
+  const { data: workbooks = [], isLoading } = useLiveQuery((q) =>
+    q
+      .from({ workbook: workbooksCollection })
+      .orderBy(({ workbook }) => workbook.createdAt, 'desc'),
+  )
 
-  // Fetch all workbooks
-  const { data: workbooks = [], isLoading } = useQuery({
-    queryKey: ['workbooks'],
-    queryFn: async () => {
-      const result = await client.workbooks.list()
-      return result
-    },
-  })
+  const createWorkbook = (name: string, description?: string) => {
+    const newWorkbook = {
+      id: crypto.randomUUID(),
+      userId: '', // Will be set by server
+      name,
+      description: description || null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
 
-  // Create workbook mutation
-  const createWorkbookMutation = useMutation({
-    mutationFn: async (input: { name: string; description?: string }) => {
-      return await client.workbooks.create(input)
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['workbooks'] })
-    },
-  })
+    // Optimistic insert
+    workbooksCollection.insert(newWorkbook)
+  }
 
-  // Delete workbook mutation
-  const deleteWorkbookMutation = useMutation({
-    mutationFn: async (workbookId: string) => {
-      return await client.workbooks.delete({ workbookId })
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['workbooks'] })
-    },
-  })
+  const updateWorkbook = (
+    workbookId: string,
+    updates: { name?: string; description?: string | null },
+  ) => {
+    // Optimistic update
+    workbooksCollection.update(workbookId, (workbook) => ({
+      ...workbook,
+      ...updates,
+      updatedAt: new Date(),
+    }))
+  }
 
-  // Update workbook mutation
-  const updateWorkbookMutation = useMutation({
-    mutationFn: async (input: {
-      workbookId: string
-      name?: string
-      description?: string | null
-    }) => {
-      return await client.workbooks.update(input)
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['workbooks'] })
-    },
-  })
+  const deleteWorkbook = (workbookId: string) => {
+    // Optimistic delete
+    workbooksCollection.delete(workbookId)
+  }
 
   return {
     workbooks,
     isLoading,
-    createWorkbook: (name: string, description?: string) =>
-      createWorkbookMutation.mutate({ name, description }),
-    deleteWorkbook: (workbookId: string) =>
-      deleteWorkbookMutation.mutate(workbookId),
-    updateWorkbook: (
-      workbookId: string,
-      updates: { name?: string; description?: string | null },
-    ) => updateWorkbookMutation.mutate({ workbookId, ...updates }),
-    isCreating: createWorkbookMutation.isPending,
-    isDeleting: deleteWorkbookMutation.isPending,
-    isUpdating: updateWorkbookMutation.isPending,
+    createWorkbook,
+    updateWorkbook,
+    deleteWorkbook,
   }
 }
-

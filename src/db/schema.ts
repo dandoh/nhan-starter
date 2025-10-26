@@ -59,6 +59,8 @@ export const workbooks = pgTable('workbooks', {
     .references(() => users.id, { onDelete: 'cascade' }),
   name: varchar('name', { length: 255 }).notNull(),
   description: text('description'),
+  // Block ordering stored as { blockId: position }
+  blockOrder: jsonb('block_order').notNull().default({}),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -72,6 +74,66 @@ export const workbooks = pgTable('workbooks', {
 
 export type Workbook = typeof workbooks.$inferSelect
 export type NewWorkbook = typeof workbooks.$inferInsert
+
+// Zod schema for block ordering
+export const blockOrderSchema = z.record(z.string().uuid(), z.number())
+export type BlockOrder = z.infer<typeof blockOrderSchema>
+
+// AI Markdown table (for workbook markdown blocks)
+export const aiMarkdowns = pgTable('ai_markdowns', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  content: text('content').notNull().default(''),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+}, (table) => [
+  index('ai_markdowns_user_id_idx').on(table.userId),
+])
+
+export type AiMarkdown = typeof aiMarkdowns.$inferSelect
+export type NewAiMarkdown = typeof aiMarkdowns.$inferInsert
+
+// Workbook Blocks table
+export const workbookBlocks = pgTable(
+  'workbook_blocks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workbookId: uuid('workbook_id')
+      .notNull()
+      .references(() => workbooks.id, { onDelete: 'cascade' }),
+    type: text('type', { enum: ['markdown', 'table'] }).notNull(),
+    // Foreign key to ai_markdowns (for markdown blocks)
+    aiMarkdownId: uuid('ai_markdown_id').references(() => aiMarkdowns.id, {
+      onDelete: 'cascade',
+    }),
+    // Foreign key to ai_tables (for table blocks)
+    aiTableId: uuid('ai_table_id').references(() => aiTables.id, {
+      onDelete: 'cascade',
+    }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index('workbook_blocks_workbook_id_idx').on(table.workbookId),
+    index('workbook_blocks_ai_markdown_id_idx').on(table.aiMarkdownId),
+    index('workbook_blocks_ai_table_id_idx').on(table.aiTableId),
+  ],
+)
+
+export type WorkbookBlock = typeof workbookBlocks.$inferSelect
+export type NewWorkbookBlock = typeof workbookBlocks.$inferInsert
 
 // AI Conversations table
 export const aiConversations = pgTable('ai_conversations', {
@@ -299,16 +361,41 @@ export const postsRelations = relations(posts, ({ one }) => ({
 export const usersRelations = relations(users, ({ many }) => ({
   posts: many(posts),
   workbooks: many(workbooks),
+  aiMarkdowns: many(aiMarkdowns),
   aiConversations: many(aiConversations),
   aiTables: many(aiTables),
 }))
 
-export const workbooksRelations = relations(workbooks, ({ one }) => ({
+export const workbooksRelations = relations(workbooks, ({ one, many }) => ({
   user: one(users, {
     fields: [workbooks.userId],
     references: [users.id],
   }),
+  blocks: many(workbookBlocks),
   // Note: conversations are linked via contextType='workbook' + contextId (polymorphic)
+}))
+
+export const workbookBlocksRelations = relations(workbookBlocks, ({ one }) => ({
+  workbook: one(workbooks, {
+    fields: [workbookBlocks.workbookId],
+    references: [workbooks.id],
+  }),
+  aiMarkdown: one(aiMarkdowns, {
+    fields: [workbookBlocks.aiMarkdownId],
+    references: [aiMarkdowns.id],
+  }),
+  aiTable: one(aiTables, {
+    fields: [workbookBlocks.aiTableId],
+    references: [aiTables.id],
+  }),
+}))
+
+export const aiMarkdownsRelations = relations(aiMarkdowns, ({ one, many }) => ({
+  user: one(users, {
+    fields: [aiMarkdowns.userId],
+    references: [users.id],
+  }),
+  workbookBlocks: many(workbookBlocks),
 }))
 
 export const aiConversationsRelations = relations(
@@ -339,6 +426,7 @@ export const aiTablesRelations = relations(aiTables, ({ one, many }) => ({
   }),
   columns: many(aiTableColumns),
   records: many(aiTableRecords),
+  workbookBlocks: many(workbookBlocks),
   // Note: conversations are linked via contextType='table' + contextId (polymorphic)
 }))
 

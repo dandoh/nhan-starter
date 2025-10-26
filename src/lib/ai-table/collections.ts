@@ -8,6 +8,7 @@ import type {
   AiTableColumn,
   AiTableRecord,
   AiTableCell,
+  Workbook,
 } from '@/db/schema'
 import type { OutputTypeConfig } from '@/lib/ai-table/output-types'
 
@@ -43,6 +44,43 @@ export const tablesCollection = createCollection(
       const { original } = transaction.mutations[0]
       await client.aiTables.delete({
         tableId: original.id,
+      })
+    },
+  }),
+)
+
+// ============================================================================
+// Workbooks List Collection
+// ============================================================================
+
+export const workbooksCollection = createCollection(
+  queryCollectionOptions<Workbook>({
+    queryClient,
+    queryKey: ['workbooks', 'list'],
+    queryFn: async () => {
+      const workbooks = await client.workbooks.list()
+      return workbooks
+    },
+    getKey: (workbook) => workbook.id,
+    onInsert: async ({ transaction }) => {
+      const { modified: newWorkbook } = transaction.mutations[0]
+      await client.workbooks.create({
+        name: newWorkbook.name,
+        description: newWorkbook.description || undefined,
+      })
+    },
+    onUpdate: async ({ transaction }) => {
+      const { original, changes } = transaction.mutations[0]
+      await client.workbooks.update({
+        workbookId: original.id,
+        name: changes.name,
+        description: changes.description,
+      })
+    },
+    onDelete: async ({ transaction }) => {
+      const { original } = transaction.mutations[0]
+      await client.workbooks.delete({
+        workbookId: original.id,
       })
     },
   }),

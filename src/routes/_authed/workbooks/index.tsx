@@ -46,8 +46,7 @@ export const Route = createFileRoute('/_authed/workbooks/')({
 })
 
 function WorkbooksListPage() {
-  const { workbooks, createWorkbook, deleteWorkbook, isCreating, isDeleting } =
-    useWorkbooksList()
+  const { workbooks, createWorkbook, deleteWorkbook } = useWorkbooksList()
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [newWorkbookName, setNewWorkbookName] = useState('')
   const [newWorkbookDescription, setNewWorkbookDescription] = useState('')
@@ -143,8 +142,8 @@ function WorkbooksListPage() {
                   >
                     Cancel
                   </Button>
-                  <Button onClick={handleCreateWorkbook} disabled={isCreating}>
-                    {isCreating ? 'Creating...' : 'Create Workbook'}
+                  <Button onClick={handleCreateWorkbook} >
+                    Create Workbook
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -215,7 +214,6 @@ function WorkbooksListPage() {
                             e.preventDefault()
                             setDeleteConfirmWorkbook(workbook)
                           }}
-                          disabled={isDeleting}
                           className="text-destructive hover:text-destructive hover:bg-destructive/10"
                         >
                           <Trash2 className="h-4 w-4" />
