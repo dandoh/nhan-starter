@@ -11,12 +11,14 @@ pnpx shadcn@latest add button
 ALWAYS use shadcn theme colors via CSS variables instead of hardcoded colors like "red", "blue", "#ffffff", etc.
 
 **Correct approach:**
+
 - Use Tailwind utility classes with theme colors: `bg-primary`, `text-primary`, `border-border`
 - For custom colors, use CSS variables: `oklch(var(--primary))`, `oklch(var(--destructive))`, etc.
 
 **Available theme colors from src/styles.css:**
 
 ### Core Semantic Colors
+
 - `background` / `foreground` - Page background and text
 - `card` / `card-foreground` - Card backgrounds
 - `popover` / `popover-foreground` - Popover backgrounds
@@ -30,11 +32,13 @@ ALWAYS use shadcn theme colors via CSS variables instead of hardcoded colors lik
 - `ring` - Focus ring colors
 
 ### Color Scales (50-1000, lightest to darkest)
+
 - `base-{50,100,200,300,400,500,600,700,800,900,950,1000}` - Neutral grays
 - `primary-{50,100,200,300,400,500,600,700,800,900,950,1000}` - Primary color scale
 - `secondary-{50,100,200,300,400,500,600,700,800,900,950,1000}` - Secondary color scale
 
 ### Specialized Colors
+
 - `chart-{1,2,3,4,5}` - Chart/data visualization colors
 - `sidebar` / `sidebar-foreground` - Sidebar backgrounds
 - `sidebar-primary` / `sidebar-primary-foreground` - Sidebar primary elements
@@ -42,6 +46,7 @@ ALWAYS use shadcn theme colors via CSS variables instead of hardcoded colors lik
 - `sidebar-border` / `sidebar-ring` - Sidebar borders and focus
 
 **Examples:**
+
 ```tsx
 // ✅ CORRECT - Use Tailwind classes
 <div className="bg-primary text-primary-foreground">
@@ -57,3 +62,7 @@ ALWAYS use shadcn theme colors via CSS variables instead of hardcoded colors lik
 ```
 
 This ensures consistent theming and makes dark mode work automatically.
+
+### Database
+
+Never run generate migrations or apply migrations, I'll run it manually myself

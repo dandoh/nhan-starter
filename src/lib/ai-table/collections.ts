@@ -72,6 +72,16 @@ export function createTableCollections(tableId: string) {
           refetch: false,
         }
       },
+      onDelete: async ({ transaction }) => {
+        for (const mutation of transaction.mutations) {
+          const { modified: cell } = mutation
+          cellsCollection.utils.writeDelete(cell.id)
+        }
+
+        return {
+          refetch: false,
+        }
+      },
       onUpdate: async ({ transaction }) => {
         for (const mutation of transaction.mutations) {
           const { original, changes } = mutation
@@ -103,7 +113,9 @@ export function createTableCollections(tableId: string) {
       onInsert: async ({ transaction }) => {
         for (const mutation of transaction.mutations) {
           const { modified: newColumn } = mutation
-          const outputTypeConfig = newColumn.outputTypeConfig as OutputTypeConfig | undefined
+          const outputTypeConfig = newColumn.outputTypeConfig as
+            | OutputTypeConfig
+            | undefined
           const { cells } = await client.aiTables.createColumn({
             tableId,
             name: newColumn.name,
@@ -115,13 +127,13 @@ export function createTableCollections(tableId: string) {
           })
 
           // Insert created cells into cells collection
-          if (cells && cells.length > 0) {
+          if (cells.length > 0) {
             cells.forEach((cell) => {
               const existing = cellsCollection.get(cell.id)
               if (existing) {
                 cellsCollection.update(cell.id, () => cell)
               } else {
-                cellsCollection.insert(cell as Cell)
+                cellsCollection.insert(cell)
               }
             })
           }
@@ -131,7 +143,9 @@ export function createTableCollections(tableId: string) {
       onUpdate: async ({ transaction }) => {
         for (const mutation of transaction.mutations) {
           const { original, modified } = mutation
-          const outputTypeConfig = modified.outputTypeConfig as OutputTypeConfig | undefined
+          const outputTypeConfig = modified.outputTypeConfig as
+            | OutputTypeConfig
+            | undefined
           await client.aiTables.updateColumn({
             columnId: original.id,
             name: modified.name,
@@ -175,7 +189,7 @@ export function createTableCollections(tableId: string) {
           })
 
           // Insert created cells into cells collection
-          if (cells && cells.length > 0) {
+          if (cells.length > 0) {
             cells.forEach((cell) => {
               const existing = cellsCollection.get(cell.id)
               if (existing) {

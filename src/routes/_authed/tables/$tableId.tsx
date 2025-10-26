@@ -8,13 +8,12 @@ import {
   flexRender,
   type ColumnDef,
 } from '@tanstack/react-table'
-import { Plus, Sparkles, Bot, X } from 'lucide-react'
+import { Plus, Sparkles } from 'lucide-react'
 import { useTableSync } from '@/hooks/use-table-sync'
 import { AiTableCell } from '@/components/ai-table/AiTableCell'
 import { AiColumnHeader } from '@/components/ai-table/AiColumnHeader'
 import { AIChat } from '@/components/ai-table/AIChat'
 import { Button } from '@/components/ui/button'
-import { Toggle } from '@/components/ui/toggle'
 import {
   Tooltip,
   TooltipContent,
@@ -43,7 +42,7 @@ import {
   AppPageContentWrapper,
 } from '@/components/AppPageWrapper'
 import { Card, CardContent, CardTitle } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
+import { cn } from '@/lib/utils'
 
 export const Route = createFileRoute('/_authed/tables/$tableId')({
   ssr: false,
@@ -167,14 +166,14 @@ function TableEditorPage() {
               <span>Company stock analysis</span>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Toggle
-                    pressed={isAIChatOpen}
-                    onPressedChange={setIsAIChatOpen}
+                  <Button
+                    onClick={() => setIsAIChatOpen(!isAIChatOpen)}
                     size="sm"
+                    variant={isAIChatOpen ? 'secondary' : 'ghost'}
                     aria-label="Toggle AI Assistant"
                   >
                     <Sparkles />
-                  </Toggle>
+                  </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
                   {isAIChatOpen ? 'Close AI Assistant' : 'Open AI Assistant'}
@@ -185,20 +184,23 @@ function TableEditorPage() {
           <CardContent className="p-0">
             <ResizablePanelGroup
               direction="horizontal"
-              className="min-h-[600px]"
+              className="min-h-[300px] max-h-[600px]"
             >
               {/* Main Table Panel */}
               <ResizablePanel defaultSize={70} minSize={30}>
-                <div className="h-full flex flex-col px-6 py-4">
+                <div className="h-full flex flex-col px-6 py-4 overflow-hidden">
                   {/* Table and Add Column Button */}
                   <div className="flex space-x-2 flex-1 overflow-hidden">
-                    <div className="flex-1 overflow-auto">
+                    <div className="flex-1 overflow-auto scrollbar scrollbar-track-transparent scrollbar-thumb-transparent hover:scrollbar-thumb-interactive">
                       <Table>
-                        <TableHeader>
+                        <TableHeader className="">
                           {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id}>
                               {headerGroup.headers.map((header) => (
-                                <TableHead key={header.id}>
+                                <TableHead
+                                  key={header.id}
+                                  className="sticky top-0 z-10 bg-background"
+                                >
                                   {header.isPlaceholder
                                     ? null
                                     : flexRender(
@@ -296,34 +298,15 @@ function TableEditorPage() {
                 </div>
               </ResizablePanel>
 
-              {/* AI Chat Sidebar */}
-              {isAIChatOpen && (
-                <>
-                  <ResizableHandle withHandle className="w-[0.5px]" />
-                  <ResizablePanel defaultSize={30} minSize={20} maxSize={50}>
-                    <div className="h-full flex flex-col border-l border-border bg-muted/10">
-                      {/* Sidebar Header */}
-                      {/* <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-                        <h3 className="font-medium text-sm text-muted-foreground">
-                          AI Assistant
-                        </h3>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 hover:bg-muted"
-                          onClick={() => setIsAIChatOpen(false)}
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
-                      </div> */}
-                      {/* Chat Content */}
-                      <div className="flex-1 overflow-hidden">
-                        <AIChat tableId={tableId} />
-                      </div>
-                    </div>
-                  </ResizablePanel>
-                </>
-              )}
+              <ResizableHandle withHandle className="w-[0.5px]" />
+              <ResizablePanel
+                defaultSize={30}
+                minSize={20}
+                maxSize={50}
+                className={cn(isAIChatOpen ? 'max-h-full' : 'hidden')}
+              >
+                <AIChat tableId={tableId} />
+              </ResizablePanel>
             </ResizablePanelGroup>
           </CardContent>
         </Card>

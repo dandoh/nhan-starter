@@ -1,18 +1,17 @@
 'use client'
 
-import { useState } from 'react'
-import { Sparkles, MessageSquareIcon } from 'lucide-react'
+import { Suspense } from 'react'
+import { useChat } from '@ai-sdk/react'
+import { DefaultChatTransport, type UIMessage } from 'ai'
+import { Sparkles, CheckCircle2, XCircle, Columns3 } from 'lucide-react'
+import { orpc } from '@/orpc/client'
 import {
   Conversation,
   ConversationContent,
   ConversationEmptyState,
   ConversationScrollButton,
 } from '@/components/ai-elements/conversation'
-import {
-  Message,
-  MessageAvatar,
-  MessageContent,
-} from '@/components/ai-elements/message'
+import { Message, MessageContent } from '@/components/ai-elements/message'
 import {
   PromptInput,
   PromptInputBody,
@@ -23,81 +22,91 @@ import {
   type PromptInputMessage,
 } from '@/components/ai-elements/prompt-input'
 import { Suggestion } from '@/components/ai-elements/suggestion'
-import { Loader } from '@/components/ai-elements/loader'
 import { Response } from '@/components/ai-elements/response'
+import { Loader } from '@/components/ai-elements/loader'
+import {
+  Tool,
+  ToolContent,
+  ToolHeader,
+  ToolInput,
+  ToolOutput,
+} from '@/components/ai-elements/tool'
+import { useSuspenseQuery } from '@tanstack/react-query'
+import type { ToolUIPart } from 'ai'
 
 interface AIChatProps {
   tableId: string
 }
 
-interface ChatMessage {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  avatar: string
-  name: string
+// Helper function to transform messages to UI format
+function transformMessages(messages: any[]): UIMessage[] {
+  return messages.map((msg) => ({
+    id: msg.id,
+    role: msg.role as 'user' | 'assistant' | 'system',
+    parts: msg.parts as any,
+    metadata: msg.metadata as any,
+  }))
 }
 
-export function AIChat({ tableId: _tableId }: AIChatProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [status, setStatus] = useState<
-    'submitted' | 'streaming' | 'ready' | 'error'
-  >('ready')
+// Loading fallback component
+function AIChatLoading() {
+  return (
+    <div className="flex flex-col h-full items-center justify-center p-4">
+      <Loader size={24} />
+      <p className="text-sm text-muted-foreground mt-2">Initializing chat...</p>
+    </div>
+  )
+}
+
+// Internal component that uses Suspense
+function AIChatInternal({ tableId }: AIChatProps) {
+  // Use oRPC's auto-generated query hook with Suspense
+  const { data: conversations } = useSuspenseQuery(
+    orpc.conversations.getForContext.queryOptions({
+      input: {
+        context: { type: 'table', tableId },
+        limit: 10,
+      },
+    }),
+  )
+
+  // Use the most recent conversation (first in the array)
+  const conversation = conversations[0]
+  const existingMessages = transformMessages(conversation.messages || [])
+
+  const { messages, sendMessage, status, error } = useChat({
+    id: conversation.id,
+    transport: new DefaultChatTransport({
+      api: `/api/chat/${conversation.id}`,
+    }),
+    messages: existingMessages,
+  })
 
   const handleSubmit = async (message: PromptInputMessage) => {
-    // TODO: Use tableId to scope AI operations to this specific table
     const text = message.text?.trim()
     if (!text) return
 
-    setStatus('submitted')
-
-    const userMessage: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: 'user',
-      content: text,
-      avatar: '/avatar-placeholder.png',
-      name: 'You',
-    }
-
-    setMessages((prev) => [...prev, userMessage])
-
-    // Simulate streaming
-    setTimeout(() => {
-      setStatus('streaming')
-
-      const aiMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content:
-          'AI response will be implemented here. This demonstrates the ai-elements components working together.',
-        avatar: '/ai-avatar.png',
-        name: 'AI Assistant',
-      }
-
-      setMessages((prev) => [...prev, aiMessage])
-
-      setTimeout(() => {
-        setStatus('ready')
-      }, 1000)
-    }, 500)
+    sendMessage({ text })
   }
+
+  const isLoading = status === 'submitted' || status === 'streaming'
 
   const quickActions = [
     'Add a new column',
     'Analyze sentiment trends',
     'Calculate P/E ratio',
     'Export to CSV',
-  ].slice(0, 4)
+  ]
 
   const handleSuggestionClick = (suggestion: string) => {
     handleSubmit({ text: suggestion })
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full max-h-full">
       {/* Conversation Area */}
-      <Conversation className="flex-1">
-        <ConversationContent>
+      <Conversation className="flex-1 min-h-0 ">
+        <ConversationContent className="scrollbar scrollbar-track-transparent scrollbar-thumb-transparent hover:scrollbar-thumb-interactive">
           {messages.length === 0 ? (
             <ConversationEmptyState
               icon={
@@ -113,25 +122,42 @@ export function AIChat({ tableId: _tableId }: AIChatProps) {
               {messages.map((message) => (
                 <Message key={message.id} from={message.role}>
                   <MessageContent>
-                    <Response>{message.content}</Response>
+                    {message.parts.map((part, index) => {
+                      // Handle text parts
+                      if (part.type === 'text') {
+                        return <Response key={index}>{part.text}</Response>
+                      }
+
+                      // Handle tool calls
+                      if (part.type.startsWith('tool-')) {
+                        const toolPart = part as ToolUIPart
+                        // Auto-open tools that are completed or errored
+                        // const shouldDefaultOpen =
+                        //   toolPart.state === 'output-available' ||
+                        //   toolPart.state === 'output-error'
+
+                        return (
+                          <Tool key={index} open={false} >
+                            <ToolHeader
+                              type={toolPart.type}
+                              state={toolPart.state}
+                            />
+                            <ToolContent>
+                              <ToolInput input={toolPart.input} />
+                              <ToolOutput
+                                output={toolPart.output}
+                                errorText={toolPart.errorText}
+                              />
+                            </ToolContent>
+                          </Tool>
+                        )
+                      }
+
+                      return null
+                    })}
                   </MessageContent>
-                  <MessageAvatar src={message.avatar} name={message.name} />
                 </Message>
               ))}
-
-              {status === 'streaming' && (
-                <Message from="assistant">
-                  <MessageContent>
-                    <div className="flex items-center gap-2">
-                      <Loader size={16} />
-                      <span className="text-muted-foreground text-sm">
-                        Thinking...
-                      </span>
-                    </div>
-                  </MessageContent>
-                  <MessageAvatar src="/ai-avatar.png" name="AI Assistant" />
-                </Message>
-              )}
             </>
           )}
         </ConversationContent>
@@ -156,12 +182,24 @@ export function AIChat({ tableId: _tableId }: AIChatProps) {
         </div>
       )}
 
+      {/* Error Display */}
+      {error && (
+        <div className="px-4 pb-2">
+          <div className="p-2 bg-destructive/10 text-destructive text-xs rounded">
+            Error: {error.message}
+          </div>
+        </div>
+      )}
+
       {/* Input Area */}
       <div>
         <div className="p-4">
           <PromptInput onSubmit={handleSubmit}>
             <PromptInputBody>
-              <PromptInputTextarea placeholder="Ask AI to help..." />
+              <PromptInputTextarea
+                placeholder="Ask AI to help..."
+                disabled={isLoading}
+              />
             </PromptInputBody>
             <PromptInputFooter>
               <PromptInputTools>
@@ -175,5 +213,14 @@ export function AIChat({ tableId: _tableId }: AIChatProps) {
         </div>
       </div>
     </div>
+  )
+}
+
+// Exported component with Suspense boundary
+export function AIChat({ tableId }: AIChatProps) {
+  return (
+    <Suspense fallback={<AIChatLoading />}>
+      <AIChatInternal tableId={tableId} />
+    </Suspense>
   )
 }
