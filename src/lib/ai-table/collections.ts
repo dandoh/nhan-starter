@@ -8,6 +8,8 @@ import type {
   AiTableColumn,
   AiTableRecord,
   AiTableCell,
+  Workbook,
+  WorkbookBlock,
 } from '@/db/schema'
 import type { OutputTypeConfig } from '@/lib/ai-table/output-types'
 
@@ -43,6 +45,44 @@ export const tablesCollection = createCollection(
       const { original } = transaction.mutations[0]
       await client.aiTables.delete({
         tableId: original.id,
+      })
+    },
+  }),
+)
+
+// ============================================================================
+// Workbooks List Collection
+// ============================================================================
+
+export const workbooksCollection = createCollection(
+  queryCollectionOptions<Workbook>({
+    queryClient,
+    queryKey: ['workbooks', 'list'],
+    queryFn: async () => {
+      const workbooks = await client.workbooks.list()
+      return workbooks
+    },
+    getKey: (workbook) => workbook.id,
+    onInsert: async ({ transaction }) => {
+      const { modified: newWorkbook } = transaction.mutations[0]
+      await client.workbooks.create({
+        name: newWorkbook.name,
+        description: newWorkbook.description || undefined,
+      })
+    },
+    onUpdate: async ({ transaction }) => {
+      const { original, changes } = transaction.mutations[0]
+      console.log(original, changes)
+      await client.workbooks.update({
+        workbookId: original.id,
+        name: changes.name,
+        description: changes.description,
+      })
+    },
+    onDelete: async ({ transaction }) => {
+      const { original } = transaction.mutations[0]
+      await client.workbooks.delete({
+        workbookId: original.id,
       })
     },
   }),
@@ -221,3 +261,52 @@ export function createTableCollections(tableId: string) {
 }
 
 export type TableCollections = ReturnType<typeof createTableCollections>
+
+// ============================================================================
+// Workbook-Specific Collections Factory
+// ============================================================================
+
+export function createWorkbookCollections(workbookId: string) {
+  // Blocks collection
+  const blocksCollection = createCollection(
+    queryCollectionOptions<WorkbookBlock>({
+      queryClient,
+      queryKey: ['workbooks', workbookId, 'blocks'],
+      queryFn: async () => {
+        const blocks = await client.workbooks.getBlocks({ workbookId })
+        return blocks
+      },
+      getKey: (block) => block.id,
+      onInsert: async ({ transaction }) => {
+        for (const mutation of transaction.mutations) {
+          const { modified: newBlock, metadata } = mutation
+          const position =
+            (metadata as { position: number } | undefined)?.position ?? 0
+          await client.workbooks.createBlock({
+            workbookId,
+            type: newBlock.type,
+            position,
+            initialMarkdown: newBlock.type === 'markdown' ? '' : undefined,
+            tableName: newBlock.type === 'table' ? 'Untitled Table' : undefined,
+          })
+
+          console.log('created block', newBlock)
+        }
+      },
+      onDelete: async ({ transaction }) => {
+        for (const mutation of transaction.mutations) {
+          const { original } = mutation
+          await client.workbooks.deleteBlock({
+            blockId: original.id,
+          })
+        }
+      },
+    }),
+  )
+
+  return {
+    blocks: blocksCollection,
+  }
+}
+
+export type WorkbookCollections = ReturnType<typeof createWorkbookCollections>

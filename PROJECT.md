@@ -1,137 +1,142 @@
-# AI Table Builder
+# AI Workbook Platform
 
-A smart spreadsheet application that uses AI to automatically generate column data based on your prompts. Think Airtable meets ChatGPT.
+A computational notebook meets intelligent spreadsheet - where you can combine data tables, text, code, and AI analysis in one collaborative workspace. Think Hex + Notion + Airtable, powered by AI.
 
 ## Product Vision
 
-Build and sell a SaaS product that lets users create intelligent tables where AI does the heavy lifting. Users can define what each column should contain using natural language, and the AI generates the data automatically based on context from other columns.
+Build and sell a SaaS product centered around **Workbooks** - smart documents that combine multiple types of content blocks (tables, text, visualizations, code) with an AI assistant that understands your entire workspace context.
+
+Users work in workbooks where AI helps analyze data, generate content, answer questions, and automate workflows - all while seeing the full context of tables, notes, and previous analyses.
 
 ## Core Product
 
 ### What It Does
 
-Users can create tables with two types of columns:
+**Workbooks** are the main working unit. Each workbook contains:
 
-1. **Manual Columns** - Regular user-editable columns (like Subject, Name, Description)
-2. **AI Columns** - Smart columns that auto-generate content using AI prompts
+1. **Multiple Blocks** - Different content types working together:
+   - **AI Tables** - Smart tables with AI-generated columns based on custom prompts
+   - **Text Blocks** - Markdown/rich text for notes, documentation, and analysis
+   - **More Coming** - Code cells, visualizations, charts, embeds, etc.
 
-Plus, connect to external data sources (MCP integrations, APIs, databases) to automatically pull data into your tables and take actions based on AI analysis.
+2. **AI Chat Assistant** - Positioned on the right side of every workbook:
+   - Understands context from all blocks in the workbook
+   - Can analyze table data, answer questions, generate insights
+   - Helps fill in AI columns, suggest next steps, create new blocks
+   - Conversational interface for exploring data and ideas
+
+3. **Smart AI Tables** - One of the core block types:
+   - **Manual Columns** - Regular user-editable columns (like Subject, Name, Description)
+   - **AI Columns** - Smart columns that auto-generate content using AI prompts
+   - AI reads full row context to generate intelligent, context-aware values
+
+4. **External Integrations** - Connect to external data sources (MCP integrations, APIs, databases) to automatically pull data into your workbooks and take actions based on AI analysis.
 
 ## Use Case Examples
 
-### 📊 Stock Portfolio Analysis
-```
-Data Source: Manual entry or pull from finance API
-Columns:
-- Ticker (manual) - AAPL, GOOGL, TSLA
-- Sentiment (AI) - "Analyze recent news sentiment for this stock"
-- Company Size (AI) - "Determine market cap category (small/mid/large)"
-- P/E Ratio (AI) - "Get current P/E ratio and compare to industry average"
-- Investment Signal (AI) - "Based on all data, suggest Buy/Hold/Sell with reasoning"
-- Risk Level (AI) - "Assess risk level (Low/Medium/High) and explain why"
-```
+Each workbook combines tables, text documentation, and AI assistance to solve complete workflows:
 
-### 🐛 GitHub Issues Dashboard
-```
-Data Source: Pull from GitHub via MCP
-Columns:
-- Issue Title (auto-imported) - From GitHub
-- Status (auto-imported) - Open/Closed
-- Category (AI) - "Categorize as Bug/Feature/Documentation/Question"
-- Priority (AI) - "Assign priority based on title and description"
-- Complexity (AI) - "Estimate complexity (Simple/Medium/Complex)"
-- Suggested Action (AI) - "What should I do first? Provide specific next steps"
-- Estimated Time (AI) - "Estimate time to resolve in hours"
-```
+### 📊 Stock Portfolio Analysis Workbook
 
-### 💬 Customer Support Tickets
-```
-Data Source: Pull from Zendesk/Intercom or manual entry
-Columns:
-- Customer Message (manual/imported)
-- Sentiment (AI) - "Analyze customer sentiment and urgency"
-- Category (AI) - "Categorize: Billing/Technical/Feature Request/Other"
-- Priority (AI) - "Low/Medium/High/Critical with reasoning"
-- Root Cause (AI) - "Identify likely root cause of the issue"
-- Draft Response (AI) - "Write an empathetic, helpful response"
-- Escalation Needed (AI) - "Yes/No and why"
-```
+**Blocks:**
+- **Text:** "Q4 2025 Portfolio Review - Analyzing tech sector holdings"
+- **AI Table:** Stock data with columns:
+  - Ticker (manual) - AAPL, GOOGL, TSLA
+  - Sentiment (AI) - "Analyze recent news sentiment for this stock"
+  - Company Size (AI) - "Determine market cap category (small/mid/large)"
+  - P/E Ratio (AI) - "Get current P/E ratio and compare to industry average"
+  - Investment Signal (AI) - "Based on all data, suggest Buy/Hold/Sell with reasoning"
+  - Risk Level (AI) - "Assess risk level (Low/Medium/High) and explain why"
+- **Text:** Key findings and recommendations
+- **AI Chat:** "Which stocks show the strongest momentum? Compare AAPL vs GOOGL risk profiles"
 
-### 🛍️ E-commerce Product Optimization
-```
-Data Source: Import from Shopify/WooCommerce
-Columns:
-- Product Name (manual)
-- Current Description (manual)
-- SEO Title (AI) - "Generate SEO-optimized title under 60 chars"
-- Meta Description (AI) - "Write compelling meta description under 160 chars"
-- Target Keywords (AI) - "Suggest 5 relevant keywords"
-- Price Analysis (AI) - "Compare to market, suggest optimal price point"
-- Product Tags (AI) - "Generate relevant tags for better discoverability"
-```
+### 🐛 GitHub Issues Dashboard Workbook
 
-### 📝 Content Calendar Planning
-```
-Data Source: Manual entry or pull from CMS
-Columns:
-- Topic (manual) - "AI in healthcare"
-- Target Audience (AI) - "Identify ideal reader persona"
-- SEO Difficulty (AI) - "Rate keyword difficulty and search volume"
-- Content Angle (AI) - "Suggest unique angle to stand out"
-- Outline (AI) - "Generate article outline with H2/H3 structure"
-- Social Copy (AI) - "Write Twitter, LinkedIn posts for promotion"
-- Best Publish Time (AI) - "Suggest optimal day/time based on audience"
-```
+**Blocks:**
+- **Text:** "Sprint 12 Planning - Prioritizing backlog for next 2 weeks"
+- **AI Table:** Issues pulled from GitHub via MCP:
+  - Issue Title (auto-imported)
+  - Status (auto-imported)
+  - Category (AI) - "Categorize as Bug/Feature/Documentation/Question"
+  - Priority (AI) - "Assign priority based on title and description"
+  - Complexity (AI) - "Estimate complexity (Simple/Medium/Complex)"
+  - Suggested Action (AI) - "What should I do first? Provide specific next steps"
+  - Estimated Time (AI) - "Estimate time to resolve in hours"
+- **Text:** Sprint goals and team capacity notes
+- **AI Chat:** "Show me all high-priority bugs. Which issues can be finished this week?"
 
-### 💼 Sales Lead Enrichment
-```
-Data Source: Import from CSV or pull from LinkedIn/CRM
-Columns:
-- Company Name (manual)
-- Website (manual)
-- Industry (AI) - "Identify industry and sub-sector"
-- Company Size (AI) - "Estimate employee count range"
-- Tech Stack (AI) - "Research and list technologies they use"
-- Pain Points (AI) - "Identify likely pain points based on industry"
-- Personalized Pitch (AI) - "Write custom outreach email"
-- Decision Maker (AI) - "Suggest job titles of key decision makers"
-```
+### 💬 Customer Support Analysis Workbook
 
-### 🔬 Research Paper Analysis
-```
-Data Source: Manual entry or pull from academic databases
-Columns:
-- Paper Title (manual)
-- Abstract (manual)
-- Key Findings (AI) - "Summarize main findings in 2-3 bullet points"
-- Methodology (AI) - "Describe research methodology used"
-- Relevance Score (AI) - "Rate relevance to my research (1-10) with explanation"
-- Citation Style (AI) - "Generate citation in APA, MLA, Chicago formats"
-- Related Papers (AI) - "Suggest related papers to read next"
-```
+**Blocks:**
+- **Text:** "Week of Oct 20-26: Support Ticket Analysis"
+- **AI Table:** Tickets from Zendesk:
+  - Customer Message (imported)
+  - Sentiment (AI) - "Analyze customer sentiment and urgency"
+  - Category (AI) - "Categorize: Billing/Technical/Feature Request/Other"
+  - Priority (AI) - "Low/Medium/High/Critical with reasoning"
+  - Root Cause (AI) - "Identify likely root cause"
+  - Draft Response (AI) - "Write empathetic response"
+- **Text:** "Trends: 60% billing issues due to unclear pricing page"
+- **AI Chat:** "What are the top 3 issues this week? Draft a response for ticket #156"
 
-### 📧 Email Campaign Planning
-```
-Data Source: Manual or import contact list
-Columns:
-- Contact Name (manual)
-- Company (manual)
-- Previous Interactions (manual)
-- Personalization Angle (AI) - "Find unique angle based on their background"
-- Email Subject Line (AI) - "Write 3 compelling subject line options"
-- Email Body (AI) - "Draft personalized email with clear CTA"
-- Follow-up Timing (AI) - "When to follow up and what to say"
-- Expected Response (AI) - "Predict likely response and objections"
-```
+### 🛍️ Product Launch Planning Workbook
+
+**Blocks:**
+- **Text:** "Fall 2025 Product Launch - SEO Optimization"
+- **AI Table:** Product catalog:
+  - Product Name (manual)
+  - Current Description (manual)
+  - SEO Title (AI) - "Generate SEO-optimized title under 60 chars"
+  - Meta Description (AI) - "Write compelling meta description"
+  - Target Keywords (AI) - "Suggest 5 relevant keywords"
+  - Price Analysis (AI) - "Compare to market, suggest optimal price"
+- **Text:** "Launch strategy: Focus on keywords with <40 difficulty score"
+- **AI Chat:** "Which products need the most SEO work? Suggest pricing for Product X"
+
+### 📝 Content Calendar Workbook
+
+**Blocks:**
+- **Text:** "Q4 Content Strategy - Healthcare AI Series"
+- **AI Table:** Content ideas:
+  - Topic (manual)
+  - Target Audience (AI) - "Identify ideal reader persona"
+  - SEO Difficulty (AI) - "Rate keyword difficulty"
+  - Content Angle (AI) - "Suggest unique angle"
+  - Outline (AI) - "Generate article outline"
+  - Social Copy (AI) - "Write Twitter, LinkedIn posts"
+- **Text:** Publishing schedule and performance goals
+- **AI Chat:** "Which topics have the best SEO opportunity? Write an outline for the healthcare AI article"
+
+### 💼 Sales Prospecting Workbook
+
+**Blocks:**
+- **Text:** "Q4 2025 Outbound Campaign - Enterprise SaaS"
+- **AI Table:** Lead list from LinkedIn:
+  - Company Name (manual)
+  - Website (manual)
+  - Industry (AI) - "Identify industry and sub-sector"
+  - Company Size (AI) - "Estimate employee count"
+  - Tech Stack (AI) - "Research technologies they use"
+  - Pain Points (AI) - "Identify likely pain points"
+  - Personalized Pitch (AI) - "Write custom outreach email"
+- **Text:** Campaign results and A/B test notes
+- **AI Chat:** "Which companies are the best fit? Rewrite the pitch for Company X to focus on cost savings"
 
 ### How It Works
 
-1. User creates a table and adds manual columns
-2. User adds AI columns with custom prompts
-3. User fills in manual column data (or pulls from external sources)
-4. Click "Compute All" - AI reads the row context and generates values for AI columns
-5. Results appear in real-time as they're computed
-6. Optionally trigger actions based on AI results (create tickets, send emails, update systems)
+1. **Create a Workbook** - Start with a blank workbook for your project/analysis
+2. **Add Blocks** - Insert tables, text, and other content blocks as needed
+3. **Build AI Tables** - Add manual and AI columns with custom prompts
+4. **Use the AI Assistant** - Chat with AI on the right side:
+   - Ask questions about your data
+   - Get help writing AI column prompts
+   - Generate insights and summaries
+   - Request new analyses or visualizations
+5. **Compute & Analyze** - Click "Compute All" on tables or let AI assistant trigger computations
+6. **Document & Share** - Add text blocks to explain findings, document processes, tell the story
+7. **Connect External Data** - Pull from APIs, databases, or trigger actions based on AI results
+
+**The Power of Context**: The AI assistant sees everything in your workbook - all your tables, text blocks, and previous conversations - making it incredibly smart about your specific use case.
 
 ### External Integrations (Future Vision)
 
@@ -162,65 +167,100 @@ This makes it the **simplest way to connect AI analysis to your actual work** - 
 
 ### Current Features
 
-✅ Create unlimited tables
-✅ Add manual and AI columns to any table
-✅ Custom AI prompts for each column
-✅ AI reads context from all manual columns in the same row
-✅ Background processing (no waiting for AI responses)
-✅ Real-time status updates (pending → computing → completed)
-✅ User authentication and data isolation
-✅ Local caching for instant UI
+✅ **Workbooks** - Create unlimited workbooks as your main workspace
+✅ **AI Tables** - Add tables with manual and AI columns
+✅ **AI Chat Assistant** - Context-aware chat on the right side of workbooks
+✅ **Custom AI Prompts** - Write your own logic for AI columns
+✅ **Context-Aware AI** - AI reads full row context when computing columns
+✅ **Background Processing** - No waiting for AI responses, works async
+✅ **Real-time Status** - See pending → computing → completed states
+✅ **User Authentication** - Secure login and data isolation
+✅ **Local-First UI** - Optimistic updates and instant feedback
+
+🚧 **In Progress:**
+- Text blocks for documentation and notes
+- Multi-block workbook layout
+- AI assistant understanding full workbook context
 
 ## Roadmap
 
-### Phase 1: Core Product (Current)
-- ✅ Basic table CRUD
-- ✅ Manual and AI columns
+### Phase 1: Workbook Foundation (Current)
+- ✅ Workbook CRUD and management
+- ✅ AI Tables with manual and AI columns
+- ✅ AI Chat Assistant per workbook
 - ✅ Claude integration
-- ✅ Background computation
+- ✅ Background computation with Inngest
+- 🚧 Text blocks (Markdown/rich text)
+- 🚧 Multi-block workbook layout
+- 🚧 Block reordering and organization
 
-### Phase 2: Polish & UX
-- 🎯 Better error handling and retry logic
-- 🎯 Cell-level compute triggers (compute single cells)
-- 🎯 Column reordering and resizing
-- 🎯 Table templates (common use cases)
-- 🎯 Export to CSV/Excel
+### Phase 2: Enhanced Blocks & UX
+- 🎯 **More Block Types:**
+  - Code cells (Python, SQL, JavaScript)
+  - Visualization blocks (charts, graphs)
+  - Embed blocks (web pages, images, videos)
+  - Query blocks (SQL, API calls)
+- 🎯 **Table Improvements:**
+  - Cell-level compute triggers
+  - Column reordering and resizing
+  - Better error handling and retry
+  - Export to CSV/Excel
+- 🎯 **AI Assistant Upgrades:**
+  - Understands all blocks in workbook
+  - Can generate and edit blocks via chat
+  - Suggest next steps and analyses
 
-### Phase 3: External Integrations
+### Phase 3: External Integrations (MCP)
 - 🎯 MCP (Model Context Protocol) integrations
-- 🎯 Connect to external data sources (GitHub, Linear, Notion, etc.)
-- 🎯 Pull data automatically from APIs
-- 🎯 Take actions from tables (create tickets, send emails, update databases)
+- 🎯 Connect to data sources (GitHub, Linear, Notion, Google Sheets, databases)
+- 🎯 Pull data automatically into workbooks
+- 🎯 Take actions from workbooks (create tickets, send emails, update records)
 - 🎯 Batch import from CSV/Excel
 - 🎯 Webhook triggers for automation
+- 🎯 Scheduled workbook runs
 
 ### Phase 4: Power Features
-- 🎯 AI columns that read from other AI columns
-- 🎯 Multiple AI models (GPT-4, Gemini, Llama)
-- 🎯 Formula columns (like spreadsheets)
-- 🎯 Cell history and version tracking
-- 🎯 Custom functions and scripts
+- 🎯 **Advanced AI:**
+  - AI columns that read from other AI columns
+  - Multiple AI models (GPT-4, Gemini, Claude, Llama)
+  - Custom AI model configurations
+  - AI-generated visualizations
+- 🎯 **Computation:**
+  - Formula columns (spreadsheet-like)
+  - Code execution in blocks
+  - Query results as data sources
+- 🎯 **Versioning:**
+  - Cell history and rollback
+  - Workbook version history
+  - Block-level undo/redo
 
-### Phase 5: Collaboration
+### Phase 5: Collaboration & Sharing
 - 🎯 Team workspaces
-- 🎯 Share tables with view/edit permissions
-- 🎯 Comments on cells
+- 🎯 Share workbooks with view/edit permissions
+- 🎯 Comments on blocks and cells
 - 🎯 Real-time collaboration
+- 🎯 Publish workbooks as public pages
+- 🎯 Workbook templates and marketplace
 
 ### Phase 6: Monetization
-- 🎯 Usage-based pricing (per AI computation)
-- 🎯 Workspace seats
-- 🎯 Advanced AI models as premium tier
-- 🎯 API access
+- 🎯 Free tier: 3 workbooks, 100 AI computations/month
+- 🎯 Pro tier: Unlimited workbooks, usage-based AI pricing
+- 🎯 Team tier: Collaboration features, shared workspaces
+- 🎯 Enterprise: Advanced AI models, priority support, custom integrations
+- 🎯 API access and embedding
 
 ## Target Customers
 
-- **Marketing teams** - Analyze customer feedback, categorize leads
-- **Customer support** - Auto-classify tickets, draft responses
-- **Content creators** - Generate metadata, SEO descriptions, translations
-- **Researchers** - Extract insights, categorize data
-- **Sales teams** - Enrich lead data, generate outreach templates
-- **Product managers** - Analyze user requests, prioritize features
+- **Data Analysts** - Explore datasets, generate insights, document findings in one place
+- **Product Managers** - Track features, analyze feedback, maintain product specs with AI assistance
+- **Marketing Teams** - Plan campaigns, analyze performance, generate content with contextual AI
+- **Customer Support** - Analyze tickets, identify trends, draft responses with full context
+- **Content Creators** - Plan editorial calendars, generate SEO content, track performance
+- **Sales Teams** - Enrich leads, personalize outreach, track pipeline with AI insights
+- **Researchers** - Organize papers, extract insights, document methodology
+- **Consultants** - Deliver client analyses, combine data with recommendations, professional reports
+- **Operations Teams** - Process tracking, automation workflows, documentation
+- **Anyone** who works with data and needs to document their thinking, analysis, and decisions
 
 ## Tech Stack
 
@@ -272,19 +312,41 @@ INNGEST_EVENT_KEY=your_key
 
 ## Business Metrics to Track
 
-- Tables created per user
-- AI computations per table
-- Most common AI prompts (template opportunities)
-- Computation success/failure rates
-- User retention and active usage
-- Time saved vs manual data entry
+- **Workbooks:** Created per user, active workbooks, workbook retention
+- **Blocks:** Total blocks, blocks per workbook, block type distribution
+- **AI Usage:** Computations per workbook, chat messages, most common prompts
+- **Engagement:** Daily active users, time spent in workbooks, blocks created per session
+- **Success Metrics:** Computation success/failure rates, AI accuracy feedback
+- **Growth:** User retention curves, feature adoption, referral rates
+- **Monetization:** Conversion to paid, compute usage per tier, expansion revenue
 
 ## Competitive Edge
 
-- **Flexible prompting** - Users write their own AI logic, no pre-defined templates
-- **Context-aware AI** - AI sees all row data, not just isolated cells
-- **External integrations** - Connect to any data source (MCP, APIs, databases) and take actions automatically
-- **Fast UI** - Local-first architecture with background processing, no lag
-- **Transparent status** - Users see exactly what's computing in real-time
-- **Action-oriented** - Not just data analysis, but take actions (create tickets, send emails, update records)
-- **No vendor lock-in** - Export your data anytime, own your prompts and logic
+### vs. Traditional Spreadsheets (Excel, Google Sheets)
+- **AI-Native** - Built-in AI for data generation, not just formulas
+- **Documentation Built-In** - Combine data and narrative in one place
+- **Conversational Interface** - Chat with AI about your data instead of complex formulas
+
+### vs. Notebooks (Jupyter, Observable)
+- **No Coding Required** - Natural language AI instead of Python/JavaScript
+- **User-Friendly** - Beautiful UI designed for non-developers
+- **Background Processing** - No waiting for cell execution
+
+### vs. Data Tools (Airtable, Notion Databases)
+- **Flexible AI Prompting** - Users write custom logic, not pre-defined formulas
+- **Full Workbook Context** - AI understands entire workspace, not just one table
+- **Analysis + Documentation** - Complete workflow in one tool
+
+### vs. AI Chat Tools (ChatGPT, Claude)
+- **Structured Data** - Tables with persistent, computed columns
+- **Reproducible Workflows** - Reuse prompts across rows automatically
+- **Context Management** - Workbooks maintain context better than chat history
+
+### Core Advantages
+- ✅ **Hybrid Interface** - Structured tables + flexible text + conversational AI
+- ✅ **Context-Aware AI** - Understands full workbook, not just isolated queries
+- ✅ **External Integrations** - Connect to any data source via MCP
+- ✅ **Fast & Responsive** - Local-first architecture with background processing
+- ✅ **Transparent** - See exactly what AI is computing in real-time
+- ✅ **Action-Oriented** - Trigger real workflows, not just analysis
+- ✅ **No Lock-In** - Export data, own your prompts and workflows

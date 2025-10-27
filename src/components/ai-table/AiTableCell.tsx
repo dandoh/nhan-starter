@@ -134,7 +134,7 @@ export const AiTableCell = memo(function TableCell({
       onFocus={handleFocus}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
-      className="border-none bg-transparent focus-visible:border-none focus-visible:ring-0 shadow-none"
+      className="border-none bg-transparent focus-visible:border-none focus-visible:ring-0 shadow-none p-0"
     />
   )
 })
