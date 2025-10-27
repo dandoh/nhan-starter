@@ -1,111 +1,60 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useQuery, useMutation } from '@tanstack/react-query'
+import { useLiveQuery } from '@tanstack/react-db'
 import { useSidebar } from '@/components/ui/sidebar'
-import { WorkbookBlock, type Block } from '@/components/workbook/WorkbookBlock'
+import { useWorkbookSync } from '@/hooks/use-workbook-sync'
+import { WorkbookBlock } from '@/components/workbook/WorkbookBlock'
 import { AddBlockButton } from '@/components/workbook/AddBlockButton'
-import { TextBlock } from '@/components/workbook/blocks/TextBlock'
-import { CodeBlock } from '@/components/workbook/blocks/CodeBlock'
-import { TableBlock } from '@/components/workbook/blocks/TableBlock'
+import { MarkdownBlock } from '@/components/workbook/blocks/MarkdownBlock'
+import { TableBlockWrapper } from '@/components/workbook/blocks/TableBlockWrapper'
 import { AIChat } from '@/components/ai-chat/AIChat'
 import { Input } from '@/components/ui/input'
 import { TopNav, AppPageWrapper } from '@/components/AppPageWrapper'
+import { orpc } from '@/orpc/client'
 import type { BlockType } from '@/components/workbook/WorkbookBlock'
+import type { BlockOrder } from '@/db/schema'
 
 export const Route = createFileRoute('/_authed/workbooks/$workbookId')({
+  ssr: false,
+  loader: async ({ params, context }) => {
+    const workbook = await context.queryClient.ensureQueryData(
+      orpc.workbooks.get.queryOptions({
+        input: { workbookId: params.workbookId },
+      }),
+    )
+    return { workbook }
+  },
   component: WorkbookDetailPage,
 })
-
-// Mock data
-const initialBlocks: Block[] = [
-  {
-    id: '1',
-    type: 'table',
-    title: 'Orders Data',
-    content: {
-      columns: [
-        'id',
-        'order_id',
-        'status',
-        'created_at',
-        'menu_item',
-        'quantity',
-        'category',
-      ],
-      rows: [
-        [
-          1,
-          8942,
-          'completed',
-          '2023-01-01T13:05:00',
-          'Shrimp and Pork Siu Mai',
-          18,
-          'Dumplings',
-        ],
-        [
-          2,
-          10982,
-          'completed',
-          '2019-02-25T19:40:54',
-          'Cilantro Har Gow',
-          16,
-          'Dumplings',
-        ],
-        [
-          3,
-          8441,
-          'completed',
-          '2022-06-27T09:16:04',
-          'Seafood Gyoza',
-          25,
-          'Dumplings',
-        ],
-        [
-          4,
-          11916,
-          'completed',
-          '2022-05-03T14:05:03',
-          'Boiled pork dumplings',
-          21,
-          'Dumplings',
-        ],
-        [
-          5,
-          11606,
-          'completed',
-          '2020-08-23T11:13:00',
-          'Egg Yolk Bun',
-          33,
-          'Sweets',
-        ],
-      ],
-    },
-  },
-  {
-    id: '2',
-    type: 'text',
-    title: "What's our most popular dessert?",
-    content: "Let's use some Python to analyze our above SQL result.",
-  },
-  {
-    id: '3',
-    type: 'code',
-    content: {
-      language: 'python',
-      code: `only_sweets = orders[orders['CATEGORY'] == "Sweets"]
-popular_dessert = only_sweets["MENU_ITEM"].mode()[0]
-print(f"The most popular dessert is the {popular_dessert}")`,
-      output: 'The most popular dessert is the Green Tea & Milk Bun',
-    },
-  },
-]
 
 function WorkbookDetailPage() {
   const { workbookId } = Route.useParams()
   const { setOpen: setSidebarOpen } = useSidebar()
-  const [blocks, setBlocks] = useState<Block[]>(initialBlocks)
-  const [workbookName, setWorkbookName] = useState('Q4 Restaurant Analysis')
-  const [workbookDescription, setWorkbookDescription] = useState(
-    'Get started with this example project that uses SQL and Python to find the most popular dessert order for a fictional dumpling restaurant.',
+
+  const { workbook: preloadedWorkbook } = Route.useLoaderData()
+
+  const { data: workbook = preloadedWorkbook } = useQuery(
+    orpc.workbooks.get.queryOptions({
+      input: { workbookId: Route.useParams().workbookId },
+    }),
+  )
+
+  // Local state for name and description (only update on blur)
+  const [name, setName] = useState(workbook.name)
+  const [description, setDescription] = useState(workbook.description || '')
+
+  // Use collections for blocks
+  const collections = useWorkbookSync(workbookId)
+
+  // Live query for blocks
+  const { data: blocks = [] } = useLiveQuery((q) =>
+    q.from({ block: collections.blocks }),
+  )
+
+  // Mutation for workbook updates
+  const updateWorkbookMutation = useMutation(
+    orpc.workbooks.update.mutationOptions(),
   )
 
   // Collapse sidebar on mount
@@ -113,38 +62,57 @@ function WorkbookDetailPage() {
     setSidebarOpen(false)
   }, [setSidebarOpen])
 
-  const addBlock = (type: BlockType, afterIndex: number) => {
-    const newBlock: Block = {
-      id: Date.now().toString(),
-      type,
-      content:
-        type === 'code' || type === 'sql'
-          ? {
-              language: type === 'sql' ? 'sql' : 'python',
-              code: '',
-              output: '',
-            }
-          : type === 'table'
-            ? { columns: [], rows: [] }
-            : '',
+  // Sort blocks by position from workbook.blockOrder
+  const sortedBlocks = useMemo(() => {
+    const order = (workbook?.blockOrder as BlockOrder) || {}
+    return [...blocks].sort((a, b) => {
+      const posA = (order as Record<string, number>)[a.id] ?? 999
+      const posB = (order as Record<string, number>)[b.id] ?? 999
+      return posA - posB
+    })
+  }, [blocks, workbook?.blockOrder])
+
+  const handleNameBlur = () => {
+    if (name !== workbook.name) {
+      updateWorkbookMutation.mutate({
+        workbookId,
+        name,
+      })
     }
-
-    const newBlocks = [...blocks]
-    newBlocks.splice(afterIndex + 1, 0, newBlock)
-    setBlocks(newBlocks)
   }
 
-  const deleteBlock = (blockId: string) => {
-    setBlocks(blocks.filter((b) => b.id !== blockId))
+  const handleDescriptionBlur = () => {
+    if (description !== (workbook.description || '')) {
+      updateWorkbookMutation.mutate({
+        workbookId,
+        description,
+      })
+    }
   }
 
-  const updateBlock = (blockId: string, updates: Partial<Block>) => {
-    setBlocks(blocks.map((b) => (b.id === blockId ? { ...b, ...updates } : b)))
+  const handleAddBlock = (type: BlockType, position: number) => {
+    if (type !== 'markdown' && type !== 'table') return
+
+    collections.blocks.insert(
+      {
+        id: crypto.randomUUID(),
+        workbookId,
+        type,
+        aiMarkdownId: null,
+        aiTableId: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      { metadata: { position } },
+    )
   }
 
-  const runBlock = (blockId: string) => {
-    // Mock execution
-    console.log('Running block:', blockId)
+  const handleDeleteBlock = (blockId: string) => {
+    collections.blocks.delete(blockId)
+  }
+
+  if (!workbook) {
+    return <div>Loading...</div>
   }
 
   return (
@@ -152,7 +120,7 @@ function WorkbookDetailPage() {
       <TopNav
         breadcrumbs={[
           { label: 'Workbooks', href: '/workbooks' },
-          { label: workbookName },
+          { label: name },
         ]}
       />
 
@@ -162,66 +130,57 @@ function WorkbookDetailPage() {
         <div className="flex-1 overflow-y-auto">
           <div className="mx-auto max-w-5xl px-12 py-8">
             {/* Editable Title and Description */}
-            <div className="mb-8 space-y-2">
+            <div className="mb-2 space-y-2">
               <Input
-                value={workbookName}
-                onChange={(e) => setWorkbookName(e.target.value)}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onBlur={handleNameBlur}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.currentTarget.blur()
                   }
                 }}
                 className="!text-3xl font-bold border-none shadow-none px-0 h-auto focus-visible:ring-1 
-                focus-visible:ring-border rounded-none bg-transparent  transition-colors cursor-pointer"
+                focus-visible:ring-border rounded-none bg-transparent  transition-colors "
               />
 
               <Input
-                value={workbookDescription}
-                onChange={(e) => setWorkbookDescription(e.target.value)}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                onBlur={handleDescriptionBlur}
+                placeholder="Add a description..."
                 className="text-sm text-muted-foreground border-none shadow-none px-0 h-auto focus-visible:ring-1 
-                focus-visible:ring-border rounded-none bg-transparent hover:text-foreground transition-colors cursor-pointer"
+                focus-visible:ring-border rounded-none bg-transparent hover:text-foreground transition-colors "
               />
             </div>
 
+            <AddBlockButton onAddBlock={(type) => handleAddBlock(type, 0)} />
             <div className="space-y-1">
-              {blocks.map((block, index) => (
+              {sortedBlocks.map((block, index) => (
                 <div key={block.id}>
                   <WorkbookBlock
-                    block={block}
-                    onDelete={deleteBlock}
-                    onRun={runBlock}
+                    block={{
+                      id: block.id,
+                      type: block.type as BlockType,
+                      content: null,
+                    }}
+                    onDelete={handleDeleteBlock}
                   >
-                    {block.type === 'text' && (
-                      <TextBlock
-                        title={block.title}
-                        content={block.content}
-                        onChange={(content) =>
-                          updateBlock(block.id, { content })
-                        }
-                        onTitleChange={(title) =>
-                          updateBlock(block.id, { title })
-                        }
-                      />
+                    {block.type === 'markdown' && block.aiMarkdownId && (
+                      <div className="p-6">
+                        <MarkdownBlock markdownId={block.aiMarkdownId} />
+                      </div>
                     )}
-                    {(block.type === 'code' || block.type === 'sql') && (
-                      <CodeBlock
-                        language={block.content.language}
-                        code={block.content.code}
-                        output={block.content.output}
-                        onChange={(code) =>
-                          updateBlock(block.id, {
-                            content: { ...block.content, code },
-                          })
-                        }
-                      />
-                    )}
-                    {block.type === 'table' && (
-                      <TableBlock data={block.content} title={block.title} />
+
+                    {block.type === 'table' && block.aiTableId && (
+                      <div className="p-6">
+                        <TableBlockWrapper tableId={block.aiTableId} />
+                      </div>
                     )}
                   </WorkbookBlock>
 
                   <AddBlockButton
-                    onAddBlock={(type) => addBlock(type, index)}
+                    onAddBlock={(type) => handleAddBlock(type, index + 1)}
                   />
                 </div>
               ))}

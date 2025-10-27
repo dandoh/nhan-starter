@@ -31,6 +31,16 @@ export default {
     get: workbooksRouter.getWorkbook,
     update: workbooksRouter.updateWorkbook,
     delete: workbooksRouter.deleteWorkbook,
+    
+    // Block operations
+    getBlocks: workbooksRouter.getBlocks,
+    createBlock: workbooksRouter.createBlock,
+    deleteBlock: workbooksRouter.deleteBlock,
+    
+    // Markdown operations
+    getMarkdown: workbooksRouter.getMarkdown,
+    getMarkdowns: workbooksRouter.getMarkdowns,
+    updateMarkdown: workbooksRouter.updateMarkdown,
   },
   
   // AI Tables

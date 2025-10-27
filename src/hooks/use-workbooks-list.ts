@@ -20,9 +20,9 @@ export function useWorkbooksList() {
       description: description || null,
       createdAt: new Date(),
       updatedAt: new Date(),
+      blockOrder: {},
     }
 
-    // Optimistic insert
     workbooksCollection.insert(newWorkbook)
   }
 
@@ -30,7 +30,6 @@ export function useWorkbooksList() {
     workbookId: string,
     updates: { name?: string; description?: string | null },
   ) => {
-    // Optimistic update
     workbooksCollection.update(workbookId, (workbook) => ({
       ...workbook,
       ...updates,
@@ -39,7 +38,6 @@ export function useWorkbooksList() {
   }
 
   const deleteWorkbook = (workbookId: string) => {
-    // Optimistic delete
     workbooksCollection.delete(workbookId)
   }
 

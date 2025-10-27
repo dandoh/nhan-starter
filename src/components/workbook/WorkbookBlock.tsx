@@ -1,5 +1,4 @@
 import { ReactNode } from 'react'
-import { cn } from '@/lib/utils'
 import { GripVertical, MoreHorizontal, Play, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -9,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-export type BlockType = 'table' | 'text' | 'code' | 'sql' | 'chart'
+export type BlockType = 'table' | 'markdown' | 'text' | 'code' | 'sql' | 'chart'
 
 export interface Block {
   id: string

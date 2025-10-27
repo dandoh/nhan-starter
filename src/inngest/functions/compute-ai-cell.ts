@@ -4,10 +4,7 @@ import { aiTableCells, aiTableColumns } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { anthropic } from '@ai-sdk/anthropic'
 import { generateObject } from 'ai'
-import type { OutputType } from '@/lib/ai-table/output-types'
 import { getOutputTypeDefinition } from '@/lib/ai-table/output-type-registry'
-import { trace } from '@opentelemetry/api'
-import { wrapAISDKModel } from 'axiom/ai'
 import { getTracer } from '@lmnr-ai/lmnr'
 
 /**

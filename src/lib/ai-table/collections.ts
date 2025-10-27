@@ -9,6 +9,7 @@ import type {
   AiTableRecord,
   AiTableCell,
   Workbook,
+  WorkbookBlock,
 } from '@/db/schema'
 import type { OutputTypeConfig } from '@/lib/ai-table/output-types'
 
@@ -71,6 +72,7 @@ export const workbooksCollection = createCollection(
     },
     onUpdate: async ({ transaction }) => {
       const { original, changes } = transaction.mutations[0]
+      console.log(original, changes)
       await client.workbooks.update({
         workbookId: original.id,
         name: changes.name,
@@ -259,3 +261,52 @@ export function createTableCollections(tableId: string) {
 }
 
 export type TableCollections = ReturnType<typeof createTableCollections>
+
+// ============================================================================
+// Workbook-Specific Collections Factory
+// ============================================================================
+
+export function createWorkbookCollections(workbookId: string) {
+  // Blocks collection
+  const blocksCollection = createCollection(
+    queryCollectionOptions<WorkbookBlock>({
+      queryClient,
+      queryKey: ['workbooks', workbookId, 'blocks'],
+      queryFn: async () => {
+        const blocks = await client.workbooks.getBlocks({ workbookId })
+        return blocks
+      },
+      getKey: (block) => block.id,
+      onInsert: async ({ transaction }) => {
+        for (const mutation of transaction.mutations) {
+          const { modified: newBlock, metadata } = mutation
+          const position =
+            (metadata as { position: number } | undefined)?.position ?? 0
+          await client.workbooks.createBlock({
+            workbookId,
+            type: newBlock.type,
+            position,
+            initialMarkdown: newBlock.type === 'markdown' ? '' : undefined,
+            tableName: newBlock.type === 'table' ? 'Untitled Table' : undefined,
+          })
+
+          console.log('created block', newBlock)
+        }
+      },
+      onDelete: async ({ transaction }) => {
+        for (const mutation of transaction.mutations) {
+          const { original } = mutation
+          await client.workbooks.deleteBlock({
+            blockId: original.id,
+          })
+        }
+      },
+    }),
+  )
+
+  return {
+    blocks: blocksCollection,
+  }
+}
+
+export type WorkbookCollections = ReturnType<typeof createWorkbookCollections>
