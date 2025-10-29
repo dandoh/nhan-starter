@@ -5,6 +5,7 @@ import { db } from '@/db'
 import { workbooks, workbookBlocks, aiMarkdowns, aiTables } from '@/db/schema'
 import { eq, and, desc } from 'drizzle-orm'
 import type { BlockOrder } from '@/db/schema'
+import { chain, isEqual } from 'lodash-es'
 
 // ============================================================================
 // Workbook Management
@@ -66,6 +67,8 @@ export const getWorkbook = os
       ),
     })
 
+    // Normalize order
+
     if (!workbook) {
       throw new ORPCError('NOT_FOUND', {
         message: 'Workbook not found',
@@ -85,6 +88,7 @@ export const updateWorkbook = os
       workbookId: z.string().uuid(),
       name: z.string().min(1).max(255).optional(),
       description: z.string().optional().nullable(),
+      blockOrder: z.record(z.string().uuid(), z.number()).optional(),
     }),
   )
   .handler(async ({ input, context }) => {
@@ -106,7 +110,10 @@ export const updateWorkbook = os
       .update(workbooks)
       .set({
         ...(input.name && { name: input.name }),
-        ...(input.description !== undefined && { description: input.description }),
+        ...(input.description !== undefined && {
+          description: input.description,
+        }),
+        ...(input.blockOrder !== undefined && { blockOrder: input.blockOrder }),
       })
       .where(eq(workbooks.id, input.workbookId))
       .returning()
@@ -183,46 +190,6 @@ export const getBlocks = os
   })
 
 /**
- * Get all markdowns for a workbook
- */
-export const getMarkdowns = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      workbookId: z.string().uuid(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
-    // Verify workbook ownership
-    const workbook = await db.query.workbooks.findFirst({
-      where: and(
-        eq(workbooks.id, input.workbookId),
-        eq(workbooks.userId, context.user.id),
-      ),
-      with: {
-        blocks: {
-          with: {
-            aiMarkdown: true,
-          },
-        },
-      },
-    })
-
-    if (!workbook) {
-      throw new ORPCError('NOT_FOUND', {
-        message: 'Workbook not found',
-      })
-    }
-
-    // Extract markdowns from blocks
-    const markdowns = workbook.blocks
-      .map((block) => block.aiMarkdown)
-      .filter((m): m is NonNullable<typeof m> => m !== null)
-
-    return markdowns
-  })
-
-/**
  * Get a single markdown by ID
  */
 export const getMarkdown = os
@@ -291,9 +258,9 @@ export const createBlock = os
   .use(authMiddleware)
   .input(
     z.object({
+      id: z.string().uuid().optional(),
       workbookId: z.string().uuid(),
       type: z.enum(['markdown', 'table']),
-      position: z.number().int().min(0),
       // For markdown blocks
       initialMarkdown: z.string().optional(),
       // For table blocks
@@ -347,28 +314,13 @@ export const createBlock = os
     const [block] = await db
       .insert(workbookBlocks)
       .values({
+        ...(input.id && { id: input.id }),
         workbookId: input.workbookId,
         type: input.type,
         aiMarkdownId,
         aiTableId,
       })
       .returning()
-
-    // Update workbook's blockOrder
-    const currentOrder = (workbook.blockOrder as BlockOrder | null) ?? {}
-    const newOrder: BlockOrder = { ...currentOrder, [block.id]: input.position }
-
-    // Adjust positions of other blocks if necessary
-    Object.keys(newOrder).forEach((blockId) => {
-      if (blockId !== block.id && newOrder[blockId] >= input.position) {
-        newOrder[blockId] = newOrder[blockId] + 1
-      }
-    })
-
-    await db
-      .update(workbooks)
-      .set({ blockOrder: newOrder })
-      .where(eq(workbooks.id, input.workbookId))
 
     return block
   })
@@ -418,4 +370,3 @@ export const deleteBlock = os
 
     return { success: true }
   })
-

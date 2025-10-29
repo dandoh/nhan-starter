@@ -60,7 +60,7 @@ export const workbooks = pgTable('workbooks', {
   name: varchar('name', { length: 255 }).notNull(),
   description: text('description'),
   // Block ordering stored as { blockId: position }
-  blockOrder: jsonb('block_order').notNull().default({}),
+  blockOrder: jsonb('block_order').$type<BlockOrder>().notNull().default({}),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),

@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-export type BlockType = 'table' | 'markdown' | 'text' | 'code' | 'sql' | 'chart'
+export type BlockType = 'table' | 'markdown' 
 
 export interface Block {
   id: string
@@ -30,7 +30,6 @@ export function WorkbookBlock({
   onRun,
   children,
 }: WorkbookBlockProps) {
-  const showRunButton = block.type === 'code' || block.type === 'sql'
 
   return (
     <div className="group relative">
@@ -46,7 +45,7 @@ export function WorkbookBlock({
       </div>
 
       <div className="absolute -right-12 top-0 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-        {showRunButton && onRun && (
+        {/* {showRunButton && onRun && (
           <Button
             variant="ghost"
             size="icon"
@@ -55,7 +54,7 @@ export function WorkbookBlock({
           >
             <Play className="h-4 w-4" />
           </Button>
-        )}
+        )} */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button

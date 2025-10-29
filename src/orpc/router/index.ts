@@ -39,7 +39,6 @@ export default {
     
     // Markdown operations
     getMarkdown: workbooksRouter.getMarkdown,
-    getMarkdowns: workbooksRouter.getMarkdowns,
     updateMarkdown: workbooksRouter.updateMarkdown,
   },
   
