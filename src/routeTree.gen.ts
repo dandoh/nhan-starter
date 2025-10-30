@@ -23,7 +23,6 @@ import { Route as AuthedWorkbooksIndexRouteImport } from './routes/_authed/workb
 import { Route as AuthedTablesIndexRouteImport } from './routes/_authed/tables/index'
 import { Route as DemoFormAddressRouteImport } from './routes/demo/form.address'
 import { Route as DemoApiTqTodosRouteImport } from './routes/demo/api.tq-todos'
-import { Route as ApiRpcSplatRouteImport } from './routes/api/rpc.$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
 import { Route as ApiAuthedApiDbChatApiRouteImport } from './routes/api/_authed-api/db-chat-api'
 import { Route as AuthedWorkbooksWorkbookIdRouteImport } from './routes/_authed/workbooks/$workbookId'
@@ -100,11 +99,6 @@ const DemoApiTqTodosRoute = DemoApiTqTodosRouteImport.update({
   path: '/demo/api/tq-todos',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiRpcSplatRoute = ApiRpcSplatRouteImport.update({
-  id: '/api/rpc/$',
-  path: '/api/rpc/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -154,7 +148,6 @@ export interface FileRoutesByFullPath {
   '/workbooks/$workbookId': typeof AuthedWorkbooksWorkbookIdRoute
   '/api/db-chat-api': typeof ApiAuthedApiDbChatApiRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/api/rpc/$': typeof ApiRpcSplatRoute
   '/demo/api/tq-todos': typeof DemoApiTqTodosRoute
   '/demo/form/address': typeof DemoFormAddressRoute
   '/tables': typeof AuthedTablesIndexRoute
@@ -176,7 +169,6 @@ export interface FileRoutesByTo {
   '/workbooks/$workbookId': typeof AuthedWorkbooksWorkbookIdRoute
   '/api/db-chat-api': typeof ApiAuthedApiDbChatApiRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/api/rpc/$': typeof ApiRpcSplatRoute
   '/demo/api/tq-todos': typeof DemoApiTqTodosRoute
   '/demo/form/address': typeof DemoFormAddressRoute
   '/tables': typeof AuthedTablesIndexRoute
@@ -200,7 +192,6 @@ export interface FileRoutesById {
   '/_authed/workbooks/$workbookId': typeof AuthedWorkbooksWorkbookIdRoute
   '/api/_authed-api/db-chat-api': typeof ApiAuthedApiDbChatApiRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/api/rpc/$': typeof ApiRpcSplatRoute
   '/demo/api/tq-todos': typeof DemoApiTqTodosRoute
   '/demo/form/address': typeof DemoFormAddressRoute
   '/_authed/tables/': typeof AuthedTablesIndexRoute
@@ -224,7 +215,6 @@ export interface FileRouteTypes {
     | '/workbooks/$workbookId'
     | '/api/db-chat-api'
     | '/api/auth/$'
-    | '/api/rpc/$'
     | '/demo/api/tq-todos'
     | '/demo/form/address'
     | '/tables'
@@ -246,7 +236,6 @@ export interface FileRouteTypes {
     | '/workbooks/$workbookId'
     | '/api/db-chat-api'
     | '/api/auth/$'
-    | '/api/rpc/$'
     | '/demo/api/tq-todos'
     | '/demo/form/address'
     | '/tables'
@@ -269,7 +258,6 @@ export interface FileRouteTypes {
     | '/_authed/workbooks/$workbookId'
     | '/api/_authed-api/db-chat-api'
     | '/api/auth/$'
-    | '/api/rpc/$'
     | '/demo/api/tq-todos'
     | '/demo/form/address'
     | '/_authed/tables/'
@@ -286,7 +274,6 @@ export interface RootRouteChildren {
   DemoTeamRoute: typeof DemoTeamRoute
   ApiAuthedApiDbChatApiRoute: typeof ApiAuthedApiDbChatApiRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
-  ApiRpcSplatRoute: typeof ApiRpcSplatRoute
   DemoApiTqTodosRoute: typeof DemoApiTqTodosRoute
   DemoFormAddressRoute: typeof DemoFormAddressRoute
   ApiAuthedApiChatConversationIdRoute: typeof ApiAuthedApiChatConversationIdRoute
@@ -392,13 +379,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoApiTqTodosRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/rpc/$': {
-      id: '/api/rpc/$'
-      path: '/api/rpc/$'
-      fullPath: '/api/rpc/$'
-      preLoaderRoute: typeof ApiRpcSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -481,7 +461,6 @@ const rootRouteChildren: RootRouteChildren = {
   DemoTeamRoute: DemoTeamRoute,
   ApiAuthedApiDbChatApiRoute: ApiAuthedApiDbChatApiRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
-  ApiRpcSplatRoute: ApiRpcSplatRoute,
   DemoApiTqTodosRoute: DemoApiTqTodosRoute,
   DemoFormAddressRoute: DemoFormAddressRoute,
   ApiAuthedApiChatConversationIdRoute: ApiAuthedApiChatConversationIdRoute,

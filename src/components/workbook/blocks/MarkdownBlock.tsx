@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { Textarea } from '@/components/ui/textarea'
-import { orpc } from '@/orpc/client'
+import { serverFnGetMarkdown, serverFnUpdateMarkdown } from '@/serverFns/workbooks'
 
 interface MarkdownBlockProps {
   markdownId: string
@@ -10,9 +10,20 @@ interface MarkdownBlockProps {
 export function MarkdownBlock({ markdownId }: MarkdownBlockProps) {
   // Fetch markdown data
   const { data: markdown } = useQuery(
-    orpc.workbooks.getMarkdown.queryOptions({
-      input: { markdownId },
-    }),
+    // orpc.workbooks.getMarkdown.queryOptions({
+    //   input: { markdownId },
+    // }),
+    {
+      queryKey: ['workbooks', 'markdowns', markdownId],
+      queryFn: async () => {
+        const markdown = await serverFnGetMarkdown({
+          data: {
+            markdownId,
+          },
+        })
+        return markdown
+      },
+    },
   )
 
   const [content, setContent] = useState(markdown?.content || '')
@@ -25,15 +36,21 @@ export function MarkdownBlock({ markdownId }: MarkdownBlockProps) {
   }, [markdown])
 
   const updateMarkdownMutation = useMutation(
-    orpc.workbooks.updateMarkdown.mutationOptions(),
+    {
+      mutationFn: async () => {
+        await serverFnUpdateMarkdown({
+          data: {
+            markdownId,
+            content,
+          },
+        })
+      },
+    },
   )
 
   const handleBlur = () => {
     if (markdown && content !== markdown.content) {
-      updateMarkdownMutation.mutate({
-        markdownId,
-        content,
-      })
+      updateMarkdownMutation.mutate()
     }
   }
 
@@ -57,4 +74,3 @@ export function MarkdownBlock({ markdownId }: MarkdownBlockProps) {
     </div>
   )
 }
-

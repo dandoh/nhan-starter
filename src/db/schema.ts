@@ -225,8 +225,8 @@ export const aiMessages = pgTable('ai_messages', {
     .notNull()
     .references(() => aiConversations.id, { onDelete: 'cascade' }),
   role: varchar('role', { length: 20 }).notNull(), // 'system' | 'user' | 'assistant'
-  parts: jsonb('parts').notNull(), // Array of UIMessagePart (text, tool calls, reasoning, files, etc.)
-  metadata: jsonb('metadata'), // Optional custom metadata
+  parts: jsonb('parts').notNull().$type<any>(), // Array of UIMessagePart (text, tool calls, reasoning, files, etc.)
+  metadata: jsonb('metadata').$type<any>(), // Optional custom metadata
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),

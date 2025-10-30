@@ -1,17 +1,17 @@
-import { os, ORPCError } from '@orpc/server'
+import { createServerFn } from '@tanstack/react-start'
 import * as z from 'zod'
-import { authMiddleware } from '../middleware/auth'
+import { authMiddleware } from '@/serverFns/middleware/auth-middleware'
+import { defineFunction } from '@/serverFns/utils'
 import { db } from '@/db'
-import { 
-  aiConversations, 
-  aiMessages, 
+import {
+  aiConversations,
+  aiMessages,
   aiTables,
   workbooks,
   conversationContextToFields,
   conversationContextSchema,
 } from '@/db/schema'
 import { eq, and, isNull } from 'drizzle-orm'
-import { getRequestHeaders } from '@tanstack/react-start/server'
 
 /**
  * Create a new conversation
@@ -20,16 +20,13 @@ import { getRequestHeaders } from '@tanstack/react-start/server'
  * - Optionally accepts an initial prompt which will be saved as the first user message
  * - Returns new conversation object
  */
-export const createConversation = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      title: z.string().optional(),
-      initialPrompt: z.string().optional(),
-      context: conversationContextSchema.optional(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
+const createConversationDef = defineFunction({
+  input: z.object({
+    title: z.string().optional().describe("The title of the conversation"),
+    initialPrompt: z.string().optional().describe("The initial prompt for the conversation"),
+    context: conversationContextSchema.optional().describe("The context of the conversation"),
+  }),
+  handler: async ({ data: input, context }) => {
     // Validate context if provided
     if (input.context) {
       if (input.context.type === 'workbook') {
@@ -41,9 +38,7 @@ export const createConversation = os
           ),
         })
         if (!workbook) {
-          throw new ORPCError('NOT_FOUND', {
-            message: 'Workbook not found or access denied',
-          })
+          throw new Error('Workbook not found or access denied')
         }
       } else if (input.context.type === 'table') {
         // Verify table exists and user has access
@@ -54,16 +49,14 @@ export const createConversation = os
           ),
         })
         if (!table) {
-          throw new ORPCError('NOT_FOUND', {
-            message: 'Table not found or access denied',
-          })
+          throw new Error('Table not found or access denied')
         }
       }
       // Add validation for other context types (project, document) when implemented
     }
 
     // Convert context to database fields
-    const contextFields = input.context 
+    const contextFields = input.context
       ? conversationContextToFields(input.context)
       : { contextType: 'general' as const, contextId: null }
 
@@ -90,32 +83,24 @@ export const createConversation = os
     }
 
     return newConversation
-  })
+  },
+})
+
+export const serverFnCreateConversation = createServerFn({ method: 'POST' })
+  .inputValidator(createConversationDef.input)
+  .middleware([authMiddleware])
+  .handler(createConversationDef.handler)
 
 /**
  * Get conversation with messages
  * - Requires authentication and validates ownership
  * - Returns conversation details and all messages
  */
-export const getConversation = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      conversationId: z.string().uuid(),
-    }),
-  )
-  .output(
-    z.object({
-      id: z.string().uuid(),
-      status: z.enum(['idle', 'generating']),
-      title: z.string().nullable(),
-      userId: z.string().uuid(),
-      contextType: z.enum(['general', 'workbook', 'table', 'project', 'document']).nullable(),
-      contextId: z.string().uuid().nullable(),
-      messages: z.array(z.any()),
-    }),
-  )
-  .handler(async ({ input, context }) => {
+const getConversationDef = defineFunction({
+  input: z.object({
+    conversationId: z.string().uuid(),
+  }),
+  handler: async ({ data: input, context }) => {
     const { conversationId } = input
 
     // Validate existing conversation
@@ -123,45 +108,39 @@ export const getConversation = os
       where: eq(aiConversations.id, conversationId),
       with: {
         messages: {
-          orderBy: (messages, { asc }) => [asc(messages.createdAt)],
+          orderBy: (m, { asc }) => [asc(m.createdAt)],
         },
       },
     })
 
     if (!conversation) {
-      throw new ORPCError('NOT_FOUND', {
-        message: 'Conversation not found',
-      })
+      throw new Error('Conversation not found')
     }
 
     if (conversation.userId !== context.user.id) {
-      throw new ORPCError('FORBIDDEN', {
-        message: 'You do not have access to this conversation',
-      })
+      throw new Error('You do not have access to this conversation')
     }
 
-    return conversation
-  })
-  .callable({
-    context: () => ({
-      headers: getRequestHeaders(),
-    }),
-  })
+    return conversation 
+  },
+})
+
+export const serverFnGetConversation = createServerFn({ method: 'GET' })
+  .inputValidator(getConversationDef.input)
+  .middleware([authMiddleware])
+  .handler(getConversationDef.handler)
 
 /**
  * Find or create a conversation for a specific context
  * - Useful for table/project/document chat where we want one conversation per context
  * - Returns existing conversation if found, creates new one if not
  */
-export const findOrCreateConversationForContext = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      context: conversationContextSchema,
-      title: z.string().optional(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
+const findOrCreateConversationForContextDef = defineFunction({
+  input: z.object({
+    context: conversationContextSchema,
+    title: z.string().optional(),
+  }),
+  handler: async ({ data: input, context }) => {
     // Validate context access
     if (input.context.type === 'workbook') {
       const workbook = await db.query.workbooks.findFirst({
@@ -171,9 +150,7 @@ export const findOrCreateConversationForContext = os
         ),
       })
       if (!workbook) {
-        throw new ORPCError('NOT_FOUND', {
-          message: 'Workbook not found or access denied',
-        })
+        throw new Error('Workbook not found or access denied')
       }
     } else if (input.context.type === 'table') {
       const table = await db.query.aiTables.findFirst({
@@ -183,9 +160,7 @@ export const findOrCreateConversationForContext = os
         ),
       })
       if (!table) {
-        throw new ORPCError('NOT_FOUND', {
-          message: 'Table not found or access denied',
-        })
+        throw new Error('Table not found or access denied')
       }
     }
 
@@ -197,13 +172,13 @@ export const findOrCreateConversationForContext = os
       where: and(
         eq(aiConversations.userId, context.user.id),
         eq(aiConversations.contextType, contextFields.contextType),
-        contextFields.contextId 
+        contextFields.contextId
           ? eq(aiConversations.contextId, contextFields.contextId)
           : isNull(aiConversations.contextId),
       ),
       with: {
         messages: {
-          orderBy: (messages, { asc }) => [asc(messages.createdAt)],
+          orderBy: (m, { asc }) => [asc(m.createdAt)],
         },
       },
     })
@@ -227,8 +202,14 @@ export const findOrCreateConversationForContext = os
     return {
       ...newConversation,
       messages: [],
-    }
-  })
+    } as any
+  },
+})
+
+export const findOrCreateConversationForContext = createServerFn({ method: 'POST' })
+  .inputValidator(findOrCreateConversationForContextDef.input)
+  .middleware([authMiddleware])
+  .handler(findOrCreateConversationForContextDef.handler)
 
 /**
  * Get conversations for a specific context
@@ -236,15 +217,12 @@ export const findOrCreateConversationForContext = os
  * - Creates a new conversation if none exist
  * - Optimized for React Query / Suspense usage
  */
-export const getConversationsForContext = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      context: conversationContextSchema,
-      limit: z.number().min(1).max(50).default(10),
-    }),
-  )
-  .handler(async ({ input, context }) => {
+const getConversationsForContextDef = defineFunction({
+  input: z.object({
+    context: conversationContextSchema,
+    limit: z.number().min(1).max(50).default(10),
+  }),
+  handler: async ({ data: input, context }) => {
     // Validate context access
     if (input.context.type === 'workbook') {
       const workbook = await db.query.workbooks.findFirst({
@@ -254,9 +232,7 @@ export const getConversationsForContext = os
         ),
       })
       if (!workbook) {
-        throw new ORPCError('NOT_FOUND', {
-          message: 'Workbook not found or access denied',
-        })
+        throw new Error('Workbook not found or access denied')
       }
     } else if (input.context.type === 'table') {
       const table = await db.query.aiTables.findFirst({
@@ -266,9 +242,7 @@ export const getConversationsForContext = os
         ),
       })
       if (!table) {
-        throw new ORPCError('NOT_FOUND', {
-          message: 'Table not found or access denied',
-        })
+        throw new Error('Table not found or access denied')
       }
     }
 
@@ -280,16 +254,16 @@ export const getConversationsForContext = os
       where: and(
         eq(aiConversations.userId, context.user.id),
         eq(aiConversations.contextType, contextFields.contextType),
-        contextFields.contextId 
+        contextFields.contextId
           ? eq(aiConversations.contextId, contextFields.contextId)
           : isNull(aiConversations.contextId),
       ),
       with: {
         messages: {
-          orderBy: (messages, { asc }) => [asc(messages.createdAt)],
+          orderBy: (m, { asc }) => [asc(m.createdAt)],
         },
       },
-      orderBy: (conv, { desc }) => [desc(conv.createdAt)],
+      orderBy: (c, { desc }) => [desc(c.createdAt)],
       limit: input.limit,
     })
 
@@ -315,9 +289,10 @@ export const getConversationsForContext = os
     }
 
     return conversations
-  })
-  .callable({
-    context: () => ({
-      headers: getRequestHeaders(),
-    }),
-  })
+  },
+})
+
+export const serverFnGetConversationsForContext = createServerFn({ method: 'GET' })
+  .inputValidator(getConversationsForContextDef.input)
+  .middleware([authMiddleware])
+  .handler(getConversationsForContextDef.handler)

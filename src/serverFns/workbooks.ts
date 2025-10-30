@@ -1,42 +1,42 @@
-import { os, ORPCError } from '@orpc/server'
+import { createServerFn } from '@tanstack/react-start'
 import * as z from 'zod'
-import { authMiddleware } from '../middleware/auth'
+import { authMiddleware } from '@/serverFns/middleware/auth-middleware'
+import { defineFunction } from '@/serverFns/utils'
 import { db } from '@/db'
 import { workbooks, workbookBlocks, aiMarkdowns, aiTables } from '@/db/schema'
 import { eq, and, desc } from 'drizzle-orm'
 import type { BlockOrder } from '@/db/schema'
-import { chain, isEqual } from 'lodash-es'
 
 // ============================================================================
 // Workbook Management
 // ============================================================================
-
 /**
  * List all workbooks for the authenticated user
  */
-export const listWorkbooks = os
-  .use(authMiddleware)
-  .handler(async ({ context }) => {
+const listWorkbooksDef = defineFunction({
+  handler: async ({ context }) => {
     const userWorkbooks = await db.query.workbooks.findMany({
       where: eq(workbooks.userId, context.user.id),
       orderBy: [desc(workbooks.updatedAt)],
     })
 
     return userWorkbooks
-  })
+  },
+})
+
+export const serverFnListWorkbooks = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .handler(listWorkbooksDef.handler)
 
 /**
  * Create a new workbook
  */
-export const createWorkbook = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      name: z.string().min(1).max(255),
-      description: z.string().optional(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
+const createWorkbookDef = defineFunction({
+  input: z.object({
+    name: z.string().min(1).max(255),
+    description: z.string().optional(),
+  }),
+  handler: async ({ data: input, context }) => {
     const [newWorkbook] = await db
       .insert(workbooks)
       .values({
@@ -47,19 +47,22 @@ export const createWorkbook = os
       .returning()
 
     return newWorkbook
-  })
+  },
+})
+
+export const serverFnCreateWorkbook = createServerFn({ method: 'POST' })
+  .inputValidator(createWorkbookDef.input)
+  .middleware([authMiddleware])
+  .handler(createWorkbookDef.handler)
 
 /**
  * Get workbook details
  */
-export const getWorkbook = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      workbookId: z.string().uuid(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
+const getWorkbookDef = defineFunction({
+  input: z.object({
+    workbookId: z.string().uuid(),
+  }),
+  handler: async ({ data: input, context }) => {
     const workbook = await db.query.workbooks.findFirst({
       where: and(
         eq(workbooks.id, input.workbookId),
@@ -70,28 +73,29 @@ export const getWorkbook = os
     // Normalize order
 
     if (!workbook) {
-      throw new ORPCError('NOT_FOUND', {
-        message: 'Workbook not found',
-      })
+      throw new Error('Workbook not found')
     }
 
     return workbook
-  })
+  },
+})
+
+export const serverFnGetWorkbook = createServerFn({ method: 'GET' })
+  .inputValidator(getWorkbookDef.input)
+  .middleware([authMiddleware])
+  .handler(getWorkbookDef.handler)
 
 /**
  * Update workbook name and description
  */
-export const updateWorkbook = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      workbookId: z.string().uuid(),
-      name: z.string().min(1).max(255).optional(),
-      description: z.string().optional().nullable(),
-      blockOrder: z.record(z.string().uuid(), z.number()).optional(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
+const updateWorkbookDef = defineFunction({
+  input: z.object({
+    workbookId: z.string().uuid(),
+    name: z.string().min(1).max(255).optional(),
+    description: z.string().optional().nullable(),
+    blockOrder: z.record(z.string().uuid(), z.number()).optional(),
+  }),
+  handler: async ({ data: input, context }) => {
     // Verify ownership
     const workbook = await db.query.workbooks.findFirst({
       where: and(
@@ -101,9 +105,7 @@ export const updateWorkbook = os
     })
 
     if (!workbook) {
-      throw new ORPCError('NOT_FOUND', {
-        message: 'Workbook not found',
-      })
+      throw new Error('Workbook not found')
     }
 
     const [updated] = await db
@@ -119,19 +121,22 @@ export const updateWorkbook = os
       .returning()
 
     return updated
-  })
+  },
+})
+
+export const serverFnUpdateWorkbook = createServerFn({ method: 'POST' })
+  .inputValidator(updateWorkbookDef.input)
+  .middleware([authMiddleware])
+  .handler(updateWorkbookDef.handler)
 
 /**
  * Delete a workbook
  */
-export const deleteWorkbook = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      workbookId: z.string().uuid(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
+const deleteWorkbookDef = defineFunction({
+  input: z.object({
+    workbookId: z.string().uuid(),
+  }),
+  handler: async ({ data: input, context }) => {
     // Verify ownership and delete
     const result = await db
       .delete(workbooks)
@@ -144,13 +149,17 @@ export const deleteWorkbook = os
       .returning()
 
     if (result.length === 0) {
-      throw new ORPCError('NOT_FOUND', {
-        message: 'Workbook not found',
-      })
+      throw new Error('Workbook not found')
     }
 
     return { success: true }
-  })
+  },
+})
+
+export const serverFnDeleteWorkbook = createServerFn({ method: 'POST' })
+  .inputValidator(deleteWorkbookDef.input)
+  .middleware([authMiddleware])
+  .handler(deleteWorkbookDef.handler)
 
 // ============================================================================
 // Workbook Blocks Management
@@ -159,14 +168,11 @@ export const deleteWorkbook = os
 /**
  * Get all blocks for a workbook
  */
-export const getBlocks = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      workbookId: z.string().uuid(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
+const getBlocksDef = defineFunction({
+  input: z.object({
+    workbookId: z.string().uuid(),
+  }),
+  handler: async ({ data: input, context }) => {
     // Verify workbook ownership
     const workbook = await db.query.workbooks.findFirst({
       where: and(
@@ -176,9 +182,7 @@ export const getBlocks = os
     })
 
     if (!workbook) {
-      throw new ORPCError('NOT_FOUND', {
-        message: 'Workbook not found',
-      })
+      throw new Error('Workbook not found')
     }
 
     // Get all blocks for this workbook
@@ -187,19 +191,22 @@ export const getBlocks = os
     })
 
     return blocks
-  })
+  },
+})
+
+export const serverFnGetBlocks = createServerFn({ method: 'GET' })
+  .inputValidator(getBlocksDef.input)
+  .middleware([authMiddleware])
+  .handler(getBlocksDef.handler)
 
 /**
  * Get a single markdown by ID
  */
-export const getMarkdown = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      markdownId: z.string().uuid(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
+const getMarkdownDef = defineFunction({
+  input: z.object({
+    markdownId: z.string().uuid(),
+  }),
+  handler: async ({ data: input, context }) => {
     const markdown = await db.query.aiMarkdowns.findFirst({
       where: and(
         eq(aiMarkdowns.id, input.markdownId),
@@ -208,26 +215,27 @@ export const getMarkdown = os
     })
 
     if (!markdown) {
-      throw new ORPCError('NOT_FOUND', {
-        message: 'Markdown not found',
-      })
+      throw new Error('Markdown not found')
     }
 
     return markdown
-  })
+  },
+})
+
+export const serverFnGetMarkdown = createServerFn({ method: 'GET' })
+  .inputValidator(getMarkdownDef.input)
+  .middleware([authMiddleware])
+  .handler(getMarkdownDef.handler)
 
 /**
  * Update markdown content
  */
-export const updateMarkdown = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      markdownId: z.string().uuid(),
-      content: z.string(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
+const updateMarkdownDef = defineFunction({
+  input: z.object({
+    markdownId: z.string().uuid(),
+    content: z.string(),
+  }),
+  handler: async ({ data: input, context }) => {
     // Verify ownership through workbook block
     const markdown = await db.query.aiMarkdowns.findFirst({
       where: and(
@@ -237,9 +245,7 @@ export const updateMarkdown = os
     })
 
     if (!markdown) {
-      throw new ORPCError('NOT_FOUND', {
-        message: 'Markdown not found',
-      })
+      throw new Error('Markdown not found')
     }
 
     const [updated] = await db
@@ -249,25 +255,28 @@ export const updateMarkdown = os
       .returning()
 
     return updated
-  })
+  },
+})
+
+export const serverFnUpdateMarkdown = createServerFn({ method: 'POST' })
+  .inputValidator(updateMarkdownDef.input)
+  .middleware([authMiddleware])
+  .handler(updateMarkdownDef.handler)
 
 /**
  * Create a new block in a workbook
  */
-export const createBlock = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      id: z.string().uuid().optional(),
-      workbookId: z.string().uuid(),
-      type: z.enum(['markdown', 'table']),
-      // For markdown blocks
-      initialMarkdown: z.string().optional(),
-      // For table blocks
-      tableName: z.string().optional(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
+const createBlockDef = defineFunction({
+  input: z.object({
+    id: z.string().uuid().optional(),
+    workbookId: z.string().uuid(),
+    type: z.enum(['markdown', 'table']),
+    // For markdown blocks
+    initialMarkdown: z.string().optional(),
+    // For table blocks
+    tableName: z.string().optional(),
+  }),
+  handler: async ({ data: input, context }) => {
     // Verify workbook ownership
     const workbook = await db.query.workbooks.findFirst({
       where: and(
@@ -277,9 +286,7 @@ export const createBlock = os
     })
 
     if (!workbook) {
-      throw new ORPCError('NOT_FOUND', {
-        message: 'Workbook not found',
-      })
+      throw new Error('Workbook not found')
     }
 
     // Create the underlying content based on type
@@ -323,19 +330,22 @@ export const createBlock = os
       .returning()
 
     return block
-  })
+  },
+})
+
+export const serverFnCreateBlock = createServerFn({ method: 'POST' })
+  .inputValidator(createBlockDef.input)
+  .middleware([authMiddleware])
+  .handler(createBlockDef.handler)
 
 /**
  * Delete a block from a workbook
  */
-export const deleteBlock = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      blockId: z.string().uuid(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
+const deleteBlockDef = defineFunction({
+  input: z.object({
+    blockId: z.string().uuid(),
+  }),
+  handler: async ({ data: input, context }) => {
     // Find the block and verify ownership through workbook
     const block = await db.query.workbookBlocks.findFirst({
       where: eq(workbookBlocks.id, input.blockId),
@@ -345,15 +355,11 @@ export const deleteBlock = os
     })
 
     if (!block) {
-      throw new ORPCError('NOT_FOUND', {
-        message: 'Block not found',
-      })
+      throw new Error('Block not found')
     }
 
     if (block.workbook.userId !== context.user.id) {
-      throw new ORPCError('FORBIDDEN', {
-        message: 'You do not have permission to delete this block',
-      })
+      throw new Error('You do not have permission to delete this block')
     }
 
     // Remove block from workbook's blockOrder
@@ -369,4 +375,10 @@ export const deleteBlock = os
     await db.delete(workbookBlocks).where(eq(workbookBlocks.id, input.blockId))
 
     return { success: true }
-  })
+  },
+})
+
+export const serverFnDeleteBlock = createServerFn({ method: 'POST' })
+  .inputValidator(deleteBlockDef.input)
+  .middleware([authMiddleware])
+  .handler(deleteBlockDef.handler)

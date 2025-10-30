@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import {
-  createWorkbookLocalSyncDb,
-  type WorkbookCollections,
-} from '@/lib/ai-table/collections'
 import type { Workbook, WorkbookBlock } from '@/db/schema'
 import { queryCollectionOptions } from '@tanstack/query-db-collection'
 import { queryClient } from '@/integrations/tanstack-query/root-provider'
 import { createCollection, eq, useLiveQuery } from '@tanstack/react-db'
-import { client, orpc } from '@/orpc/client'
-import { useMutation, useQuery } from '@tanstack/react-query'
 import { chain } from 'lodash-es'
+import {
+  serverFnCreateBlock,
+  serverFnDeleteBlock as deleteBlockServer,
+  serverFnGetBlocks,
+  serverFnGetWorkbook,
+  serverFnUpdateWorkbook,
+} from '@/serverFns/workbooks'
 
 /**
  * Hook to manage a workbook's blocks and markdowns with local collections
@@ -22,8 +23,10 @@ export function useWorkbookSync(initialWorkbook: Workbook) {
         queryKey: ['workbooks', initialWorkbook.id],
         queryFn: async () => {
           return [
-            await client.workbooks.get({
-              workbookId: initialWorkbook.id,
+            await serverFnGetWorkbook({
+              data: {
+                workbookId: initialWorkbook.id,
+              },
             }),
           ]
         },
@@ -41,12 +44,13 @@ export function useWorkbookSync(initialWorkbook: Workbook) {
             }
           }
 
-
-          await client.workbooks.update({
-            workbookId: original.id,
-            name: modified.name,
-            description: modified.description,
-            blockOrder: modified.blockOrder,
+          await serverFnUpdateWorkbook({
+            data: {
+              workbookId: original.id,
+              name: modified.name,
+              description: modified.description,
+              blockOrder: modified.blockOrder,
+            },
           })
         },
       }),
@@ -60,8 +64,10 @@ export function useWorkbookSync(initialWorkbook: Workbook) {
         queryClient,
         queryKey: ['workbooks', initialWorkbook.id, 'blocks'],
         queryFn: async () => {
-          const blocks = await client.workbooks.getBlocks({
-            workbookId: initialWorkbook.id,
+          const blocks = await serverFnGetBlocks({
+            data: {
+              workbookId: initialWorkbook.id,
+            },
           })
           return blocks
         },
@@ -69,21 +75,25 @@ export function useWorkbookSync(initialWorkbook: Workbook) {
         onInsert: async ({ transaction }) => {
           for (const mutation of transaction.mutations) {
             const { modified: newBlock } = mutation
-            await client.workbooks.createBlock({
-              id: newBlock.id,
-              workbookId: initialWorkbook.id,
-              type: newBlock.type,
-              initialMarkdown: newBlock.type === 'markdown' ? '' : undefined,
-              tableName:
-                newBlock.type === 'table' ? 'Untitled Table' : undefined,
+            await serverFnCreateBlock({
+              data: {
+                id: newBlock.id,
+                workbookId: initialWorkbook.id,
+                type: newBlock.type,
+                initialMarkdown: newBlock.type === 'markdown' ? '' : undefined,
+                tableName:
+                  newBlock.type === 'table' ? 'Untitled Table' : undefined,
+              },
             })
           }
         },
         onDelete: async ({ transaction }) => {
           for (const mutation of transaction.mutations) {
             const { original } = mutation
-            await client.workbooks.deleteBlock({
-              blockId: original.id,
+            await deleteBlockServer({
+              data: {
+                blockId: original.id,
+              },
             })
           }
         },

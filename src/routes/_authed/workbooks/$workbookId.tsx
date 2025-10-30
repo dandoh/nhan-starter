@@ -9,14 +9,16 @@ import { TableBlockWrapper } from '@/components/workbook/blocks/TableBlockWrappe
 import { AIChat } from '@/components/ai-chat/AIChat'
 import { Input } from '@/components/ui/input'
 import { TopNav, AppPageWrapper } from '@/components/AppPageWrapper'
-import { client, orpc } from '@/orpc/client'
 import type { BlockType } from '@/components/workbook/WorkbookBlock'
+import { serverFnGetWorkbook } from '@/serverFns/workbooks'
 
 export const Route = createFileRoute('/_authed/workbooks/$workbookId')({
   ssr: false,
   loader: async ({ params, context }) => {
-    const workbook = await client.workbooks.get({
-      workbookId: params.workbookId,
+    const workbook = await serverFnGetWorkbook({
+      data: {
+        workbookId: params.workbookId,
+      },
     })
     return { workbook }
   },
@@ -38,14 +40,13 @@ function WorkbookDetailPage() {
     changeWorkbookName,
   } = useWorkbookSync(preloadedWorkbook)
 
-
   // Collapse sidebar on mount
   useEffect(() => {
     setSidebarOpen(false)
   }, [setSidebarOpen])
 
   const handleNameBlur = () => {
-    console.log("name blur")
+    console.log('name blur')
     changeWorkbookName(workbook.name, 'sync')
   }
 

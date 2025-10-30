@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
-import { orpc } from '@/orpc/client'
+import { orpc } from '@/serverFns/client'
 
 export const Route = createFileRoute('/_authed/new-chat')({
   component: NewChatPage,

@@ -1,6 +1,7 @@
-import { os, ORPCError } from '@orpc/server'
+import { createServerFn } from '@tanstack/react-start'
 import * as z from 'zod'
-import { authMiddleware } from '../middleware/auth'
+import { authMiddleware } from '@/serverFns/middleware/auth-middleware'
+import { defineFunction } from '@/serverFns/utils'
 import { db } from '@/db'
 import {
   aiTables,
@@ -10,10 +11,7 @@ import {
 } from '@/db/schema'
 import { eq, and, gt, sql, inArray } from 'drizzle-orm'
 import { inngest } from '@/inngest/client'
-import {
-  optionSchema,
-  type OutputType,
-} from '@/lib/ai-table/output-types'
+import { optionSchema } from '@/lib/ai-table/output-types'
 import { validateOutputTypeConfig } from '@/lib/ai-table/output-type-registry'
 
 // ============================================================================
@@ -23,29 +21,30 @@ import { validateOutputTypeConfig } from '@/lib/ai-table/output-type-registry'
 /**
  * List all tables for the authenticated user
  */
-export const listTables = os
-  .use(authMiddleware)
-  .handler(async ({ context }) => {
+const listTablesDef = defineFunction({
+  handler: async ({ context }) => {
     const tables = await db.query.aiTables.findMany({
       where: eq(aiTables.userId, context.user.id),
-      orderBy: (tables, { desc }) => [desc(tables.createdAt)],
+      orderBy: (t, { desc }) => [desc(t.createdAt)],
     })
 
     return tables
-  })
+  },
+})
+
+export const serverFnListTables = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .handler(listTablesDef.handler)
 
 /**
  * Create a new table with an initial "Main" column
  */
-export const createTable = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      id: z.string().uuid().optional(),
-      name: z.string().min(1).max(255),
-    }),
-  )
-  .handler(async ({ input, context }) => {
+const createTableDef = defineFunction({
+  input: z.object({
+    id: z.string().uuid().optional(),
+    name: z.string().min(1).max(255),
+  }),
+  handler: async ({ data: input, context }) => {
     // Create table and main column in a transaction
     const result = await db.transaction(async (tx) => {
       // Create table
@@ -72,19 +71,22 @@ export const createTable = os
     })
 
     return result
-  })
+  },
+})
+
+export const serverFnCreateTable = createServerFn({ method: 'POST' })
+  .inputValidator(createTableDef.input)
+  .middleware([authMiddleware])
+  .handler(createTableDef.handler)
 
 /**
  * Get table details with columns and record count
  */
-export const getTable = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      tableId: z.string().uuid(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
+const getTableDef = defineFunction({
+  input: z.object({
+    tableId: z.string().uuid(),
+  }),
+  handler: async ({ data: input, context }) => {
     const table = await db.query.aiTables.findFirst({
       where: and(
         eq(aiTables.id, input.tableId),
@@ -98,9 +100,7 @@ export const getTable = os
     })
 
     if (!table) {
-      throw new ORPCError('NOT_FOUND', {
-        message: 'Table not found',
-      })
+      throw new Error('Table not found')
     }
 
     // Get record count
@@ -114,19 +114,22 @@ export const getTable = os
       ...table,
       recordCount,
     }
-  })
+  },
+})
+
+export const serverFnGetTable = createServerFn({ method: 'GET' })
+  .inputValidator(getTableDef.input)
+  .middleware([authMiddleware])
+  .handler(getTableDef.handler)
 
 /**
  * Delete a table and all related data
  */
-export const deleteTable = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      tableId: z.string().uuid(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
+const deleteTableDef = defineFunction({
+  input: z.object({
+    tableId: z.string().uuid(),
+  }),
+  handler: async ({ data: input, context }) => {
     // Verify ownership and delete
     const result = await db
       .delete(aiTables)
@@ -139,13 +142,17 @@ export const deleteTable = os
       .returning()
 
     if (result.length === 0) {
-      throw new ORPCError('NOT_FOUND', {
-        message: 'Table not found',
-      })
+      throw new Error('Table not found')
     }
 
     return { success: true }
-  })
+  },
+})
+
+export const serverFnDeleteTable = createServerFn({ method: 'POST' })
+  .inputValidator(deleteTableDef.input)
+  .middleware([authMiddleware])
+  .handler(deleteTableDef.handler)
 
 // ============================================================================
 // Column Operations
@@ -154,14 +161,11 @@ export const deleteTable = os
 /**
  * Get all columns for a table
  */
-export const getColumns = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      tableId: z.string().uuid(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
+const getColumnsDef = defineFunction({
+  input: z.object({
+    tableId: z.string().uuid(),
+  }),
+  handler: async ({ data: input, context }) => {
     // Verify table ownership
     const table = await db.query.aiTables.findFirst({
       where: and(
@@ -171,31 +175,38 @@ export const getColumns = os
     })
 
     if (!table) {
-      throw new ORPCError('NOT_FOUND', {
-        message: 'Table not found',
-      })
+      throw new Error('Table not found')
     }
 
     const columns = await db.query.aiTableColumns.findMany({
       where: eq(aiTableColumns.tableId, input.tableId),
-      orderBy: (columns, { asc }) => [asc(columns.position)],
+      orderBy: (c, { asc }) => [asc(c.position)],
     })
 
     return columns
-  })
+  },
+})
+
+export const serverFnGetColumns = createServerFn({ method: 'GET' })
+  .inputValidator(getColumnsDef.input)
+  .middleware([authMiddleware])
+  .handler(getColumnsDef.handler)
 
 /**
  * Create a new column and initialize cells for existing records
  */
-export const createColumn = os
-  .use(authMiddleware)
-  .input(
+export const serverFnCreateColumn = createServerFn({
+  method: 'POST',
+})
+  .inputValidator(
     z.object({
       tableId: z.string().uuid(),
       name: z.string().min(1).max(255),
       type: z.enum(['manual', 'ai']).default('ai'),
       description: z.string().optional(),
-      outputType: z.enum(['text', 'long_text', 'single_select', 'multi_select', 'date']).default('text'),
+      outputType: z
+        .enum(['text', 'long_text', 'single_select', 'multi_select', 'date'])
+        .default('text'),
       aiPrompt: z.string().default(''),
       outputTypeConfig: z
         .object({
@@ -206,7 +217,8 @@ export const createColumn = os
         .optional(),
     }),
   )
-  .handler(async ({ input, context }) => {
+  .middleware([authMiddleware])
+  .handler(async ({ data: input, context }) => {
     // Verify table ownership
     const table = await db.query.aiTables.findFirst({
       where: and(
@@ -216,18 +228,19 @@ export const createColumn = os
     })
 
     if (!table) {
-      throw new ORPCError('NOT_FOUND', {
-        message: 'Table not found',
-      })
+      throw new Error('Table not found')
     }
 
     // Validate outputTypeConfig matches outputType
     if (input.outputTypeConfig) {
-      const validation = validateOutputTypeConfig(input.outputType as OutputType, input.outputTypeConfig)
+      const validation = validateOutputTypeConfig(
+        input.outputType,
+        input.outputTypeConfig,
+      )
       if (!validation.success) {
-        throw new ORPCError('BAD_REQUEST', {
-          message: validation.error || 'Invalid configuration for output type',
-        })
+        throw new Error(
+          validation.error || 'Invalid configuration for output type',
+        )
       }
     }
 
@@ -237,7 +250,7 @@ export const createColumn = os
         .select({ max: sql<number>`COALESCE(MAX(position), -1)::int` })
         .from(aiTableColumns)
         .where(eq(aiTableColumns.tableId, input.tableId))
-        .then((result) => result[0]?.max ?? -1)
+        .then((res) => res[0]?.max ?? -1)
 
       // Create column
       const [newColumn] = await tx
@@ -260,7 +273,7 @@ export const createColumn = os
       })
 
       // Create cells for all existing records
-      let createdCells: typeof aiTableCells.$inferSelect[] = []
+      let createdCells: (typeof aiTableCells.$inferSelect)[] = []
       if (records.length > 0) {
         const cellsToInsert = records.map((record) => ({
           recordId: record.id,
@@ -268,7 +281,10 @@ export const createColumn = os
           value: null,
         }))
 
-        createdCells = await tx.insert(aiTableCells).values(cellsToInsert).returning()
+        createdCells = await tx
+          .insert(aiTableCells)
+          .values(cellsToInsert)
+          .returning()
       }
 
       return { column: newColumn, cells: createdCells }
@@ -288,26 +304,26 @@ export const createColumn = os
 /**
  * Update column name, type, or config
  */
-export const updateColumn = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      columnId: z.string().uuid(),
-      name: z.string().min(1).max(255).optional(),
-      type: z.enum(['manual', 'ai']).optional(),
-      description: z.string().optional(),
-      outputType: z.enum(['text', 'long_text', 'single_select', 'multi_select', 'date']).optional(),
-      aiPrompt: z.string().optional(),
-      outputTypeConfig: z
-        .object({
-          options: z.array(optionSchema).optional(),
-          maxSelections: z.number().int().positive().optional(),
-          dateFormat: z.string().optional(),
-        })
-        .optional().nullable(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
+const updateColumnDef = defineFunction({
+  input: z.object({
+    columnId: z.string().uuid(),
+    name: z.string().min(1).max(255).optional(),
+    type: z.enum(['manual', 'ai']).optional(),
+    description: z.string().optional(),
+    outputType: z
+      .enum(['text', 'long_text', 'single_select', 'multi_select', 'date'])
+      .optional(),
+    aiPrompt: z.string().optional(),
+    outputTypeConfig: z
+      .object({
+        options: z.array(optionSchema).optional(),
+        maxSelections: z.number().int().positive().optional(),
+        dateFormat: z.string().optional(),
+      })
+      .optional()
+      .nullable(),
+  }),
+  handler: async ({ data: input, context }) => {
     // Verify ownership through table
     const column = await db.query.aiTableColumns.findFirst({
       where: eq(aiTableColumns.id, input.columnId),
@@ -317,9 +333,7 @@ export const updateColumn = os
     })
 
     if (!column || column.table.userId !== context.user.id) {
-      throw new ORPCError('NOT_FOUND', {
-        message: 'Column not found',
-      })
+      throw new Error('Column not found')
     }
 
     // Validate type change: prevent converting last manual column to AI
@@ -336,20 +350,21 @@ export const updateColumn = os
         .then((result) => result[0]?.count ?? 0)
 
       if (manualCount <= 1) {
-        throw new ORPCError('BAD_REQUEST', {
-          message: 'Cannot convert the last manual column to AI',
-        })
+        throw new Error('Cannot convert the last manual column to AI')
       }
     }
 
     // Validate outputTypeConfig matches outputType
     const finalOutputType = input.outputType || column.outputType
     if (input.outputTypeConfig) {
-      const validation = validateOutputTypeConfig(finalOutputType as OutputType, input.outputTypeConfig)
+      const validation = validateOutputTypeConfig(
+        finalOutputType,
+        input.outputTypeConfig,
+      )
       if (!validation.success) {
-        throw new ORPCError('BAD_REQUEST', {
-          message: validation.error || 'Invalid configuration for output type',
-        })
+        throw new Error(
+          validation.error || 'Invalid configuration for output type',
+        )
       }
     }
 
@@ -358,28 +373,35 @@ export const updateColumn = os
       .set({
         ...(input.name && { name: input.name }),
         ...(input.type && { type: input.type }),
-        ...(input.description !== undefined && { description: input.description }),
+        ...(input.description !== undefined && {
+          description: input.description,
+        }),
         ...(input.outputType && { outputType: input.outputType }),
         ...(input.aiPrompt !== undefined && { aiPrompt: input.aiPrompt }),
-        ...(input.outputTypeConfig !== undefined && { outputTypeConfig: input.outputTypeConfig }),
+        ...(input.outputTypeConfig !== undefined && {
+          outputTypeConfig: input.outputTypeConfig,
+        }),
       })
       .where(eq(aiTableColumns.id, input.columnId))
       .returning()
 
     return updated
-  })
+  },
+})
+
+export const serverFnUpdateColumn = createServerFn({ method: 'POST' })
+  .inputValidator(updateColumnDef.input)
+  .middleware([authMiddleware])
+  .handler(updateColumnDef.handler)
 
 /**
  * Delete a column and its cells
  */
-export const deleteColumn = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      columnId: z.string().uuid(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
+const deleteColumnDef = defineFunction({
+  input: z.object({
+    columnId: z.string().uuid(),
+  }),
+  handler: async ({ data: input, context }) => {
     // Verify ownership through table
     const column = await db.query.aiTableColumns.findFirst({
       where: eq(aiTableColumns.id, input.columnId),
@@ -389,9 +411,7 @@ export const deleteColumn = os
     })
 
     if (!column || column.table.userId !== context.user.id) {
-      throw new ORPCError('NOT_FOUND', {
-        message: 'Column not found',
-      })
+      throw new Error('Column not found')
     }
 
     // Prevent deleting the last column
@@ -402,9 +422,7 @@ export const deleteColumn = os
       .then((result) => result[0]?.count ?? 0)
 
     if (columnCount <= 1) {
-      throw new ORPCError('BAD_REQUEST', {
-        message: 'Cannot delete the last column',
-      })
+      throw new Error('Cannot delete the last column')
     }
 
     // Prevent deleting the last manual column
@@ -421,16 +439,20 @@ export const deleteColumn = os
         .then((result) => result[0]?.count ?? 0)
 
       if (manualCount <= 1) {
-        throw new ORPCError('BAD_REQUEST', {
-          message: 'Cannot delete the last manual column',
-        })
+        throw new Error('Cannot delete the last manual column')
       }
     }
 
     await db.delete(aiTableColumns).where(eq(aiTableColumns.id, input.columnId))
 
     return { success: true }
-  })
+  },
+})
+
+export const serverFnDeleteColumn = createServerFn({ method: 'POST' })
+  .inputValidator(deleteColumnDef.input)
+  .middleware([authMiddleware])
+  .handler(deleteColumnDef.handler)
 
 // ============================================================================
 // Record Operations
@@ -439,14 +461,11 @@ export const deleteColumn = os
 /**
  * Get all records for a table (without cell data)
  */
-export const getRecords = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      tableId: z.string().uuid(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
+const getRecordsDef = defineFunction({
+  input: z.object({
+    tableId: z.string().uuid(),
+  }),
+  handler: async ({ data: input, context }) => {
     // Verify table ownership
     const table = await db.query.aiTables.findFirst({
       where: and(
@@ -456,31 +475,32 @@ export const getRecords = os
     })
 
     if (!table) {
-      throw new ORPCError('NOT_FOUND', {
-        message: 'Table not found',
-      })
+      throw new Error('Table not found')
     }
 
     const records = await db.query.aiTableRecords.findMany({
       where: eq(aiTableRecords.tableId, input.tableId),
-      orderBy: (records, { asc }) => [asc(records.position)],
+      orderBy: (r, { asc }) => [asc(r.position)],
     })
 
     return records
-  })
+  },
+})
+
+export const serverFnGetRecords = createServerFn({ method: 'GET' })
+  .inputValidator(getRecordsDef.input)
+  .middleware([authMiddleware])
+  .handler(getRecordsDef.handler)
 
 /**
  * Create a new record with empty cells for all columns
  */
-export const createRecord = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      id: z.string().uuid().optional(),
-      tableId: z.string().uuid(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
+const createRecordDef = defineFunction({
+  input: z.object({
+    id: z.string().uuid().optional(),
+    tableId: z.string().uuid(),
+  }),
+  handler: async ({ data: input, context }) => {
     // Verify table ownership
     const table = await db.query.aiTables.findFirst({
       where: and(
@@ -490,9 +510,7 @@ export const createRecord = os
     })
 
     if (!table) {
-      throw new ORPCError('NOT_FOUND', {
-        message: 'Table not found',
-      })
+      throw new Error('Table not found')
     }
 
     const result = await db.transaction(async (tx) => {
@@ -501,7 +519,7 @@ export const createRecord = os
         .select({ max: sql<number>`COALESCE(MAX(position), -1)::int` })
         .from(aiTableRecords)
         .where(eq(aiTableRecords.tableId, input.tableId))
-        .then((result) => result[0]?.max ?? -1)
+        .then((res) => res[0]?.max ?? -1)
 
       // Create record
       const [newRecord] = await tx
@@ -519,7 +537,7 @@ export const createRecord = os
       })
 
       // Create cells for all columns
-      let createdCells: typeof aiTableCells.$inferSelect[] = []
+      let createdCells: (typeof aiTableCells.$inferSelect)[] = []
       if (columns.length > 0) {
         const cellsToInsert = columns.map((column) => ({
           recordId: newRecord.id,
@@ -527,7 +545,10 @@ export const createRecord = os
           value: null,
         }))
 
-        createdCells = await tx.insert(aiTableCells).values(cellsToInsert).returning()
+        createdCells = await tx
+          .insert(aiTableCells)
+          .values(cellsToInsert)
+          .returning()
       }
 
       return { record: newRecord, cells: createdCells }
@@ -536,19 +557,22 @@ export const createRecord = os
     // TODO: Trigger Inngest for AI columns (Phase 3)
 
     return result
-  })
+  },
+})
+
+export const serverFnCreateRecord = createServerFn({ method: 'POST' })
+  .inputValidator(createRecordDef.input)
+  .middleware([authMiddleware])
+  .handler(createRecordDef.handler)
 
 /**
  * Delete a record and its cells
  */
-export const deleteRecord = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      recordId: z.string().uuid(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
+const deleteRecordDef = defineFunction({
+  input: z.object({
+    recordId: z.string().uuid(),
+  }),
+  handler: async ({ data: input, context }) => {
     // Verify ownership through table
     const record = await db.query.aiTableRecords.findFirst({
       where: eq(aiTableRecords.id, input.recordId),
@@ -558,15 +582,19 @@ export const deleteRecord = os
     })
 
     if (!record || record.table.userId !== context.user.id) {
-      throw new ORPCError('NOT_FOUND', {
-        message: 'Record not found',
-      })
+      throw new Error('Record not found')
     }
 
     await db.delete(aiTableRecords).where(eq(aiTableRecords.id, input.recordId))
 
     return { success: true }
-  })
+  },
+})
+
+export const serverFnDeleteRecord = createServerFn({ method: 'POST' })
+  .inputValidator(deleteRecordDef.input)
+  .middleware([authMiddleware])
+  .handler(deleteRecordDef.handler)
 
 // ============================================================================
 // Cell Operations
@@ -575,14 +603,11 @@ export const deleteRecord = os
 /**
  * Get all cells for a table (initial load)
  */
-export const getCells = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      tableId: z.string().uuid(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
+const getCellsDef = defineFunction({
+  input: z.object({
+    tableId: z.string().uuid(),
+  }),
+  handler: async ({ data: input, context }) => {
     // Verify table ownership
     const table = await db.query.aiTables.findFirst({
       where: and(
@@ -592,9 +617,7 @@ export const getCells = os
     })
 
     if (!table) {
-      throw new ORPCError('NOT_FOUND', {
-        message: 'Table not found',
-      })
+      throw new Error('Table not found')
     }
 
     // Get all cells for this table via records
@@ -615,20 +638,23 @@ export const getCells = os
       .where(eq(aiTableRecords.tableId, input.tableId))
 
     return cells
-  })
+  },
+})
+
+export const serverFnGetCells = createServerFn({ method: 'GET' })
+  .inputValidator(getCellsDef.input)
+  .middleware([authMiddleware])
+  .handler(getCellsDef.handler)
 
 /**
  * Update a cell value
  */
-export const updateCell = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      cellId: z.string().uuid(),
-      value: z.string().optional(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
+const updateCellDef = defineFunction({
+  input: z.object({
+    cellId: z.string().uuid(),
+    value: z.string().optional(),
+  }),
+  handler: async ({ data: input, context }) => {
     // Verify ownership through table
     const cell = await db.query.aiTableCells.findFirst({
       where: eq(aiTableCells.id, input.cellId),
@@ -643,9 +669,7 @@ export const updateCell = os
     })
 
     if (!cell || cell.record.table.userId !== context.user.id) {
-      throw new ORPCError('NOT_FOUND', {
-        message: 'Cell not found',
-      })
+      throw new Error('Cell not found')
     }
 
     // Update cell value
@@ -659,28 +683,29 @@ export const updateCell = os
       .returning()
 
     if (!updated) {
-      throw new ORPCError('INTERNAL_SERVER_ERROR', {
-        message: 'Failed to update cell',
-      })
+      throw new Error('Failed to update cell')
     }
 
     // TODO: Trigger dependent AI columns (Phase 3)
 
     return updated
-  })
+  },
+})
+
+export const serverFnUpdateCell = createServerFn({ method: 'POST' })
+  .inputValidator(updateCellDef.input)
+  .middleware([authMiddleware])
+  .handler(updateCellDef.handler)
 
 /**
  * Get table updates since a given timestamp (delta sync)
  */
-export const getTableUpdates = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      tableId: z.string().uuid(),
-      since: z.date(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
+const getTableUpdatesDef = defineFunction({
+  input: z.object({
+    tableId: z.string().uuid(),
+    since: z.date(),
+  }),
+  handler: async ({ data: input, context }) => {
     // Verify table ownership
     const table = await db.query.aiTables.findFirst({
       where: and(
@@ -690,9 +715,7 @@ export const getTableUpdates = os
     })
 
     if (!table) {
-      throw new ORPCError('NOT_FOUND', {
-        message: 'Table not found',
-      })
+      throw new Error('Table not found')
     }
 
     // Get updated cells
@@ -739,7 +762,13 @@ export const getTableUpdates = os
       columns: updatedColumns,
       timestamp: new Date(),
     }
-  })
+  },
+})
+
+export const serverFnGetTableUpdates = createServerFn({ method: 'GET' })
+  .inputValidator(getTableUpdatesDef.input)
+  .middleware([authMiddleware])
+  .handler(getTableUpdatesDef.handler)
 
 // ============================================================================
 // AI Computation Triggers
@@ -748,14 +777,11 @@ export const getTableUpdates = os
 /**
  * Manually trigger computation for all AI cells in a table
  */
-export const triggerComputeAllCells = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      tableId: z.string().uuid(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
+const triggerComputeAllCellsDef = defineFunction({
+  input: z.object({
+    tableId: z.string().uuid(),
+  }),
+  handler: async ({ data: input, context }) => {
     console.log('triggerComputeAllCells', input)
     // Verify table ownership
     const table = await db.query.aiTables.findFirst({
@@ -766,9 +792,7 @@ export const triggerComputeAllCells = os
     })
 
     if (!table) {
-      throw new ORPCError('NOT_FOUND', {
-        message: 'Table not found',
-      })
+      throw new Error('Table not found')
     }
 
     // Get all AI columns for this table
@@ -800,7 +824,6 @@ export const triggerComputeAllCells = os
         ),
       )
 
-
     // Set all cells to pending status
     const cellIds = aiCells.map((row) => row.ai_table_cells.id)
     if (cellIds.length > 0) {
@@ -828,4 +851,10 @@ export const triggerComputeAllCells = os
       triggered: cellIds.length,
       message: `Triggered computation for ${cellIds.length} AI cells`,
     }
-  })
+  },
+})
+
+export const serverFnTriggerComputeAllCells = createServerFn({ method: 'POST' })
+  .inputValidator(triggerComputeAllCellsDef.input)
+  .middleware([authMiddleware])
+  .handler(triggerComputeAllCellsDef.handler)

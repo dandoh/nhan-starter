@@ -16,7 +16,6 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from '@/components/ui/resizable'
-import { client } from '@/orpc/client'
 import { toast } from 'sonner'
 import {
   TopNav,
@@ -25,6 +24,7 @@ import {
 } from '@/components/AppPageWrapper'
 import { Card, CardContent, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { serverFnTriggerComputeAllCells } from '@/serverFns/ai-tables'
 
 export const Route = createFileRoute('/_authed/tables/$tableId')({
   ssr: false,
@@ -47,7 +47,11 @@ function TableEditorPage() {
   const handleComputeAllCells = async () => {
     setIsComputing(true)
     try {
-      const result = await client.aiTables.triggerComputeAllCells({ tableId })
+      const result = await serverFnTriggerComputeAllCells({
+        data: {
+          tableId,
+        },
+      })
       toast.success(result.message || 'AI computation started', {
         description: `Computing ${result.triggered} cells`,
       })

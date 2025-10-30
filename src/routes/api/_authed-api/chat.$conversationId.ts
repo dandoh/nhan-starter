@@ -267,7 +267,7 @@ You can use createColumn tool multiple times to create multiple columns.
         // Generate AI response with streaming (agent mode with looping)
         
         const result = streamText({
-          model: anthropic('claude-3-5-sonnet-latest'),
+          model: anthropic('claude-3-7-sonnet-latest'),
           messages: convertToModelMessages(uiMessages),
           ...(tableId && {
             tools: {
