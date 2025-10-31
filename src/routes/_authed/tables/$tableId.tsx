@@ -68,7 +68,7 @@ function TableEditorPage() {
       <div className="flex flex-1 overflow-hidden">
         {/* Table content */}
         <div className="flex-1 overflow-y-auto">
-          <div className="px-16 py-8">
+          <div className="px-4 py-8">
             {/* Table Block */}
             <TableBlockWrapper tableId={tableId} />
 
