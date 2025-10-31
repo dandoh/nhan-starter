@@ -36,23 +36,16 @@ function WorkbookDetailPage() {
     sortedBlocks,
     addBlock,
     deleteBlock,
-    changeWorkbookDescription,
-    changeWorkbookName,
+    onWorkbookDescriptionChange,
+    onWorkbookNameChange,
+    onWorkbookDescriptionBlur,
+    onWorkbookNameBlur,
   } = useWorkbookSync(preloadedWorkbook)
 
   // Collapse sidebar on mount
   useEffect(() => {
     setSidebarOpen(false)
   }, [setSidebarOpen])
-
-  const handleNameBlur = () => {
-    console.log('name blur')
-    changeWorkbookName(workbook.name, 'sync')
-  }
-
-  const handleDescriptionBlur = () => {
-    changeWorkbookDescription(workbook.description || '', 'sync')
-  }
 
   if (!workbook) {
     return <div>Loading...</div>
@@ -76,28 +69,22 @@ function WorkbookDetailPage() {
             <div className="mb-2 space-y-2">
               <Input
                 value={workbook.name}
-                onChange={(e) =>
-                  changeWorkbookName(e.target.value, 'localOnly')
-                }
-                onBlur={handleNameBlur}
+                onChange={(e) => onWorkbookNameChange(e.target.value)}
+                onBlur={onWorkbookNameBlur}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.currentTarget.blur()
                   }
                 }}
-                className="!text-3xl font-bold border-none shadow-none px-0 h-auto focus-visible:ring-1 
-                focus-visible:ring-border rounded-none bg-transparent  transition-colors "
+                className="!text-3xl font-bold border-none shadow-none px-0 h-auto rounded-none bg-transparent transition-colors hover:ring-1 hover:ring-primary/50 focus-visible:ring-1 focus-visible:ring-primary/50"
               />
 
               <Input
                 value={workbook.description || ''}
-                onChange={(e) =>
-                  changeWorkbookDescription(e.target.value, 'localOnly')
-                }
-                onBlur={handleDescriptionBlur}
+                onChange={(e) => onWorkbookDescriptionChange(e.target.value)}
+                onBlur={onWorkbookDescriptionBlur}
                 placeholder="Add a description..."
-                className="text-sm text-muted-foreground border-none shadow-none px-0 h-auto focus-visible:ring-1 
-                focus-visible:ring-border rounded-none bg-transparent hover:text-foreground transition-colors "
+                className="text-sm text-muted-foreground border-none shadow-none px-0 h-auto rounded-none bg-transparent transition-colors hover:text-foreground hover:ring-1 hover:ring-primary/50 focus-visible:ring-1 focus-visible:ring-primary/50"
               />
             </div>
 

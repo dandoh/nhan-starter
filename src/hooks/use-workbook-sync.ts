@@ -44,6 +44,8 @@ export function useWorkbookSync(initialWorkbook: Workbook) {
             }
           }
 
+          console.log('serverFnUpdateWorkbook', modified)
+
           await serverFnUpdateWorkbook({
             data: {
               workbookId: original.id,
@@ -152,30 +154,32 @@ export function useWorkbookSync(initialWorkbook: Workbook) {
     blocksCollectionRef.current.delete(blockId)
   }
 
-  const changeWorkbookDescription = (
-    description: string,
+  const updateWorkbook = (
+    updater: (draft: Workbook) => void,
     mode: 'localOnly' | 'sync' = 'localOnly',
   ) => {
     singletonWorkbookCollectionRef.current.update(
       initialWorkbook.id,
       { metadata: { mode } },
-      (draft) => {
-        draft.description = description
-      },
+      updater,
     )
   }
 
-  const changeWorkbookName = (
-    name: string,
-    mode: 'localOnly' | 'sync' = 'localOnly',
-  ) => {
-    singletonWorkbookCollectionRef.current.update(
-      initialWorkbook.id,
-      { metadata: { mode } },
-      (draft) => {
-        draft.name = name
-      },
-    )
+  const onWorkbookDescriptionChange = (description: string) => {
+    updateWorkbook((draft) => {
+      draft.description = description
+    })
+  }
+  const onWorkbookNameChange = (name: string) => {
+    updateWorkbook((draft) => {
+      draft.name = name
+    })
+  }
+  const onWorkbookDescriptionBlur = () => {
+    updateWorkbook((draft) => {}, 'sync')
+  }
+  const onWorkbookNameBlur = () => {
+    updateWorkbook((draft) => {}, 'sync')
   }
 
   return {
@@ -183,7 +187,9 @@ export function useWorkbookSync(initialWorkbook: Workbook) {
     sortedBlocks,
     addBlock,
     deleteBlock,
-    changeWorkbookDescription,
-    changeWorkbookName,
+    onWorkbookDescriptionChange,
+    onWorkbookNameChange,
+    onWorkbookDescriptionBlur,
+    onWorkbookNameBlur,
   }
 }
