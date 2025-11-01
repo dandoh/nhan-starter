@@ -23,7 +23,7 @@ export const AiTableCell = memo(function TableCell({
   // Live query for this specific cell only
   const { data: cell } = useLiveQuery((q) =>
     q
-      .from({ cell: collections.cells })
+      .from({ cell: collections.cellsCollection })
       .where(({ cell }) =>
         and(eq(cell.recordId, recordId), eq(cell.columnId, columnId)),
       )
@@ -33,7 +33,7 @@ export const AiTableCell = memo(function TableCell({
   // Query the column to check if it's an AI column
   const { data: column } = useLiveQuery((q) =>
     q
-      .from({ column: collections.columns })
+      .from({ column: collections.columnsCollection })
       .where(({ column }) => eq(column.id, columnId))
       .findOne(),
   )
@@ -53,7 +53,7 @@ export const AiTableCell = memo(function TableCell({
   const updateCell = useCallback(
     (newValue: string) => {
       if (cell?.id) {
-        collections.cells.update(cell.id, (draft) => {
+        collections.cellsCollection.update(cell.id, (draft) => {
           draft.value = newValue
         })
       } else {
@@ -61,7 +61,7 @@ export const AiTableCell = memo(function TableCell({
         console.warn('Cell not found for update:', { recordId, columnId })
       }
     },
-    [cell?.id, collections.cells, recordId, columnId],
+    [cell?.id, collections.cellsCollection, recordId, columnId],
   )
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

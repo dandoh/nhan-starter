@@ -7,7 +7,6 @@ import {
   aiConversations,
   aiMessages,
   aiTables,
-  workbooks,
   conversationContextToFields,
   conversationContextSchema,
 } from '@/db/schema'
@@ -29,18 +28,7 @@ const createConversationDef = defineFunction({
   handler: async ({ data: input, context }) => {
     // Validate context if provided
     if (input.context) {
-      if (input.context.type === 'workbook') {
-        // Verify workbook exists and user has access
-        const workbook = await db.query.workbooks.findFirst({
-          where: and(
-            eq(workbooks.id, input.context.workbookId),
-            eq(workbooks.userId, context.user.id),
-          ),
-        })
-        if (!workbook) {
-          throw new Error('Workbook not found or access denied')
-        }
-      } else if (input.context.type === 'table') {
+      if (input.context.type === 'table') {
         // Verify table exists and user has access
         const table = await db.query.aiTables.findFirst({
           where: and(
@@ -142,17 +130,7 @@ const findOrCreateConversationForContextDef = defineFunction({
   }),
   handler: async ({ data: input, context }) => {
     // Validate context access
-    if (input.context.type === 'workbook') {
-      const workbook = await db.query.workbooks.findFirst({
-        where: and(
-          eq(workbooks.id, input.context.workbookId),
-          eq(workbooks.userId, context.user.id),
-        ),
-      })
-      if (!workbook) {
-        throw new Error('Workbook not found or access denied')
-      }
-    } else if (input.context.type === 'table') {
+    if (input.context.type === 'table') {
       const table = await db.query.aiTables.findFirst({
         where: and(
           eq(aiTables.id, input.context.tableId),
@@ -224,17 +202,7 @@ const getConversationsForContextDef = defineFunction({
   }),
   handler: async ({ data: input, context }) => {
     // Validate context access
-    if (input.context.type === 'workbook') {
-      const workbook = await db.query.workbooks.findFirst({
-        where: and(
-          eq(workbooks.id, input.context.workbookId),
-          eq(workbooks.userId, context.user.id),
-        ),
-      })
-      if (!workbook) {
-        throw new Error('Workbook not found or access denied')
-      }
-    } else if (input.context.type === 'table') {
+    if (input.context.type === 'table') {
       const table = await db.query.aiTables.findFirst({
         where: and(
           eq(aiTables.id, input.context.tableId),

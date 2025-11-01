@@ -36,6 +36,9 @@ async function seed() {
     console.log('✅ User already exists:', user.email)
   }
 
+  // Delete all tables
+  await db.delete(aiTables).where(eq(aiTables.userId, user.id))
+
   // 2. Delete existing table if it exists
   const existingTable = await db.query.aiTables.findFirst({
     where: eq(aiTables.id, SEED_TABLE_ID),

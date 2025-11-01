@@ -24,7 +24,7 @@ interface TopNavProps {
 
 export function TopNav({ breadcrumbs, children }: TopNavProps) {
   return (
-    <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between gap-2 bg-background px-4 py-4 border-b border-border">
+    <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between gap-2 bg-sidebar px-4 py-4 border-b border-border">
       <div className="flex items-center gap-2 h-full">
         <div className="pointer-events-auto">
           <SidebarTrigger />
@@ -86,7 +86,7 @@ export function AppPageContentWrapper({
   return (
     <div
       className={cn(
-        'flex-1 scrollbar scrollbar-thumb-interactive overflow-x-hidden overflow-y-auto p-4',
+        'flex-1 scrollbar scrollbar-thumb-interactive overflow-x-hidden overflow-y-auto p-4 bg-card',
         className,
       )}
     >

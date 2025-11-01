@@ -73,7 +73,7 @@ export function DataGrid<TData>({
         data-slot="grid"
         tabIndex={0}
         ref={dataGridRef}
-        className="relative grid select-none overflow-auto rounded-md border focus:outline-none"
+        className="relative grid select-none overflow-auto rounded-md border bg-card focus:outline-none"
         style={{
           ...columnSizeVars,
           height: `${height}px`,
@@ -84,7 +84,7 @@ export function DataGrid<TData>({
           role="rowgroup"
           data-slot="grid-header"
           ref={headerRef}
-          className="sticky top-0 z-10 grid border-b bg-background"
+          className="sticky top-0 z-10 grid border-b bg-card"
         >
           {table.getHeaderGroups().map((headerGroup, rowIndex) => (
             <div
@@ -173,7 +173,7 @@ export function DataGrid<TData>({
             role="rowgroup"
             data-slot="grid-footer"
             ref={footerRef}
-            className="sticky bottom-0 z-10 grid border-t bg-background"
+            className="sticky bottom-0 z-10 grid border-t bg-card"
           >
             <div
               role="row"

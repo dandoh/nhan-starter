@@ -36,13 +36,13 @@ export function AiColumnHeader({
   // Check if this is the last manual column to disable type change
   const { data: manualColumns = [] } = useLiveQuery((q) =>
     q
-      .from({ col: collections.columns })
+      .from({ col: collections.columnsCollection })
       .where(({ col }) => eq(col.type, 'manual')),
   )
 
   // Get all columns to check if this is the last one
   const { data: allColumns = [] } = useLiveQuery((q) =>
-    q.from({ col: collections.columns }),
+    q.from({ col: collections.columnsCollection }),
   )
 
   const isLastManualColumn =
@@ -133,7 +133,7 @@ export function AiColumnHeader({
         }
       }
 
-      collections.columns.update(column.id, (draft) => {
+      collections.columnsCollection.update(column.id, (draft) => {
         draft.name = value.name
         draft.type = value.type
         draft.description = value.description
@@ -161,7 +161,7 @@ export function AiColumnHeader({
       return
     }
 
-    collections.columns.delete(column.id)
+    collections.columnsCollection.delete(column.id)
     setIsOpen(false)
     toast.success('Column deleted')
   }

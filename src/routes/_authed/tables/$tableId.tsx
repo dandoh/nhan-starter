@@ -4,7 +4,7 @@ import { useLiveQuery } from '@tanstack/react-db'
 import { Sparkles } from 'lucide-react'
 import { useSidebar } from '@/components/ui/sidebar'
 import { useTableSync } from '@/hooks/use-table-sync'
-import { TableBlockWrapper } from '@/components/workbook/blocks/TableBlockWrapper'
+import { AiTable } from '@/components/ai-table/AiTable'
 import { AIChat } from '@/components/ai-chat/AIChat'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
@@ -31,7 +31,7 @@ function TableEditorPage() {
   // Live query for columns to check if we have any
   const { data: columns } = useLiveQuery((q) =>
     q
-      .from({ col: collections.columns })
+      .from({ col: collections.columnsCollection })
       .orderBy(({ col }) => col.position, 'asc'),
   )
 
@@ -68,33 +68,21 @@ function TableEditorPage() {
       <div className="flex flex-1 overflow-hidden">
         {/* Table content */}
         <div className="flex-1 overflow-y-auto">
-          <div className="px-4 py-8">
+          <div className="p-4">
             {/* Table Block */}
-            <TableBlockWrapper tableId={tableId} />
+            <AiTable tableId={tableId} />
 
-            {/* Compute All Cells Button - specific to table page */}
-            {columns.length > 0 && (
-              <div className="flex items-center gap-2 mt-4">
-                <Button
-                  onClick={handleComputeAllCells}
-                  variant="outline"
-                  size="sm"
-                  disabled={isComputing}
-                >
-                  {isComputing ? (
-                    <>
-                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                      Computing...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Compute All AI Cells
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
+            <div className="flex items-center gap-2 mt-4">
+              <Button
+                onClick={handleComputeAllCells}
+                variant="outline"
+                size="sm"
+                disabled={isComputing}
+              >
+                <Sparkles className="mr-2 h-4 w-4" />
+                Compute All AI Cells
+              </Button>
+            </div>
           </div>
         </div>
 

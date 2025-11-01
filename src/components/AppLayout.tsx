@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   Table,
   UserCircle,
-  BookOpen,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -29,11 +28,6 @@ const navigation = [
     title: 'Home',
     icon: Home,
     url: '/',
-  },
-  {
-    title: 'Workbooks',
-    icon: BookOpen,
-    url: '/workbooks',
   },
   {
     title: 'Tables',

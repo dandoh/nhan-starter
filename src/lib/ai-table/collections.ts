@@ -7,11 +7,8 @@ import type {
   AiTableColumn,
   AiTableRecord,
   AiTableCell,
-  Workbook,
-  WorkbookBlock,
 } from '@/db/schema'
 import type { OutputTypeConfig } from '@/lib/ai-table/output-types'
-import { useRef } from 'react'
 import {
   serverFnCreateTable,
   serverFnDeleteTable,
@@ -26,12 +23,6 @@ import {
   serverFnCreateRecord,
   serverFnDeleteRecord,
 } from '@/serverFns/ai-tables'
-import {
-  serverFnCreateWorkbook,
-  serverFnDeleteWorkbook,
-  serverFnListWorkbooks,
-  serverFnUpdateWorkbook,
-} from '@/serverFns/workbooks'
 
 // Create a single query client instance for collections with no refetching
 
@@ -68,49 +59,6 @@ export const tablesCollection = createCollection(
       await serverFnDeleteTable({
         data: {
           tableId: original.id,
-        },
-      })
-    },
-  }),
-)
-
-// ============================================================================
-// Workbooks List Collection
-// ============================================================================
-
-export const workbooksCollection = createCollection(
-  queryCollectionOptions<Workbook>({
-    queryClient,
-    queryKey: ['workbooks', 'list'],
-    queryFn: async () => {
-      const workbooks = await serverFnListWorkbooks({})
-      return workbooks
-    },
-    getKey: (workbook) => workbook.id,
-    onInsert: async ({ transaction }) => {
-      const { modified: newWorkbook } = transaction.mutations[0]
-      await serverFnCreateWorkbook({
-        data: {
-          name: newWorkbook.name,
-          description: newWorkbook.description || undefined,
-        },
-      })
-    },
-    onUpdate: async ({ transaction }) => {
-      const { original, changes } = transaction.mutations[0]
-      await serverFnUpdateWorkbook({
-        data: {
-          workbookId: original.id,
-          name: changes.name,
-          description: changes.description,
-        },
-      })
-    },
-    onDelete: async ({ transaction }) => {
-      const { original } = transaction.mutations[0]
-      await serverFnDeleteWorkbook({
-        data: {
-          workbookId: original.id,
         },
       })
     },
@@ -307,9 +255,9 @@ export function createTableCollections(tableId: string) {
   )
 
   return {
-    columns: columnsCollection,
-    records: recordsCollection,
-    cells: cellsCollection,
+    columnsCollection: columnsCollection,
+    recordsCollection: recordsCollection,
+    cellsCollection: cellsCollection,
   }
 }
 
