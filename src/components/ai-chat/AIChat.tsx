@@ -53,7 +53,7 @@ function transformMessages(messages: any[]): UIMessage[] {
 }
 
 // Loading fallback component
-function AIChatLoading() {
+function AiChatLoading() {
   return (
     <div className="flex flex-col h-full items-center justify-center p-4">
       <Loader size={24} />
@@ -63,7 +63,7 @@ function AIChatLoading() {
 }
 
 // Internal component that uses Suspense
-function AIChatInternal({
+function AiChatInternal({
   context,
   title = 'AI Assistant',
   description = 'Ask me to help with your data. I can analyze, generate insights, or perform calculations.',
@@ -77,7 +77,8 @@ function AIChatInternal({
   // Use oRPC's auto-generated query hook with Suspense
   const { data: conversations } = useSuspenseQuery({
     queryKey: ['conversations', context],
-    queryFn: () => serverFnGetConversationsForContext({ data: { context, limit: 10 } }),
+    queryFn: () =>
+      serverFnGetConversationsForContext({ data: { context, limit: 10 } }),
   })
 
   // Use the most recent conversation (first in the array)
@@ -220,10 +221,10 @@ function AIChatInternal({
 }
 
 // Exported component with Suspense boundary
-export function AIChat(props: AIChatProps) {
+export function AiChat(props: AIChatProps) {
   return (
-    <Suspense fallback={<AIChatLoading />}>
-      <AIChatInternal {...props} />
+    <Suspense fallback={<AiChatLoading />}>
+      <AiChatInternal {...props} />
     </Suspense>
   )
 }

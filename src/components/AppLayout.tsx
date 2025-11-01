@@ -124,9 +124,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset className="overflow-x-hidden">
-        <div className="flex flex-1 flex-col">{children}</div>
-      </SidebarInset>
+      <SidebarInset className="flex flex-col overflow-hidden">{children}</SidebarInset>
     </SidebarProvider>
   )
 }

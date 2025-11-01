@@ -31,10 +31,12 @@ export function getCommonPinningStyles<TData>({
     right: isPinned === "right" ? `${column.getAfter("right")}px` : undefined,
     opacity: isPinned ? 0.97 : 1,
     position: isPinned ? "sticky" : "relative",
+    backgroundColor: isPinned ? "var(--card)" : "var(--card)",
     width: column.getSize(),
     zIndex: isPinned ? 1 : undefined,
   };
 }
+
 
 export function getFilterOperators(filterVariant: FilterVariant) {
   const operatorMap: Record<

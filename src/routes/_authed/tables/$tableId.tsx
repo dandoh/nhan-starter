@@ -1,15 +1,16 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
-import { useLiveQuery } from '@tanstack/react-db'
 import { Sparkles } from 'lucide-react'
 import { useSidebar } from '@/components/ui/sidebar'
-import { useTableSync } from '@/hooks/use-table-sync'
 import { AiTable } from '@/components/ai-table/AiTable'
-import { AIChat } from '@/components/ai-chat/AIChat'
+import { AiChat } from '@/components/ai-chat/AiChat'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { TopNav, AppPageWrapper } from '@/components/AppPageWrapper'
 import { serverFnTriggerComputeAllCells } from '@/serverFns/ai-tables'
+import { tablesCollection } from '@/lib/ai-table/collections'
+import { useLiveQuery } from 'node_modules/@tanstack/react-db/dist/esm/useLiveQuery'
+import { eq } from '@tanstack/react-db'
 
 export const Route = createFileRoute('/_authed/tables/$tableId')({
   ssr: false,
@@ -19,21 +20,19 @@ export const Route = createFileRoute('/_authed/tables/$tableId')({
 function TableEditorPage() {
   const { tableId } = Route.useParams()
   const { setOpen: setSidebarOpen } = useSidebar()
-  const collections = useTableSync(tableId)
   const [isComputing, setIsComputing] = useState(false)
+  const { data: table } = useLiveQuery((q) =>
+    q
+      .from({ table: tablesCollection })
+      .where(({ table }) => eq(table.id, tableId))
+      .findOne(),
+  )
 
   // Collapse sidebar on mount
   useEffect(() => {
     setSidebarOpen(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  // Live query for columns to check if we have any
-  const { data: columns } = useLiveQuery((q) =>
-    q
-      .from({ col: collections.columnsCollection })
-      .orderBy(({ col }) => col.position, 'asc'),
-  )
 
   const handleComputeAllCells = async () => {
     setIsComputing(true)
@@ -58,37 +57,38 @@ function TableEditorPage() {
   return (
     <AppPageWrapper>
       <TopNav
-        breadcrumbs={[
-          { label: 'AI Tables', href: '/tables' },
-          { label: 'Table Details' },
-        ]}
+        breadcrumbs={[{ label: 'Tables', href: '/tables' }, { label: table?.name ?? 'Untitled' }]}
       />
 
       {/* Main content area */}
       <div className="flex flex-1 overflow-hidden">
         {/* Table content */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-4">
-            {/* Table Block */}
-            <AiTable tableId={tableId} />
+        <div className="flex flex-col flex-1 min-w-0">
+          <div className="flex-1 overflow-hidden p-4">
+            <div className="h-full flex flex-col">
+              {/* Table Block - scrollable */}
+              <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+                <AiTable tableId={tableId} />
+              </div>
 
-            <div className="flex items-center gap-2 mt-4">
-              <Button
-                onClick={handleComputeAllCells}
-                variant="outline"
-                size="sm"
-                disabled={isComputing}
-              >
-                <Sparkles className="mr-2 h-4 w-4" />
-                Compute All AI Cells
-              </Button>
+              {/* <div className="flex items-center gap-2 mt-4 shrink-0">
+                <Button
+                  onClick={handleComputeAllCells}
+                  variant="outline"
+                  size="sm"
+                  disabled={isComputing}
+                >
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Compute All AI Cells
+                </Button>
+              </div> */}
             </div>
           </div>
         </div>
 
         {/* AI Chat Panel */}
-        <div className="w-96 border-l border-border bg-card flex flex-col">
-          <AIChat
+        <div className="flex flex-col w-96 shrink-0 bg-card border-l border-border">
+          <AiChat
             context={{ type: 'table', tableId }}
             title="Table AI Assistant"
             description="Ask me to help with your table. I can add columns, analyze data, or perform calculations."
