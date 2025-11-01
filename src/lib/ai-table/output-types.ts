@@ -1,18 +1,16 @@
 import { z } from 'zod'
+import {
+  AI_TABLE_OUTPUT_TYPES,
+  type AiTableOutputType,
+} from '@/db/schema'
 
 // ============================================================================
 // Output Type Enums
 // ============================================================================
 
-export const OUTPUT_TYPES = [
-  'text',
-  'long_text',
-  'single_select',
-  'multi_select',
-  'date',
-] as const
-
-export type OutputType = (typeof OUTPUT_TYPES)[number]
+// Re-export from schema.ts as the single source of truth
+export const OUTPUT_TYPES = AI_TABLE_OUTPUT_TYPES
+export type OutputType = AiTableOutputType
 
 // ============================================================================
 // Zod Schemas for Config Validation

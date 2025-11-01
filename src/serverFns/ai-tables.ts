@@ -9,7 +9,7 @@ import {
   aiTableRecords,
   aiTableCells,
 } from '@/db/schema'
-import { eq, and, gt, sql, inArray } from 'drizzle-orm'
+import { eq, and, gt, sql, inArray, ne, isNotNull } from 'drizzle-orm'
 import { inngest } from '@/inngest/client'
 import { optionSchema } from '@/lib/ai-table/output-types'
 import { validateOutputTypeConfig } from '@/lib/ai-table/output-type-registry'
@@ -57,12 +57,10 @@ const createTableDef = defineFunction({
         })
         .returning()
 
-      // Create default "Subject" manual column
+      // Create default "Subject" column
       await tx.insert(aiTableColumns).values({
         name: 'Subject',
         tableId: newTable.id,
-        type: 'manual',
-        position: 0,
         aiPrompt: '',
         outputTypeConfig: null,
       })
@@ -94,7 +92,7 @@ const getTableDef = defineFunction({
       ),
       with: {
         columns: {
-          orderBy: (columns, { asc }) => [asc(columns.position)],
+          orderBy: (columns, { asc }) => [asc(columns.createdAt)],
         },
       },
     })
@@ -180,7 +178,7 @@ const getColumnsDef = defineFunction({
 
     const columns = await db.query.aiTableColumns.findMany({
       where: eq(aiTableColumns.tableId, input.tableId),
-      orderBy: (c, { asc }) => [asc(c.position)],
+      orderBy: (c, { asc }) => [asc(c.createdAt)],
     })
 
     return columns
@@ -202,7 +200,6 @@ export const serverFnCreateColumn = createServerFn({
     z.object({
       tableId: z.string().uuid(),
       name: z.string().min(1).max(255),
-      type: z.enum(['manual', 'ai']).default('ai'),
       description: z.string().optional(),
       outputType: z
         .enum(['text', 'long_text', 'single_select', 'multi_select', 'date'])
@@ -245,25 +242,16 @@ export const serverFnCreateColumn = createServerFn({
     }
 
     const result = await db.transaction(async (tx) => {
-      // Get current max position
-      const maxPosition = await tx
-        .select({ max: sql<number>`COALESCE(MAX(position), -1)::int` })
-        .from(aiTableColumns)
-        .where(eq(aiTableColumns.tableId, input.tableId))
-        .then((res) => res[0]?.max ?? -1)
-
       // Create column
       const [newColumn] = await tx
         .insert(aiTableColumns)
         .values({
           tableId: input.tableId,
           name: input.name,
-          type: input.type,
           description: input.description,
           outputType: input.outputType,
           aiPrompt: input.aiPrompt,
           outputTypeConfig: input.outputTypeConfig ?? null,
-          position: maxPosition + 1,
         })
         .returning()
 
@@ -302,13 +290,12 @@ export const serverFnCreateColumn = createServerFn({
   })
 
 /**
- * Update column name, type, or config
+ * Update column name or config
  */
 const updateColumnDef = defineFunction({
   input: z.object({
     columnId: z.string().uuid(),
     name: z.string().min(1).max(255).optional(),
-    type: z.enum(['manual', 'ai']).optional(),
     description: z.string().optional(),
     outputType: z
       .enum(['text', 'long_text', 'single_select', 'multi_select', 'date'])
@@ -336,24 +323,6 @@ const updateColumnDef = defineFunction({
       throw new Error('Column not found')
     }
 
-    // Validate type change: prevent converting last manual column to AI
-    if (input.type === 'ai' && column.type === 'manual') {
-      const manualCount = await db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(aiTableColumns)
-        .where(
-          and(
-            eq(aiTableColumns.tableId, column.tableId),
-            eq(aiTableColumns.type, 'manual'),
-          ),
-        )
-        .then((result) => result[0]?.count ?? 0)
-
-      if (manualCount <= 1) {
-        throw new Error('Cannot convert the last manual column to AI')
-      }
-    }
-
     // Validate outputTypeConfig matches outputType
     const finalOutputType = input.outputType || column.outputType
     if (input.outputTypeConfig) {
@@ -372,7 +341,6 @@ const updateColumnDef = defineFunction({
       .update(aiTableColumns)
       .set({
         ...(input.name && { name: input.name }),
-        ...(input.type && { type: input.type }),
         ...(input.description !== undefined && {
           description: input.description,
         }),
@@ -423,24 +391,6 @@ const deleteColumnDef = defineFunction({
 
     if (columnCount <= 1) {
       throw new Error('Cannot delete the last column')
-    }
-
-    // Prevent deleting the last manual column
-    if (column.type === 'manual') {
-      const manualCount = await db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(aiTableColumns)
-        .where(
-          and(
-            eq(aiTableColumns.tableId, column.tableId),
-            eq(aiTableColumns.type, 'manual'),
-          ),
-        )
-        .then((result) => result[0]?.count ?? 0)
-
-      if (manualCount <= 1) {
-        throw new Error('Cannot delete the last manual column')
-      }
     }
 
     await db.delete(aiTableColumns).where(eq(aiTableColumns.id, input.columnId))
@@ -795,11 +745,12 @@ const triggerComputeAllCellsDef = defineFunction({
       throw new Error('Table not found')
     }
 
-    // Get all AI columns for this table
+    // Get all columns with AI prompts for this table
     const aiColumns = await db.query.aiTableColumns.findMany({
       where: and(
         eq(aiTableColumns.tableId, input.tableId),
-        eq(aiTableColumns.type, 'ai'),
+        isNotNull(aiTableColumns.aiPrompt),
+        ne(aiTableColumns.aiPrompt, ''),
       ),
     })
 

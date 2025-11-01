@@ -9,7 +9,7 @@ import {
   aiTableRecords,
   aiTableCells,
 } from '@/db/schema'
-import { eq, sql } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import {
   convertToModelMessages,
   streamText,
@@ -28,11 +28,6 @@ const createColumnToolSchema = z.object({
     .min(1)
     .max(255)
     .describe('Column name - should be descriptive and concise'),
-  type: z
-    .enum(['manual', 'ai'])
-    .describe(
-      'Column type: "manual" for user-entered data, "ai" for AI-generated values based on other columns',
-    ),
   description: z
     .string()
     .optional()
@@ -48,7 +43,7 @@ const createColumnToolSchema = z.object({
     .string()
     .optional()
     .describe(
-      'For AI columns: The prompt that tells the AI how to generate values. Should reference other columns by name. Required if type is "ai".',
+      'Optional: The prompt that tells the AI how to generate values. Should reference other columns by name. If provided, the column will be AI-generated.',
     ),
   outputTypeConfig: z
     .object({
@@ -145,24 +140,23 @@ export const Route = createFileRoute('/api/_authed-api/chat/$conversationId')({
             where: eq(aiTables.id, tableId),
             with: {
               columns: {
-                orderBy: (columns, { asc }) => [asc(columns.position)],
+                orderBy: (columns, { asc }) => [asc(columns.createdAt)],
               },
             },
           })
 
           if (table) {
-            tableContext = `\n\nCurrent table context:\nTable name: ${table.name}\nExisting columns:\n${table.columns.map((col) => `- ${col.name} (${col.type}, ${col.outputType}${col.aiPrompt ? `, AI prompt: "${col.aiPrompt}"` : ''})`).join('\n')}`
+            tableContext = `\n\nCurrent table context:\nTable name: ${table.name}\nExisting columns:\n${table.columns.map((col) => `- ${col.name} (${col.outputType}${col.aiPrompt ? `, AI prompt: "${col.aiPrompt}"` : ''})`).join('\n')}`
           }
         }
 
         const createColumnTool = tool({
           description:
-            'Create a new column in the AI table with specified name, type, and configuration. Use this when the user asks to add, create, or make a new column.',
+            'Create a new column in the AI table with specified name and configuration. Use this when the user asks to add, create, or make a new column.',
           inputSchema: createColumnToolSchema,
           execute: async ({
             name,
             outputType,
-            type,
             description,
             aiPrompt,
             outputTypeConfig,
@@ -175,36 +169,17 @@ export const Route = createFileRoute('/api/_authed-api/chat/$conversationId')({
             }
 
             try {
-              // Validate: AI columns must have a prompt
-              if (type === 'ai' && !aiPrompt) {
-                return {
-                  success: false,
-                  error: 'AI columns require an aiPrompt to generate values',
-                }
-              }
-
               const newColumn = await db.transaction(async (tx) => {
-                // Get current max position
-                const maxPosition = await tx
-                  .select({
-                    max: sql<number>`COALESCE(MAX(position), -1)::int`,
-                  })
-                  .from(aiTableColumns)
-                  .where(eq(aiTableColumns.tableId, tableId))
-                  .then((rows) => rows[0]?.max ?? -1)
-
                 // Create column
                 const [column] = await tx
                   .insert(aiTableColumns)
                   .values({
                     tableId: tableId,
                     name,
-                    type,
                     description: description || '',
                     outputType,
                     aiPrompt: aiPrompt || '',
                     outputTypeConfig: outputTypeConfig ?? null,
-                    position: maxPosition + 1,
                   })
                   .returning()
 
@@ -231,7 +206,7 @@ export const Route = createFileRoute('/api/_authed-api/chat/$conversationId')({
                 success: true,
                 columnId: newColumn.id,
                 columnName: newColumn.name,
-                message: `Successfully created column "${name}"${type === 'ai' ? ' with AI generation' : ''}`,
+                message: `Successfully created column "${name}"${aiPrompt ? ' with AI generation' : ''}`,
               }
             } catch (error) {
               return {

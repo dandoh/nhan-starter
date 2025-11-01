@@ -1,6 +1,5 @@
-import { memo, useCallback, useState, useEffect, useRef } from 'react'
+import { memo, useCallback, useState, useEffect } from 'react'
 import { useLiveQuery, eq, and } from '@tanstack/react-db'
-import { Input } from '@/components/ui/input'
 import type { TableCollections } from '@/lib/ai-table/collections'
 import type { OutputType } from '@/lib/ai-table/output-types'
 import { getOutputTypeDefinition } from '@/lib/ai-table/output-type-registry'
@@ -30,7 +29,7 @@ export const AiTableCell = memo(function TableCell({
       .findOne(),
   )
 
-  // Query the column to check if it's an AI column
+  // Query the column for output type configuration
   const { data: column } = useLiveQuery((q) =>
     q
       .from({ column: collections.columnsCollection })
@@ -41,7 +40,6 @@ export const AiTableCell = memo(function TableCell({
   // Local state for controlled input
   const [localValue, setLocalValue] = useState(cell?.value || '')
   const [isEditing, setIsEditing] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
 
   // Sync server value to local state only when not editing
   useEffect(() => {
@@ -64,30 +62,27 @@ export const AiTableCell = memo(function TableCell({
     [cell?.id, collections.cellsCollection, recordId, columnId],
   )
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setLocalValue(e.target.value)
-  }
+  const handleChange = useCallback(
+    (newValue: string) => {
+      setLocalValue(newValue)
+    },
+    [],
+  )
 
-  const handleBlur = () => {
+  const handleBlur = useCallback(() => {
     setIsEditing(false)
     // Update server with final value
     if (localValue !== cell?.value) {
       updateCell(localValue)
     }
-  }
+  }, [localValue, cell?.value, updateCell])
 
-  const handleFocus = () => {
+  const handleFocus = useCallback(() => {
     setIsEditing(true)
-  }
+  }, [])
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      inputRef.current?.blur()
-    }
-    if (e.key === 'Escape') {
-      setLocalValue(cell?.value || '')
-      inputRef.current?.blur()
-    }
+  if (!column) {
+    return null
   }
 
   // Show spinner for computing cells
@@ -109,32 +104,22 @@ export const AiTableCell = memo(function TableCell({
     )
   }
 
-  // Check if this is an AI column (non-editable)
-  const isAiColumn = column?.type === 'ai'
-  const outputType = (column?.outputType || 'text') as OutputType
-  const outputTypeConfig = column?.outputTypeConfig
+  // All cells are editable - use appropriate input component based on outputType
+  const outputType = (column.outputType || 'text') as OutputType
+  const outputTypeConfig = column.outputTypeConfig
+  const outputTypeDef = getOutputTypeDefinition(outputType)
 
-  // AI columns are read-only - display value with type-specific rendering
-  if (isAiColumn) {
-    // Use registry to render the cell
-    const outputTypeDef = getOutputTypeDefinition(outputType)
-    const displayValue = outputTypeDef.deserialize(localValue)
-    return outputTypeDef.renderCell({
-      value: displayValue,
-      config: outputTypeConfig,
-    })
-  }
-
-  // Manual columns are editable
+  // Pass raw value - deserialization is handled inside renderEditable
   return (
-    <Input
-      ref={inputRef}
-      value={localValue}
-      onChange={handleChange}
-      onFocus={handleFocus}
-      onBlur={handleBlur}
-      onKeyDown={handleKeyDown}
-      className="border-none bg-transparent focus-visible:border-none focus-visible:ring-0 shadow-none p-0"
-    />
+    <div className="h-full w-full">
+      {outputTypeDef.renderEditable({
+        value: localValue,
+        config: outputTypeConfig,
+        onChange: handleChange,
+        onBlur: handleBlur,
+        onFocus: handleFocus,
+        isEditing,
+      })}
+    </div>
   )
 })

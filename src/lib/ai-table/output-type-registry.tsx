@@ -1,8 +1,33 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { z } from 'zod'
 import { Badge } from '@/components/ui/badge'
-import { Calendar } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Calendar } from '@/components/ui/calendar'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import { Calendar as CalendarIcon, X } from 'lucide-react'
 import { format, parse, isValid } from 'date-fns'
+import { cn } from '@/lib/utils'
 import type {
   OutputType,
   OutputTypeConfig,
@@ -23,9 +48,13 @@ import { getBadgeColors } from './formatters'
 // Type Definitions
 // ============================================================================
 
-export interface CellRenderProps {
-  value: any
+export interface EditableCellProps {
+  value: string
   config?: OutputTypeConfig | null
+  onChange: (value: string) => void
+  onBlur?: () => void
+  onFocus?: () => void
+  isEditing?: boolean
 }
 
 export interface OutputTypeDefinition {
@@ -41,11 +70,12 @@ export interface OutputTypeDefinition {
   createAISchema: (config: OutputTypeConfig | null) => z.ZodObject<any>
 
   // Value conversion
-  serialize: (aiResponse: any) => string // AI response → storage
+  serializeAiResponse: (aiResponse: any) => string // AI response → storage
+
   deserialize: (stored: string | null) => any // storage → display value
 
-  // React rendering
-  renderCell: (props: CellRenderProps) => React.ReactNode
+  // React rendering - editable version for table cells
+  renderEditable: (props: EditableCellProps) => React.ReactNode
 }
 
 // ============================================================================
@@ -143,15 +173,24 @@ const TEXT_TYPE: OutputTypeDefinition = {
       value: z.string().describe('A brief single-line text response'),
     }),
 
-  serialize: (response) => response.value || '',
+  serializeAiResponse: (response) => response.value || '',
 
   deserialize: (value) => value || '',
 
-  renderCell: ({ value }) => (
-    <div className="text-sm overflow-hidden text-ellipsis">
-      {value || <span className="text-muted-foreground"></span>}
-    </div>
-  ),
+  renderEditable: ({ value, onChange, onBlur, onFocus }) => {
+    // Deserialize: simple string passthrough
+    const displayValue = value || ''
+    return (
+      <Input
+        value={displayValue}
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={onBlur}
+        onFocus={onFocus}
+        className="h-full w-full border-none bg-transparent focus-visible:border-none focus-visible:ring-0 shadow-none px-2 py-1 text-sm"
+        placeholder=""
+      />
+    )
+  },
 }
 
 const LONG_TEXT_TYPE: OutputTypeDefinition = {
@@ -164,24 +203,26 @@ const LONG_TEXT_TYPE: OutputTypeDefinition = {
 
   createAISchema: () =>
     z.object({
-      value: z
-        .string()
-        .describe('A detailed multi-paragraph text response'),
+      value: z.string().describe('A detailed multi-paragraph text response'),
     }),
 
-  serialize: (response) => response.value || '',
+  serializeAiResponse: (response) => response.value || '',
 
   deserialize: (value) => value || '',
 
-  renderCell: ({ value }) => {
-    if (!value) {
-      return <div className="text-sm text-muted-foreground"></div>
-    }
-
+  renderEditable: ({ value, onChange, onBlur, onFocus }) => {
+    // Deserialize: simple string passthrough
+    const displayValue = value || ''
     return (
-      <div className="text-sm max-h-32 overflow-y-auto whitespace-pre-wrap scrollbar scrollbar-track-transparent hover:scrollbar-thumb-gray-300">
-        {value}
-      </div>
+      <Textarea
+        value={displayValue}
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={onBlur}
+        onFocus={onFocus}
+        className="h-full w-full min-h-[60px] border-none bg-transparent focus-visible:border-none focus-visible:ring-0 shadow-none px-2 py-1 text-sm resize-none"
+        placeholder=""
+        rows={3}
+      />
     )
   },
 }
@@ -221,29 +262,54 @@ const SINGLE_SELECT_TYPE: OutputTypeDefinition = {
     }
   },
 
-  serialize: (response) => response.value || '',
+  serializeAiResponse: (response) => response.value || '',
 
   deserialize: (value) => value || '',
 
-  renderCell: ({ value }) => {
-    if (!value) {
-      return <div className="text-sm text-muted-foreground"></div>
-    }
+  renderEditable: ({ value, config, onChange, onBlur, onFocus }) => {
+    // Deserialize: simple string passthrough
+    const displayValue = value || ''
+    const selectConfig = config as SingleSelectConfig | null
+    const options = selectConfig?.options || []
 
-    const colors = getBadgeColors(value)
-    return (
-      <div className="">
-        <Badge
-          style={{
-            backgroundColor: colors.backgroundColor,
-            color: colors.textColor,
-            borderColor: colors.borderColor,
+    if (options.length > 0) {
+      // Use Select dropdown for predefined options
+      return (
+        <Select
+          value={displayValue || ''}
+          onValueChange={onChange}
+          onOpenChange={(open) => {
+            if (!open && onBlur) onBlur()
           }}
         >
-          {value}
-        </Badge>
-      </div>
-    )
+          <SelectTrigger
+            onFocus={onFocus}
+            className="h-full w-full border-none bg-transparent focus-visible:border-none focus-visible:ring-0 shadow-none px-2 py-1 text-sm data-[placeholder]:text-muted-foreground"
+          >
+            <SelectValue placeholder="Select..." />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.value}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )
+    } else {
+      // Use Input for free-form text
+      return (
+        <Input
+          value={displayValue || ''}
+          onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
+          onFocus={onFocus}
+          className="h-full w-full border-none bg-transparent focus-visible:border-none focus-visible:ring-0 shadow-none px-2 py-1 text-sm"
+          placeholder=""
+        />
+      )
+    }
   },
 }
 
@@ -305,39 +371,162 @@ const MULTI_SELECT_TYPE: OutputTypeDefinition = {
     }
   },
 
-  serialize: (response) => {
+  serializeAiResponse: (response) => {
     const values = response.values || []
     return JSON.stringify(values)
   },
 
   deserialize: (value) => parseMultiSelectValue(value),
 
-  renderCell: ({ value }) => {
-    const values = Array.isArray(value) ? value : []
+  renderEditable: ({ value, config, onChange, onBlur, onFocus }) => {
+    // Deserialize: parse JSON string to array
+    const displayValue = parseMultiSelectValue(value)
+    const selectConfig = config as MultiSelectConfig | null
+    const options = selectConfig?.options || []
+    const maxSelections = selectConfig?.maxSelections
+    const values = Array.isArray(displayValue) ? displayValue : []
+    const [isOpen, setIsOpen] = useState(false)
+    const [searchQuery, setSearchQuery] = useState('')
 
-    if (values.length === 0) {
-      return <div className="text-sm text-muted-foreground"></div>
+    const handleToggle = (optionValue: string) => {
+      const newValues = values.includes(optionValue)
+        ? values.filter((v) => v !== optionValue)
+        : maxSelections && values.length >= maxSelections
+          ? values
+          : [...values, optionValue]
+      onChange(JSON.stringify(newValues))
     }
 
-    return (
-      <div className="flex flex-wrap gap-1">
-        {values.map((val, index) => {
-          const colors = getBadgeColors(val)
-          return (
-            <Badge
-              key={index}
-              style={{
-                backgroundColor: colors.backgroundColor,
-                color: colors.textColor,
-                borderColor: colors.borderColor,
-              }}
-            >
-              {val}
-            </Badge>
-          )
-        })}
-      </div>
+    const handleRemove = (optionValue: string, e: React.MouseEvent) => {
+      e.stopPropagation()
+      const newValues = values.filter((v) => v !== optionValue)
+      onChange(JSON.stringify(newValues))
+    }
+
+    // Filter options based on search query
+    const filteredOptions = options.filter((option) =>
+      option.value.toLowerCase().includes(searchQuery.toLowerCase()),
     )
+
+    if (options.length > 0) {
+      // Use Command component for searchable multi-select
+      return (
+        <Popover open={isOpen} onOpenChange={setIsOpen}>
+          <PopoverTrigger asChild>
+            <div
+              className="h-full w-full cursor-pointer py-1 px-2 text-sm flex items-center gap-1 flex-wrap min-h-[28px]"
+              onFocus={onFocus}
+              onClick={() => setIsOpen(true)}
+            >
+              {values.length > 0 ? (
+                values.map((val, index) => {
+                  return (
+                    <Badge
+                      variant="secondary"
+                      key={index}
+                      className="text-sm flex items-center gap-1 pr-1"
+                    >
+                      {val}
+                      <button
+                        type="button"
+                        onClick={(e) => handleRemove(val, e)}
+                        className="ml-1 rounded-full hover:bg-black/20 p-0.5"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleRemove(val, e as any)
+                          }
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  )
+                })
+              ) : (
+                <span className="text-muted-foreground">Select...</span>
+              )}
+            </div>
+          </PopoverTrigger>
+          <PopoverContent
+            className="w-64 p-0"
+            align="start"
+            onInteractOutside={() => {
+              setIsOpen(false)
+              setSearchQuery('')
+              if (onBlur) onBlur()
+            }}
+          >
+            <Command>
+              <CommandInput
+                placeholder="Search options..."
+                value={searchQuery}
+                onValueChange={setSearchQuery}
+              />
+              <CommandList>
+                <CommandEmpty>No options found.</CommandEmpty>
+                <CommandGroup>
+                  {filteredOptions.map((option) => {
+                    const isSelected = values.includes(option.value)
+                    const isDisabled = Boolean(
+                      maxSelections &&
+                        values.length >= maxSelections &&
+                        !isSelected,
+                    )
+
+                    return (
+                      <CommandItem
+                        key={option.value}
+                        onSelect={() => {
+                          if (!isDisabled) {
+                            handleToggle(option.value)
+                          }
+                        }}
+                        disabled={isDisabled}
+                        className="cursor-pointer"
+                      >
+                        <Checkbox
+
+                          checked={isSelected}
+                          onCheckedChange={() => {
+                            if (!isDisabled) {
+                              handleToggle(option.value)
+                            }
+                          }}
+                          disabled={isDisabled}
+                          className="mr-2"
+                        />
+                        <span>{option.value}</span>
+                      </CommandItem>
+                    )
+                  })}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      )
+    } else {
+      // Use comma-separated input for free-form
+      const commaSeparatedValue = Array.isArray(displayValue)
+        ? displayValue.join(', ')
+        : ''
+      return (
+        <Input
+          value={commaSeparatedValue}
+          onChange={(e) => {
+            const newValues = e.target.value
+              .split(',')
+              .map((v) => v.trim())
+              .filter((v) => v.length > 0)
+            onChange(JSON.stringify(newValues))
+          }}
+          onBlur={onBlur}
+          onFocus={onFocus}
+          className="h-full w-full border-none bg-transparent focus-visible:border-none focus-visible:ring-0 shadow-none px-2 py-1 text-sm"
+          placeholder="Comma-separated values"
+        />
+      )
+    }
   },
 }
 
@@ -361,24 +550,100 @@ const DATE_TYPE: OutputTypeDefinition = {
     })
   },
 
-  serialize: (response) => response.value || '',
+  serializeAiResponse: (response) => response.value || '',
 
   deserialize: (value) => value || '',
 
-  renderCell: ({ value, config }) => {
-    if (!value) {
-      return <div className="text-sm text-muted-foreground"></div>
+  renderEditable: ({ value, config, onChange, onBlur, onFocus }) => {
+    // Deserialize: simple string passthrough
+    const displayValue = value || ''
+    const dateConfig = config as DateConfig | null
+    const dateFormat = dateConfig?.dateFormat || 'YYYY-MM-DD'
+    const [isOpen, setIsOpen] = useState(false)
+    const [date, setDate] = useState<Date | undefined>(
+      displayValue ? parseDateValue(displayValue) || undefined : undefined,
+    )
+
+    // Sync date state when value changes
+    useEffect(() => {
+      if (displayValue) {
+        const parsed = parseDateValue(displayValue)
+        setDate(parsed || undefined)
+      } else {
+        setDate(undefined)
+      }
+    }, [displayValue])
+
+    // Map date format to input type
+    const inputType = dateFormat.includes('YYYY') ? 'date' : 'text'
+
+    const handleDateSelect = (selectedDate: Date | undefined) => {
+      if (selectedDate) {
+        setDate(selectedDate)
+        // Format date according to config
+        const formatMap: Record<string, string> = {
+          'YYYY-MM-DD': 'yyyy-MM-dd',
+          'MM/DD/YYYY': 'MM/dd/yyyy',
+          'DD/MM/YYYY': 'dd/MM/yyyy',
+          'MMM DD, YYYY': 'MMM dd, yyyy',
+          'MMMM DD, YYYY': 'MMMM dd, yyyy',
+        }
+        const dateFnsFormat = formatMap[dateFormat] || formatMap['YYYY-MM-DD']
+        const formatted = format(selectedDate, dateFnsFormat)
+        onChange(formatted)
+        setIsOpen(false)
+        if (onBlur) onBlur()
+      }
     }
 
-    const dateConfig = config as DateConfig | null
-    const displayValue = formatDateValue(value, dateConfig?.dateFormat)
-
-    return (
-      <div className="flex items-center gap-2 text-sm">
-        <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-        <span>{displayValue}</span>
-      </div>
-    )
+    if (inputType === 'date') {
+      // Use native date input for YYYY-MM-DD format
+      return (
+        <Input
+          type="date"
+          value={displayValue || ''}
+          onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
+          onFocus={onFocus}
+          className="h-full w-full border-none bg-transparent focus-visible:border-none focus-visible:ring-0 shadow-none px-2 py-1 text-sm"
+        />
+      )
+    } else {
+      // Use calendar popover for other formats
+      const formattedValue = displayValue
+        ? formatDateValue(displayValue, dateFormat)
+        : ''
+      return (
+        <Popover open={isOpen} onOpenChange={setIsOpen}>
+          <PopoverTrigger asChild>
+            <div
+              className="h-full w-full cursor-pointer px-2 py-1 text-sm flex items-center gap-2"
+              onFocus={onFocus}
+              onClick={() => setIsOpen(true)}
+            >
+              <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <span className={cn(!formattedValue && 'text-muted-foreground')}>
+                {formattedValue || 'Select date...'}
+              </span>
+            </div>
+          </PopoverTrigger>
+          <PopoverContent
+            className="w-auto p-0"
+            align="start"
+            onInteractOutside={() => {
+              setIsOpen(false)
+              if (onBlur) onBlur()
+            }}
+          >
+            <Calendar
+              mode="single"
+              selected={date}
+              onSelect={handleDateSelect}
+            />
+          </PopoverContent>
+        </Popover>
+      )
+    }
   },
 }
 
@@ -386,13 +651,14 @@ const DATE_TYPE: OutputTypeDefinition = {
 // Registry
 // ============================================================================
 
-export const OUTPUT_TYPE_REGISTRY: Record<OutputType, OutputTypeDefinition> = {
+// Use satisfies to ensure all output types are handled
+export const OUTPUT_TYPE_REGISTRY = {
   text: TEXT_TYPE,
   long_text: LONG_TEXT_TYPE,
   single_select: SINGLE_SELECT_TYPE,
   multi_select: MULTI_SELECT_TYPE,
   date: DATE_TYPE,
-}
+} satisfies Record<OutputType, OutputTypeDefinition>
 
 // ============================================================================
 // Helper Functions
@@ -410,7 +676,10 @@ export function getOutputTypeDefinition(
 /**
  * Get all output types for dropdown options
  */
-export function getAllOutputTypes(): Array<{ value: OutputType; label: string }> {
+export function getAllOutputTypes(): Array<{
+  value: OutputType
+  label: string
+}> {
   return Object.values(OUTPUT_TYPE_REGISTRY).map((def) => ({
     value: def.id,
     label: def.label,
@@ -438,4 +707,3 @@ export function validateOutputTypeConfig(
     return { success: false, error: 'Invalid configuration' }
   }
 }
-

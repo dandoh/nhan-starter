@@ -1,7 +1,7 @@
 import { inngest } from '../client'
 import { db } from '@/db'
 import { aiTableCells, aiTableColumns } from '@/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, ne, isNull, or } from 'drizzle-orm'
 import { anthropic } from '@ai-sdk/anthropic'
 import { generateObject } from 'ai'
 import { getOutputTypeDefinition } from '@/lib/ai-table/output-type-registry'
@@ -53,37 +53,36 @@ export const computeAiCell = inngest.createFunction(
       throw new Error(`Cell ${cellId} not found`)
     }
 
-    if (cell.column.type !== 'ai') {
-      throw new Error(`Cell ${cellId} is not an AI column`)
-    }
-
     const aiPrompt = cell.column.aiPrompt
     if (!aiPrompt || aiPrompt.trim() === '') {
-      throw new Error('AI column has no prompt configured')
+      throw new Error('Column has no AI prompt configured')
     }
 
-    // Fetch manual column values from same row (no step - fast reads)
-    const manualColumns = await db.query.aiTableColumns.findMany({
+    // Fetch other columns from same table for context (columns without AI prompts or empty prompts)
+    const contextColumns = await db.query.aiTableColumns.findMany({
       where: and(
         eq(aiTableColumns.tableId, cell.record.tableId),
-        eq(aiTableColumns.type, 'manual'),
+        or(
+          isNull(aiTableColumns.aiPrompt),
+          eq(aiTableColumns.aiPrompt, ''),
+        ),
       ),
     })
 
-    const manualCells =
-      manualColumns.length > 0
+    const contextCells =
+      contextColumns.length > 0
         ? await db.query.aiTableCells.findMany({
             where: eq(aiTableCells.recordId, cell.recordId),
           })
         : []
 
-    // Build context from manual columns
-    const manualColumnIds = new Set(manualColumns.map((col) => col.id))
+    // Build context from columns without AI prompts
+    const contextColumnIds = new Set(contextColumns.map((col) => col.id))
     const rowContext: Record<string, string> = {}
 
-    for (const cellItem of manualCells) {
-      if (manualColumnIds.has(cellItem.columnId)) {
-        const column = manualColumns.find((col) => col.id === cellItem.columnId)
+    for (const cellItem of contextCells) {
+      if (contextColumnIds.has(cellItem.columnId)) {
+        const column = contextColumns.find((col) => col.id === cellItem.columnId)
         if (column && cellItem.value) {
           rowContext[column.name] = cellItem.value
         }
@@ -136,7 +135,7 @@ export const computeAiCell = inngest.createFunction(
         })
 
         // Serialize the response for storage using registry
-        const formattedValue = outputTypeDef.serialize(response.object)
+        const formattedValue = outputTypeDef.serializeAiResponse(response.object)
         return formattedValue
       } catch (error: any) {
         // If AI fails to follow schema, throw descriptive error

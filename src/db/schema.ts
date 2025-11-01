@@ -164,16 +164,27 @@ export type AiTable = typeof aiTables.$inferSelect
 export type NewAiTable = typeof aiTables.$inferInsert
 
 // AI Table Columns - Column definitions with optional AI prompts
+
+// Output type enum - single source of truth
+export const AI_TABLE_OUTPUT_TYPES = [
+  'text',
+  'long_text',
+  'single_select',
+  'multi_select',
+  'date',
+] as const
+
+export type AiTableOutputType = (typeof AI_TABLE_OUTPUT_TYPES)[number]
+
 export const aiTableColumns = pgTable('ai_table_columns', {
   id: uuid('id').primaryKey().defaultRandom(),
   tableId: uuid('table_id')
     .notNull()
     .references(() => aiTables.id, { onDelete: 'cascade' }),
   name: varchar('name', { length: 255 }).notNull(),
-  type: text('type', { enum: ['manual', 'ai'] }).notNull().default('ai'),
   description: text('description').default(''),
   outputType: text('output_type', { 
-    enum: ['text', 'long_text', 'single_select', 'multi_select', 'date'] 
+    enum: AI_TABLE_OUTPUT_TYPES 
   }).notNull().default('text'),
   aiPrompt: text('ai_prompt').notNull().default(''),
   outputTypeConfig: jsonb('output_type_config').$type<{
@@ -181,7 +192,6 @@ export const aiTableColumns = pgTable('ai_table_columns', {
     maxSelections?: number
     dateFormat?: string
   }>(),
-  position: integer('position').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),

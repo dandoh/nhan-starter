@@ -39,7 +39,7 @@ export function AiTable({ tableId }: TableBlockWrapperProps) {
   const { data: columns = [], isReady: isReadyColumns } = useLiveQuery((q) =>
     q
       .from({ col: columnsCollection })
-      .orderBy(({ col }) => col.position, 'asc'),
+      .orderBy(({ col }) => col.createdAt, 'asc'),
   )
 
   // Live query for records
@@ -55,16 +55,14 @@ export function AiTable({ tableId }: TableBlockWrapperProps) {
       id: crypto.randomUUID(),
       tableId,
       name: 'Untitled',
-      type: 'ai',
       description: '',
       outputType: 'text',
       aiPrompt: '',
       outputTypeConfig: {},
-      position: columns.length,
       createdAt: new Date(),
       updatedAt: new Date(),
     })
-  }, [columnsCollection, tableId, columns.length])
+  }, [columnsCollection, tableId])
 
   // Handle adding a new row
   const handleAddRow = useCallback(() => {
@@ -189,7 +187,7 @@ export function AiTable({ tableId }: TableBlockWrapperProps) {
                       className={
                         cell.column.id === '__add_column__'
                           ? 'w-12 min-w-12 p-0 !border-r-0 !border-b-0'
-                          : ''
+                          : 'p-1'
                       }
                     >
                       {cell.column.id === '__add_column__'
