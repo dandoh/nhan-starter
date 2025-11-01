@@ -1,30 +1,16 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
-import { useLiveQuery } from '@tanstack/react-db'
+import { useState, useEffect } from 'react'
 import { Sparkles } from 'lucide-react'
-import { useTableSync } from '@/hooks/use-table-sync'
-import { TableBlockWrapper } from '@/components/workbook/blocks/TableBlockWrapper'
-import { AIChat } from '@/components/ai-chat/AIChat'
+import { useSidebar } from '@/components/ui/sidebar'
+import { AiTable } from '@/components/ai-table/AiTable'
+import { AiChat } from '@/components/ai-chat/AiChat'
 import { Button } from '@/components/ui/button'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
-import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from '@/components/ui/resizable'
-import { client } from '@/orpc/client'
 import { toast } from 'sonner'
-import {
-  TopNav,
-  AppPageWrapper,
-  AppPageContentWrapper,
-} from '@/components/AppPageWrapper'
-import { Card, CardContent, CardTitle } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
+import { TopNav, AppPageWrapper } from '@/components/AppPageWrapper'
+import { serverFnTriggerComputeAllCells } from '@/serverFns/ai-tables'
+import { tablesCollection } from '@/lib/ai-table/collections'
+import { useLiveQuery } from 'node_modules/@tanstack/react-db/dist/esm/useLiveQuery'
+import { eq } from '@tanstack/react-db'
 
 export const Route = createFileRoute('/_authed/tables/$tableId')({
   ssr: false,
@@ -33,21 +19,29 @@ export const Route = createFileRoute('/_authed/tables/$tableId')({
 
 function TableEditorPage() {
   const { tableId } = Route.useParams()
-  const collections = useTableSync(tableId)
+  const { setOpen: setSidebarOpen } = useSidebar()
   const [isComputing, setIsComputing] = useState(false)
-  const [isAIChatOpen, setIsAIChatOpen] = useState(false)
-
-  // Live query for columns to check if we have any
-  const { data: columns } = useLiveQuery((q) =>
+  const { data: table } = useLiveQuery((q) =>
     q
-      .from({ col: collections.columns })
-      .orderBy(({ col }) => col.position, 'asc'),
+      .from({ table: tablesCollection })
+      .where(({ table }) => eq(table.id, tableId))
+      .findOne(),
   )
+
+  // Collapse sidebar on mount
+  useEffect(() => {
+    setSidebarOpen(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleComputeAllCells = async () => {
     setIsComputing(true)
     try {
-      const result = await client.aiTables.triggerComputeAllCells({ tableId })
+      const result = await serverFnTriggerComputeAllCells({
+        data: {
+          tableId,
+        },
+      })
       toast.success(result.message || 'AI computation started', {
         description: `Computing ${result.triggered} cells`,
       })
@@ -63,92 +57,50 @@ function TableEditorPage() {
   return (
     <AppPageWrapper>
       <TopNav
-        breadcrumbs={[
-          { label: 'AI Tables', href: '/tables' },
-          { label: 'Table Details' },
-        ]}
-      ></TopNav>
-      <AppPageContentWrapper>
-        <Card className="gap-0 p-0">
-          <div className="px-6 py-4">
-            <CardTitle className="flex justify-between items-center mb-0">
-              <span>Company stock analysis</span>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={() => setIsAIChatOpen(!isAIChatOpen)}
-                    size="sm"
-                    variant={isAIChatOpen ? 'secondary' : 'ghost'}
-                    aria-label="Toggle AI Assistant"
-                  >
-                    <Sparkles />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  {isAIChatOpen ? 'Close AI Assistant' : 'Open AI Assistant'}
-                </TooltipContent>
-              </Tooltip>
-            </CardTitle>
+        breadcrumbs={[{ label: 'Tables', href: '/tables' }, { label: table?.name ?? 'Untitled' }]}
+      />
+
+      {/* Main content area */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Table content */}
+        <div className="flex flex-col flex-1 min-w-0">
+          <div className="flex-1 overflow-hidden p-4">
+            <div className="h-full flex flex-col">
+              {/* Table Block - scrollable */}
+              <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+                <AiTable tableId={tableId} />
+              </div>
+
+              {/* <div className="flex items-center gap-2 mt-4 shrink-0">
+                <Button
+                  onClick={handleComputeAllCells}
+                  variant="outline"
+                  size="sm"
+                  disabled={isComputing}
+                >
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Compute All AI Cells
+                </Button>
+              </div> */}
+            </div>
           </div>
-          <CardContent className="p-0">
-            <ResizablePanelGroup
-              direction="horizontal"
-              className="min-h-[300px] max-h-[600px]"
-            >
-              <ResizablePanel defaultSize={70} minSize={30}>
-                <div className="h-full flex flex-col px-6 py-4 overflow-hidden">
-                  {/* Reuse TableBlockWrapper component */}
-                  <TableBlockWrapper tableId={tableId} />
+        </div>
 
-                  {/* Compute All Cells Button - specific to table page */}
-                  {columns.length > 0 && (
-                    <div className="flex items-center gap-2 mt-4">
-                      <Button
-                        onClick={handleComputeAllCells}
-                        variant="outline"
-                        size="sm"
-                        disabled={isComputing}
-                      >
-                        {isComputing ? (
-                          <>
-                            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                            Computing...
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="mr-2 h-4 w-4" />
-                            Compute All AI Cells
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </ResizablePanel>
-
-              <ResizableHandle withHandle className="w-[0.5px]" />
-              <ResizablePanel
-                defaultSize={30}
-                minSize={20}
-                maxSize={50}
-                className={cn(isAIChatOpen ? 'max-h-full' : 'hidden')}
-              >
-                <AIChat
-                  context={{ type: 'table', tableId }}
-                  title="Table AI Assistant"
-                  description="Ask me to help with your table. I can add columns, analyze data, or perform calculations."
-                  quickActions={[
-                    'Add a new column',
-                    'Analyze sentiment trends',
-                    'Calculate statistics',
-                    'Export to CSV',
-                  ]}
-                />
-              </ResizablePanel>
-            </ResizablePanelGroup>
-          </CardContent>
-        </Card>
-      </AppPageContentWrapper>
+        {/* AI Chat Panel */}
+        <div className="flex flex-col w-96 shrink-0 bg-card border-l border-border">
+          <AiChat
+            context={{ type: 'table', tableId }}
+            title="Table AI Assistant"
+            description="Ask me to help with your table. I can add columns, analyze data, or perform calculations."
+            quickActions={[
+              'Add a new column',
+              'Analyze sentiment trends',
+              'Calculate statistics',
+              'Export to CSV',
+            ]}
+          />
+        </div>
+      </div>
     </AppPageWrapper>
   )
 }

@@ -2,16 +2,27 @@ import { createCollection } from '@tanstack/react-db'
 import { queryCollectionOptions } from '@tanstack/query-db-collection'
 import { queryClient } from '@/integrations/tanstack-query/root-provider'
 
-import { client } from '@/orpc/client'
 import type {
   AiTable,
   AiTableColumn,
   AiTableRecord,
   AiTableCell,
-  Workbook,
-  WorkbookBlock,
 } from '@/db/schema'
 import type { OutputTypeConfig } from '@/lib/ai-table/output-types'
+import {
+  serverFnCreateTable,
+  serverFnDeleteTable,
+  serverFnGetCells,
+  serverFnGetColumns,
+  serverFnListTables,
+  serverFnUpdateCell,
+  serverFnUpdateColumn,
+  serverFnCreateColumn,
+  serverFnDeleteColumn,
+  serverFnGetRecords,
+  serverFnCreateRecord,
+  serverFnDeleteRecord,
+} from '@/serverFns/ai-tables'
 
 // Create a single query client instance for collections with no refetching
 
@@ -30,59 +41,25 @@ export const tablesCollection = createCollection(
     queryClient,
     queryKey: ['ai-tables', 'tables'],
     queryFn: async () => {
-      const tables = await client.aiTables.list()
-      return tables
+      const tables = await serverFnListTables({})
+      return tables as Table[]
     },
     getKey: (table) => table.id,
     onInsert: async ({ transaction }) => {
       const { modified: newTable } = transaction.mutations[0]
-      await client.aiTables.create({
-        name: newTable.name,
+      await serverFnCreateTable({
+        data: {
+          name: newTable.name,
+        },
       })
     },
 
     onDelete: async ({ transaction }) => {
       const { original } = transaction.mutations[0]
-      await client.aiTables.delete({
-        tableId: original.id,
-      })
-    },
-  }),
-)
-
-// ============================================================================
-// Workbooks List Collection
-// ============================================================================
-
-export const workbooksCollection = createCollection(
-  queryCollectionOptions<Workbook>({
-    queryClient,
-    queryKey: ['workbooks', 'list'],
-    queryFn: async () => {
-      const workbooks = await client.workbooks.list()
-      return workbooks
-    },
-    getKey: (workbook) => workbook.id,
-    onInsert: async ({ transaction }) => {
-      const { modified: newWorkbook } = transaction.mutations[0]
-      await client.workbooks.create({
-        name: newWorkbook.name,
-        description: newWorkbook.description || undefined,
-      })
-    },
-    onUpdate: async ({ transaction }) => {
-      const { original, changes } = transaction.mutations[0]
-      console.log(original, changes)
-      await client.workbooks.update({
-        workbookId: original.id,
-        name: changes.name,
-        description: changes.description,
-      })
-    },
-    onDelete: async ({ transaction }) => {
-      const { original } = transaction.mutations[0]
-      await client.workbooks.delete({
-        workbookId: original.id,
+      await serverFnDeleteTable({
+        data: {
+          tableId: original.id,
+        },
       })
     },
   }),
@@ -99,8 +76,12 @@ export function createTableCollections(tableId: string) {
       queryClient,
       queryKey: ['ai-tables', tableId, 'cells'],
       queryFn: async () => {
-        const cells = await client.aiTables.getCells({ tableId })
-        return cells
+        const cells = await serverFnGetCells({
+          data: {
+            tableId,
+          },
+        })
+        return cells as Cell[]
       },
       getKey: (cell) => cell.id,
       onInsert: async ({ transaction }) => {
@@ -125,9 +106,11 @@ export function createTableCollections(tableId: string) {
       onUpdate: async ({ transaction }) => {
         for (const mutation of transaction.mutations) {
           const { original, changes } = mutation
-          const updatedCell = await client.aiTables.updateCell({
-            cellId: original.id,
-            value: changes.value || undefined,
+          const updatedCell = await serverFnUpdateCell({
+            data: {
+              cellId: original.id,
+              value: changes.value || undefined,
+            },
           })
           cellsCollection.utils.writeUpdate(updatedCell)
         }
@@ -145,8 +128,12 @@ export function createTableCollections(tableId: string) {
       queryClient,
       queryKey: ['ai-tables', tableId, 'columns'],
       queryFn: async () => {
-        const columns = await client.aiTables.getColumns({ tableId })
-        return columns as Column[]
+        const columns = await serverFnGetColumns({
+          data: {
+            tableId,
+          },
+        })
+        return columns
       },
       getKey: (col) => col.id,
 
@@ -156,14 +143,16 @@ export function createTableCollections(tableId: string) {
           const outputTypeConfig = newColumn.outputTypeConfig as
             | OutputTypeConfig
             | undefined
-          const { cells } = await client.aiTables.createColumn({
-            tableId,
-            name: newColumn.name,
-            type: newColumn.type,
-            description: newColumn.description || undefined,
-            outputType: newColumn.outputType,
-            aiPrompt: newColumn.aiPrompt || '',
-            outputTypeConfig,
+          const { cells } = await serverFnCreateColumn({
+            data: {
+              tableId,
+              name: newColumn.name,
+              type: newColumn.type,
+              description: newColumn.description || undefined,
+              outputType: newColumn.outputType,
+              aiPrompt: newColumn.aiPrompt || '',
+              outputTypeConfig,
+            },
           })
 
           // Insert created cells into cells collection
@@ -186,14 +175,16 @@ export function createTableCollections(tableId: string) {
           const outputTypeConfig = modified.outputTypeConfig as
             | OutputTypeConfig
             | undefined
-          await client.aiTables.updateColumn({
-            columnId: original.id,
-            name: modified.name,
-            type: modified.type,
-            description: modified.description || undefined,
-            outputType: modified.outputType,
-            aiPrompt: modified.aiPrompt,
-            outputTypeConfig,
+          await serverFnUpdateColumn({
+            data: {
+              columnId: original.id,
+              name: modified.name,
+              type: modified.type,
+              description: modified.description || undefined,
+              outputType: modified.outputType,
+              aiPrompt: modified.aiPrompt,
+              outputTypeConfig,
+            },
           })
         }
       },
@@ -201,8 +192,10 @@ export function createTableCollections(tableId: string) {
       onDelete: async ({ transaction }) => {
         for (const mutation of transaction.mutations) {
           const { original } = mutation
-          await client.aiTables.deleteColumn({
-            columnId: original.id,
+          await serverFnDeleteColumn({
+            data: {
+              columnId: original.id,
+            },
           })
         }
       },
@@ -215,17 +208,23 @@ export function createTableCollections(tableId: string) {
       queryClient,
       queryKey: ['ai-tables', tableId, 'records'],
       queryFn: async () => {
-        const records = await client.aiTables.getRecords({ tableId })
-        return records as Record[]
+        const records = await serverFnGetRecords({
+          data: {
+            tableId,
+          },
+        })
+        return records
       },
       getKey: (rec) => rec.id,
 
       onInsert: async ({ transaction }) => {
         for (const mutation of transaction.mutations) {
           const { modified: newRecord } = mutation
-          const { cells } = await client.aiTables.createRecord({
-            tableId,
-            id: newRecord.id,
+          const { cells } = await serverFnCreateRecord({
+            data: {
+              tableId,
+              id: newRecord.id,
+            },
           })
 
           // Insert created cells into cells collection
@@ -245,8 +244,10 @@ export function createTableCollections(tableId: string) {
       onDelete: async ({ transaction }) => {
         for (const mutation of transaction.mutations) {
           const { original } = mutation
-          await client.aiTables.deleteRecord({
-            recordId: original.id,
+          await serverFnDeleteRecord({
+            data: {
+              recordId: original.id,
+            },
           })
         }
       },
@@ -254,59 +255,10 @@ export function createTableCollections(tableId: string) {
   )
 
   return {
-    columns: columnsCollection,
-    records: recordsCollection,
-    cells: cellsCollection,
+    columnsCollection: columnsCollection,
+    recordsCollection: recordsCollection,
+    cellsCollection: cellsCollection,
   }
 }
 
 export type TableCollections = ReturnType<typeof createTableCollections>
-
-// ============================================================================
-// Workbook-Specific Collections Factory
-// ============================================================================
-
-export function createWorkbookCollections(workbookId: string) {
-  // Blocks collection
-  const blocksCollection = createCollection(
-    queryCollectionOptions<WorkbookBlock>({
-      queryClient,
-      queryKey: ['workbooks', workbookId, 'blocks'],
-      queryFn: async () => {
-        const blocks = await client.workbooks.getBlocks({ workbookId })
-        return blocks
-      },
-      getKey: (block) => block.id,
-      onInsert: async ({ transaction }) => {
-        for (const mutation of transaction.mutations) {
-          const { modified: newBlock, metadata } = mutation
-          const position =
-            (metadata as { position: number } | undefined)?.position ?? 0
-          await client.workbooks.createBlock({
-            workbookId,
-            type: newBlock.type,
-            position,
-            initialMarkdown: newBlock.type === 'markdown' ? '' : undefined,
-            tableName: newBlock.type === 'table' ? 'Untitled Table' : undefined,
-          })
-
-          console.log('created block', newBlock)
-        }
-      },
-      onDelete: async ({ transaction }) => {
-        for (const mutation of transaction.mutations) {
-          const { original } = mutation
-          await client.workbooks.deleteBlock({
-            blockId: original.id,
-          })
-        }
-      },
-    }),
-  )
-
-  return {
-    blocks: blocksCollection,
-  }
-}
-
-export type WorkbookCollections = ReturnType<typeof createWorkbookCollections>

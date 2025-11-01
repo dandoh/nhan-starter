@@ -15,7 +15,8 @@ export default [
       // Disable type specifier and array type rules
       'import/consistent-type-specifier-style': 'off',
       '@typescript-eslint/array-type': 'off',
-      "@typescript-eslint/require-await": 'off'
+      "@typescript-eslint/require-await": 'off',
+      '@typescript-eslint/no-unnecessary-condition': 'off',
     },
   },
 ]

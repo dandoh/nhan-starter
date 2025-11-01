@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto'
+import { randomUUID } from 'node:crypto'
 import { db, client } from './index'
 import {
   users,
@@ -36,6 +36,9 @@ async function seed() {
     console.log('✅ User already exists:', user.email)
   }
 
+  // Delete all tables
+  await db.delete(aiTables).where(eq(aiTables.userId, user.id))
+
   // 2. Delete existing table if it exists
   const existingTable = await db.query.aiTables.findFirst({
     where: eq(aiTables.id, SEED_TABLE_ID),
@@ -58,26 +61,23 @@ async function seed() {
 
   console.log('✅ Created table:', table.name)
 
-  // 4. Create columns
+  // 4. Create columns - one example of each output type
   const columns = await db
     .insert(aiTableColumns)
     .values([
-      // Manual column: Ticker
+      // Column: Ticker (text)
       {
         tableId: table.id,
         name: 'Ticker',
-        type: 'manual',
         description: 'Stock ticker symbol',
         outputType: 'text',
         aiPrompt: '',
         outputTypeConfig: null,
-        position: 0,
       },
-      // AI column 1: Sentiment (single_select)
+      // Column: Sentiment (single_select)
       {
         tableId: table.id,
         name: 'Sentiment',
-        type: 'ai',
         description: 'Market sentiment analysis',
         outputType: 'single_select',
         aiPrompt:
@@ -89,57 +89,47 @@ async function seed() {
             { value: 'Negative' },
           ],
         },
-        position: 1,
       },
-      // AI column 2: Company Size (single_select)
+      // Column: Tags (multi_select)
       {
         tableId: table.id,
-        name: 'Company Size',
-        type: 'ai',
-        description: 'Market capitalization category',
-        outputType: 'single_select',
+        name: 'Tags',
+        description: 'Multiple tags for categorization',
+        outputType: 'multi_select',
         aiPrompt:
-          'Determine the market cap category for this company. Choose: Small Cap, Mid Cap, or Large Cap.',
+          'Generate relevant tags for this stock based on industry, sector, and characteristics. Choose from: Technology, Finance, Healthcare, Energy, Consumer, Industrial, or leave empty for free-form suggestions.',
         outputTypeConfig: {
           options: [
-            { value: 'Small Cap' },
-            { value: 'Mid Cap' },
-            { value: 'Large Cap' },
+            { value: 'Technology' },
+            { value: 'Finance' },
+            { value: 'Healthcare' },
+            { value: 'Energy' },
+            { value: 'Consumer' },
+            { value: 'Industrial' },
           ],
         },
-        position: 2,
       },
-      // AI column 3: Investment Signal (single_select)
+      // Column: Analysis Date (date)
       {
         tableId: table.id,
-        name: 'Investment Signal',
-        type: 'ai',
-        description: 'Investment recommendation',
-        outputType: 'single_select',
+        name: 'Analysis Date',
+        description: 'Date when analysis was performed',
+        outputType: 'date',
         aiPrompt:
-          'Based on current market conditions and company fundamentals, provide an investment recommendation.',
+          'Determine the most recent date when this stock was analyzed or when significant market events occurred.',
         outputTypeConfig: {
-          options: [
-            { value: 'Strong Buy' },
-            { value: 'Buy' },
-            { value: 'Hold' },
-            { value: 'Sell' },
-            { value: 'Strong Sell' },
-          ],
+          dateFormat: 'YYYY-MM-DD',
         },
-        position: 3,
       },
-      // AI column 4: Risk Analysis (long_text)
+      // Column: Risk Analysis (long_text)
       {
         tableId: table.id,
         name: 'Risk Analysis',
-        type: 'ai',
         description: 'Detailed risk assessment',
         outputType: 'long_text',
         aiPrompt:
           'Provide a detailed risk analysis for this stock, covering market volatility, sector risks, company-specific factors, and overall risk level (Low/Medium/High). Be specific and analytical.',
         outputTypeConfig: null,
-        position: 4,
       },
     ])
     .returning()
@@ -162,8 +152,8 @@ async function seed() {
     const cells = columns.map((column, index) => ({
       recordId: record.id,
       columnId: column.id,
-      value: index === 0 ? ticker : null, // Only set value for Ticker (manual column)
-      computeStatus: column.type === 'ai' ? ('idle' as const) : ('idle' as const),
+      value: index === 0 ? ticker : null, // Only set value for Ticker column
+      computeStatus: 'idle' as const,
     }))
 
     await db.insert(aiTableCells).values(cells)
@@ -177,7 +167,7 @@ async function seed() {
   console.log(`   User: ${user.email}`)
   console.log(`   Table ID: ${table.id}`)
   console.log(`   Table Name: ${table.name}`)
-  console.log(`   Columns: ${columns.length} (1 manual + 4 AI)`)
+  console.log(`   Columns: ${columns.length}`)
   console.log(`   Records: ${tickers.length}`)
   console.log('')
   console.log(

@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   Table,
   UserCircle,
-  BookOpen,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -29,11 +28,6 @@ const navigation = [
     title: 'Home',
     icon: Home,
     url: '/',
-  },
-  {
-    title: 'Workbooks',
-    icon: BookOpen,
-    url: '/workbooks',
   },
   {
     title: 'Tables',
@@ -130,9 +124,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset className="overflow-x-hidden">
-        <div className="flex flex-1 flex-col">{children}</div>
-      </SidebarInset>
+      <SidebarInset className="flex flex-col overflow-hidden">{children}</SidebarInset>
     </SidebarProvider>
   )
 }

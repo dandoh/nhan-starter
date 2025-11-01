@@ -4,7 +4,6 @@ import { Suspense } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport, type UIMessage } from 'ai'
 import { Sparkles } from 'lucide-react'
-import { orpc } from '@/orpc/client'
 import {
   Conversation,
   ConversationContent,
@@ -34,6 +33,7 @@ import {
 import { useSuspenseQuery } from '@tanstack/react-query'
 import type { ToolUIPart } from 'ai'
 import type { ConversationContext } from '@/db/schema'
+import { serverFnGetConversationsForContext } from '@/serverFns/conversations'
 
 interface AIChatProps {
   context: Exclude<ConversationContext, { type: 'general' }>
@@ -53,7 +53,7 @@ function transformMessages(messages: any[]): UIMessage[] {
 }
 
 // Loading fallback component
-function AIChatLoading() {
+function AiChatLoading() {
   return (
     <div className="flex flex-col h-full items-center justify-center p-4">
       <Loader size={24} />
@@ -63,7 +63,7 @@ function AIChatLoading() {
 }
 
 // Internal component that uses Suspense
-function AIChatInternal({ 
+function AiChatInternal({
   context,
   title = 'AI Assistant',
   description = 'Ask me to help with your data. I can analyze, generate insights, or perform calculations.',
@@ -75,14 +75,11 @@ function AIChatInternal({
   ],
 }: AIChatProps) {
   // Use oRPC's auto-generated query hook with Suspense
-  const { data: conversations } = useSuspenseQuery(
-    orpc.conversations.getForContext.queryOptions({
-      input: {
-        context,
-        limit: 10,
-      },
-    }),
-  )
+  const { data: conversations } = useSuspenseQuery({
+    queryKey: ['conversations', context],
+    queryFn: () =>
+      serverFnGetConversationsForContext({ data: { context, limit: 10 } }),
+  })
 
   // Use the most recent conversation (first in the array)
   const conversation = conversations[0]
@@ -144,7 +141,7 @@ function AIChatInternal({
                         //   toolPart.state === 'output-error'
 
                         return (
-                          <Tool key={index} open={false} >
+                          <Tool key={index} open={false}>
                             <ToolHeader
                               type={toolPart.type}
                               state={toolPart.state}
@@ -224,10 +221,10 @@ function AIChatInternal({
 }
 
 // Exported component with Suspense boundary
-export function AIChat(props: AIChatProps) {
+export function AiChat(props: AIChatProps) {
   return (
-    <Suspense fallback={<AIChatLoading />}>
-      <AIChatInternal {...props} />
+    <Suspense fallback={<AiChatLoading />}>
+      <AiChatInternal {...props} />
     </Suspense>
   )
 }

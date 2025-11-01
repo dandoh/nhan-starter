@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
-import { orpc } from '@/orpc/client'
+import { serverFnCreateConversation } from '@/serverFns/conversations'
 
 export const Route = createFileRoute('/_authed/new-chat')({
   component: NewChatPage,
@@ -26,8 +26,10 @@ function NewChatPage() {
     setIsCreating(true)
     try {
       // Create a new conversation with the initial prompt
-      const conversation = await orpc.createConversation.call({
-        initialPrompt: input.trim(),
+      const conversation = await serverFnCreateConversation({
+        data: {
+          initialPrompt: input.trim(),
+        },
       })
 
       // Navigate to the conversation detail page

@@ -11,8 +11,8 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import type { UIMessage } from 'ai'
-import { client } from '@/orpc/client'
 import { MessageSquare, User, Bot, Send, AlertCircle, Plus } from 'lucide-react'
+import { serverFnGetConversation } from '@/serverFns/conversations'
 
 const useEffectOnce = (fn: () => void) => {
   const ref = useRef(false)
@@ -28,8 +28,10 @@ export const Route = createFileRoute('/_authed/conversations/$conversationId')({
   component: ConversationPage,
   ssr: false,
   loader: async ({ params }) => {
-    const conversation = await client.getConversation({
-      conversationId: params.conversationId,
+    const conversation = await serverFnGetConversation({
+      data: {
+        conversationId: params.conversationId,
+      },
     })
     return { conversation }
   },

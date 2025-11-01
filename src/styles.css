@@ -1,16 +1,16 @@
 /* =========================================================
-   SHADCN THEME — "Research Pro (Purple Edition)"
-   Purpose: Data-driven, analytical, professional application
-   Font: Onest (unchanged)
+   SHADCN THEME — "Airtable"
+   Purpose: Clean, modern, data-driven interface matching Airtable's design
+   Font: IBM Plex Sans (professional, scientific, research-oriented)
    ========================================================= */
 
-   @import url('https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap');
+   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&display=swap');
    @import 'tailwindcss';
    @import 'tw-animate-css';
-   
+
    @plugin 'tailwind-scrollbar';
    @custom-variant dark (&:is(.dark *));
-   
+
    @layer base {
      * {
        @apply border-border outline-ring/50 transition-colors duration-150 ease-in-out;
@@ -18,152 +18,148 @@
      body {
        @apply bg-background text-foreground antialiased leading-relaxed;
      }
-   
-     [data-slot="label"] {
-       @apply font-medium text-sm text-foreground/90;
-     }
-   
-     [data-slot="label"]:has(+ *) {
-       @apply text-xs text-muted-foreground;
-     }
-   }
-   
+  }
+
    /* =========================
-      LIGHT MODE — Professional + Purple
+      LIGHT MODE — Airtable
       ========================= */
    :root {
-     --font-sans: "Onest", "Onest Placeholder", sans-serif;
-     --font-serif: "Onest", "Onest Placeholder", sans-serif;
-     --font-mono: ui-monospace, monospace;
-   
-     --radius: 0.375rem; /* Tight and precise */
+     --font-sans: "IBM Plex Sans", "IBM Plex Sans Placeholder", sans-serif;
+     --font-serif: "IBM Plex Sans", "IBM Plex Sans Placeholder", sans-serif;
+     --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+     --radius: 0.375rem; /* Clean and precise */
      --spacing-base: 0.875rem;
-   
-     /* Cool, neutral foundation */
-     --background: rgb(252, 252, 252);
-     --foreground: rgb(26, 25, 31);
-   
-     --card: rgb(252, 252, 252);
-     --card-foreground: rgb(26, 25, 31);
-     --popover: rgb(252, 252, 252);
-     --popover-foreground: rgb(26, 25, 31);
-   
-     /* Purple core — confident, analytical */
-     --primary: rgb(115, 77, 230); /* mid violet */
-     --primary-foreground: rgb(252, 252, 252);
-   
-     /* Subtle contrast surfaces */
-     --secondary: rgb(243, 241, 248);
-     --secondary-foreground: rgb(36, 34, 43);
-   
-     /* Muted / supporting tones */
-     --muted: rgb(246, 245, 250);
-     --muted-foreground: rgb(102, 97, 115);
-   
-     /* Accent states — light lavender highlights */
-     --accent: rgb(237, 234, 251);
-     --accent-foreground: rgb(36, 34, 43);
-   
-     /* Destructive / warnings */
-     --destructive: rgb(220, 53, 69);
-     --destructive-foreground: rgb(252, 252, 252);
-   
-     /* Inputs / borders */
-     --interactive: rgb(246, 245, 250);
-     --border: rgb(230, 228, 236);
-     --input: rgb(232, 230, 238);
-     --ring: rgb(138, 89, 255); /* bright focus purple */
-   
-     /* Tables + charts */
-     --table-header-foreground: rgb(98, 94, 121);
-     --chart-1: rgb(138, 89, 255);
-     --chart-2: rgb(171, 98, 255);
-     --chart-3: rgb(234, 82, 174);
-     --chart-4: rgb(251, 146, 60);
-     --chart-5: rgb(63, 196, 121);
-   
-     /* Sidebar */
-     --sidebar: rgb(245 245 245);
-     --sidebar-foreground: rgb(36, 34, 43);
-     --sidebar-primary: rgb(138, 89, 255);
-     --sidebar-primary-foreground: rgb(252, 252, 252);
-     --sidebar-accent: rgb(242, 239, 250);
-     --sidebar-accent-foreground: rgb(36, 34, 43);
-     --sidebar-border: rgb(230, 228, 236);
-     --sidebar-ring: rgb(138, 89, 255);
-   
-     /* Custom accents */
-     --tech-badge: rgb(209, 255, 102);
-     --tech-badge-foreground: rgb(26, 25, 31);
-     --color-error: rgb(220, 53, 69);
+
+    /* Main content area - gray/blue-ish background */
+    --background: oklch(0.97 0.005 260); /* Airtable's main content background */
+    --foreground: oklch(0.15 0 0);
+
+    /* Cards/data cells - white */
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.15 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.15 0 0);
+
+    /* Airtable's darker blue */
+    --primary: oklch(0.548 0.06 263.7); /* Darker blue - much more subtle */
+    --primary-foreground: oklch(1 0 0);
+
+    /* Subtle gray surfaces */
+    --secondary: oklch(0.98 0 0);
+    --secondary-foreground: oklch(0.25 0 0);
+
+    /* Muted / supporting tones */
+    --muted: oklch(0.98 0 0);
+    --muted-foreground: oklch(0.45 0 0);
+
+    /* Accent states — light blue highlights */
+    --accent: oklch(0.95 0.03 250);
+    --accent-foreground: oklch(0.15 0 0);
+
+    /* Destructive / warnings */
+    --destructive: oklch(0.628 0.258 29.233);
+    --destructive-foreground: oklch(1 0 0);
+
+    /* Inputs / borders - Airtable's subtle borders */
+    --interactive: oklch(0.98 0 0);
+    --border: oklch(0.9 0 0);
+    --input: oklch(0.9 0 0);
+    --ring: oklch(0.548 0.06 263.7); /* Darker blue focus ring */
+
+    /* Tables + charts */
+    --table-header-foreground: oklch(0.45 0 0);
+    --chart-1: oklch(0.548 0.183 263.7); /* Darker blue */
+    --chart-2: oklch(0.6 0.15 260); /* Blue */
+    --chart-3: oklch(0.65 0.25 290); /* Purple */
+    --chart-4: oklch(0.7 0.15 55); /* Orange */
+    --chart-5: oklch(0.65 0.2 145); /* Green */
+
+    /* Sidebar - pure white */
+    --sidebar: oklch(1 0 0);
+    --sidebar-foreground: oklch(0.15 0 0);
+    --sidebar-primary: oklch(0.548 0.06 263.7);
+    --sidebar-primary-foreground: oklch(1 0 0);
+    --sidebar-accent: oklch(0.98 0 0); /* Light gray for selected sidebar items */
+    --sidebar-accent-foreground: oklch(0.15 0 0);
+    --sidebar-border: oklch(0.9 0 0);
+    --sidebar-ring: oklch(0.548 0.06 263.7);
+
+    /* Custom accents */
+    --tech-badge: oklch(0.85 0.15 120);
+    --tech-badge-foreground: oklch(0.15 0.01 0);
+    --color-error: oklch(0.628 0.258 29.233);
    }
-   
+
    /* =========================
-      DARK MODE — Deep Analytical Purple
+      DARK MODE — Airtable Dark
       ========================= */
-   .dark {
-     --background: rgb(15, 14, 20);
-     --foreground: rgb(238, 237, 245);
-   
-     --card: rgb(22, 21, 29);
-     --card-foreground: rgb(238, 237, 245);
-     --popover: rgb(22, 21, 29);
-     --popover-foreground: rgb(238, 237, 245);
-   
-     --primary: rgb(159, 112, 255); /* Bright lavender */
-     --primary-foreground: rgb(252, 252, 252);
-   
-     --secondary: rgb(36, 34, 43);
-     --secondary-foreground: rgb(238, 237, 245);
-   
-     --muted: rgb(42, 40, 50);
-     --muted-foreground: rgb(160, 155, 175);
-   
-     --accent: rgb(52, 48, 63);
-     --accent-foreground: rgb(238, 237, 245);
-   
-     --destructive: rgb(239, 68, 68);
-     --destructive-foreground: rgb(252, 252, 252);
-   
-     --interactive: rgb(36, 34, 43);
-     --border: rgb(52, 50, 61);
-     --input: rgb(54, 52, 63);
-     --ring: rgb(171, 98, 255);
-   
-     --table-header-foreground: rgb(170, 165, 190);
-     --chart-1: rgb(171, 98, 255);
-     --chart-2: rgb(203, 120, 255);
-     --chart-3: rgb(236, 72, 153);
-     --chart-4: rgb(255, 184, 77);
-     --chart-5: rgb(82, 217, 130);
-   
-     --sidebar: rgb(22, 21, 29);
-     --sidebar-foreground: rgb(238, 237, 245);
-     --sidebar-primary: rgb(171, 98, 255);
-     --sidebar-primary-foreground: rgb(252, 252, 252);
-     --sidebar-accent: rgb(36, 34, 43);
-     --sidebar-accent-foreground: rgb(238, 237, 245);
-     --sidebar-border: rgb(52, 50, 61);
-     --sidebar-ring: rgb(171, 98, 255);
-   
-     --tech-badge: rgb(209, 255, 102);
-     --tech-badge-foreground: rgb(26, 25, 31);
-     --color-error: rgb(239, 68, 68);
-   }
-   
+  .dark {
+    /* Main content area - dark gray/blue-ish background */
+    --background: oklch(0.15 0.01 260);
+    --foreground: oklch(0.96 0 0);
+
+    /* Cards/data cells - dark gray */
+    --card: oklch(0.2 0 0);
+    --card-foreground: oklch(0.96 0 0);
+    --popover: oklch(0.2 0 0);
+    --popover-foreground: oklch(0.96 0 0);
+
+    --primary: oklch(0.6 0.15 260); /* Darker blue for dark mode */
+    --primary-foreground: oklch(1 0 0);
+
+    --secondary: oklch(0.22 0 0);
+    --secondary-foreground: oklch(0.96 0 0);
+
+    --muted: oklch(0.22 0 0);
+    --muted-foreground: oklch(0.65 0 0);
+
+    --accent: oklch(0.25 0.05 260);
+    --accent-foreground: oklch(0.96 0 0);
+
+    --destructive: oklch(0.628 0.258 29.233);
+    --destructive-foreground: oklch(1 0 0);
+
+    --interactive: oklch(0.22 0 0);
+    --border: oklch(0.35 0 0);
+    --input: oklch(0.35 0 0);
+    --ring: oklch(0.6 0.15 260);
+
+    --table-header-foreground: oklch(0.65 0 0);
+    --chart-1: oklch(0.6 0.15 260);
+    --chart-2: oklch(0.65 0.12 260);
+    --chart-3: oklch(0.7 0.15 290);
+    --chart-4: oklch(0.7 0.15 55);
+    --chart-5: oklch(0.7 0.15 145);
+
+    /* Sidebar - darker but still distinct from background */
+    --sidebar: oklch(0.18 0.01 260);
+    --sidebar-foreground: oklch(0.96 0 0);
+    --sidebar-primary: oklch(0.6 0.15 260);
+    --sidebar-primary-foreground: oklch(1 0 0);
+    --sidebar-accent: oklch(0.22 0.01 260);
+    --sidebar-accent-foreground: oklch(0.96 0 0);
+    --sidebar-border: oklch(0.35 0 0);
+    --sidebar-ring: oklch(0.6 0.15 260);
+
+    --tech-badge: oklch(0.85 0.15 120);
+    --tech-badge-foreground: oklch(0.15 0.01 0);
+    --color-error: oklch(0.628 0.258 29.233);
+  }
+
    /* =========================
       INLINE MAPPINGS
       ========================= */
    @theme inline {
-     --font-sans: "Onest", "Onest Placeholder", sans-serif;
-     --font-serif: "Onest", "Onest Placeholder", sans-serif;
-     --font-mono: ui-monospace, monospace;
-   
+     --font-sans: "IBM Plex Sans", "IBM Plex Sans Placeholder", sans-serif;
+     --font-serif: "IBM Plex Sans", "IBM Plex Sans Placeholder", sans-serif;
+     --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
      --radius-sm: calc(var(--radius) - 2px);
      --radius-md: var(--radius);
      --radius-lg: calc(var(--radius) + 2px);
      --radius-xl: calc(var(--radius) + 4px);
-   
+
      --color-background: var(--background);
      --color-foreground: var(--foreground);
      --color-primary: var(--primary);
