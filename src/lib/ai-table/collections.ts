@@ -27,8 +27,6 @@ import { queryCollectionOptions } from '@tanstack/query-db-collection'
 import {
   createPacedMutations,
   debounceStrategy,
-  queueStrategy,
-  createTransaction,
   createCollection,
 } from '@tanstack/db'
 
@@ -48,6 +46,7 @@ export const tablesCollection = createCollection(
       const { modified: newTable } = transaction.mutations[0]
       await serverFnCreateTable({
         data: {
+          id: newTable.id,
           name: newTable.name,
         },
       })
@@ -76,34 +75,60 @@ export const tablesCollection = createCollection(
   }),
 )
 
-export const updateTableColumnSizing = createPacedMutations<
-  {
-    tableId: string
-    columnSizing: Record<string, number>
-  },
-  AiTable
->({
-  onMutate: ({ tableId, columnSizing }) => {
-    tablesCollection.update(tableId, (draft) => {
-      draft.columnSizing = columnSizing
-    })
-  },
-
-  mutationFn: async ({ transaction }) => {
-    for (const mutation of transaction.mutations) {
-      const { original, changes, modified } = mutation
-      await serverFnUpdateTable({
-        data: {
-          tableId: (original as AiTable).id,
-          ...changes,
-        },
+// Helper function to create table update mutations
+function createTableUpdateMutation<Key extends keyof AiTable>(
+  fieldName: Key,
+  updateDraft: (draft: AiTable, value: AiTable[Key]) => void,
+  debounceWait?: number,
+) {
+  return createPacedMutations<
+    {
+      tableId: string
+    } & Record<Key, AiTable[Key]>,
+    AiTable
+  >({
+    onMutate: ({ tableId, ...rest }) => {
+      const value = rest[fieldName] as AiTable[Key]
+      tablesCollection.update(tableId, (draft) => {
+        updateDraft(draft, value)
       })
+    },
 
-      tablesCollection.utils.writeUpdate(modified)
-    }
+    mutationFn: async ({ transaction }) => {
+      for (const mutation of transaction.mutations) {
+        const { original, changes, modified } = mutation
+        await serverFnUpdateTable({
+          data: {
+            tableId: (original as AiTable).id,
+            ...changes,
+          },
+        })
+
+        tablesCollection.utils.writeUpdate(modified)
+      }
+    },
+    strategy: debounceStrategy({ wait: debounceWait || 500 }),
+  })
+}
+
+export const updateTableColumnSizing =
+  createTableUpdateMutation<'columnSizing'>('columnSizing', (draft, value) => {
+    draft.columnSizing = value
+  })
+
+export const updateTableName = createTableUpdateMutation<'name'>(
+  'name',
+  (draft, value) => {
+    draft.name = value
   },
-  strategy: debounceStrategy({ wait: 500 }),
-})
+)
+
+export const updateTableDescription = createTableUpdateMutation<'description'>(
+  'description',
+  (draft, value) => {
+    draft.description = value
+  },
+)
 
 // ============================================================================
 // Table-Specific Collections Factory

@@ -58,7 +58,7 @@
     --accent-foreground: oklch(0.15 0 0);
 
     /* Destructive / warnings */
-    --destructive: oklch(0.628 0.258 29.233);
+    --destructive: oklch(0.5 0.199 28.536);
     --destructive-foreground: oklch(1 0 0);
 
     /* Inputs / borders - Airtable's subtle borders */

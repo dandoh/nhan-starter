@@ -1,14 +1,16 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState, useEffect } from 'react'
-import { Sparkles } from 'lucide-react'
+import { useEffect } from 'react'
 import { useSidebar } from '@/components/ui/sidebar'
 import { AiTable } from '@/components/ai-table/AiTable'
 import { AiChat } from '@/components/ai-chat/AiChat'
-import { Button } from '@/components/ui/button'
-import { toast } from 'sonner'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { TopNav, AppPageWrapper } from '@/components/AppPageWrapper'
-import { serverFnTriggerComputeAllCells } from '@/serverFns/ai-tables'
-import { tablesCollection } from '@/lib/ai-table/collections'
+import {
+  tablesCollection,
+  updateTableName,
+  updateTableDescription,
+} from '@/lib/ai-table/collections'
 import { eq, useLiveQuery } from '@tanstack/react-db'
 
 export const Route = createFileRoute('/_authed/tables/$tableId')({
@@ -19,7 +21,6 @@ export const Route = createFileRoute('/_authed/tables/$tableId')({
 function TableEditorPage() {
   const { tableId } = Route.useParams()
   const { setOpen: setSidebarOpen } = useSidebar()
-  const [isComputing, setIsComputing] = useState(false)
   const { data: table } = useLiveQuery((q) =>
     q
       .from({ table: tablesCollection })
@@ -33,24 +34,20 @@ function TableEditorPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const handleComputeAllCells = async () => {
-    setIsComputing(true)
-    try {
-      const result = await serverFnTriggerComputeAllCells({
-        data: {
-          tableId,
-        },
-      })
-      toast.success(result.message || 'AI computation started', {
-        description: `Computing ${result.triggered} cells`,
-      })
-    } catch (error) {
-      toast.error('Failed to trigger AI computation', {
-        description: error instanceof Error ? error.message : 'Unknown error',
-      })
-    } finally {
-      setIsComputing(false)
+  const handleNameChange = (value: string) => {
+    if (!table) return
+    if (value !== table.name) {
+      updateTableName({ tableId: table.id, name: value })
     }
+  }
+
+  const handleDescriptionChange = (value: string) => {
+    if (!table) return
+    const descriptionValue = value || null
+    updateTableDescription({
+      tableId: table.id,
+      description: descriptionValue,
+    })
   }
 
   return (
@@ -67,23 +64,35 @@ function TableEditorPage() {
         {/* Table content */}
         <div className="flex flex-col flex-1 min-w-0">
           <div className="flex-1 overflow-hidden p-4">
-            <div className="h-full flex flex-col">
+            <div className="h-full flex flex-col space-y-2">
+              {/* Name and Description Section */}
+              <div className="shrink-0 space-y-2 ">
+                <div className="">
+                  <Input
+                    value={table?.name || ''}
+                    onChange={(e) => handleNameChange(e.target.value)}
+                    placeholder="Table name"
+                    className="!text-xl font-semibold h-auto px-1 py-2 border-none shadow-none 
+                    hover:ring-primary/50 hover:ring-1 
+                    focus-visible:ring-primary focus-visible:ring-1"
+                  />
+                </div>
+                {/* <div className="">
+                  <Input
+                    value={table?.description || ''}
+                    onChange={(e) => handleDescriptionChange(e.target.value)}
+                    placeholder="Add a description..."
+                    className="px-1 border-none shadow-none 
+                    hover:ring-primary/50 hover:ring-1 hover:ring-inset
+                    overflow-hidden
+                    focus-visible:ring-primary focus-visible:ring-1 focus-visible:ring-inset min-h-0 text-foreground/80"
+                  />
+                </div> */}
+              </div>
               {/* Table Block - scrollable */}
               <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-                {table && <AiTable tableId={tableId} />}
+                <AiTable tableId={tableId} />
               </div>
-
-              {/* <div className="flex items-center gap-2 mt-4 shrink-0">
-                <Button
-                  onClick={handleComputeAllCells}
-                  variant="outline"
-                  size="sm"
-                  disabled={isComputing}
-                >
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Compute All AI Cells
-                </Button>
-              </div> */}
             </div>
           </div>
         </div>

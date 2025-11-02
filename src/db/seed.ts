@@ -6,6 +6,7 @@ import {
   aiTableColumns,
   aiTableRecords,
   aiTableCells,
+  aiConversations,
 } from './schema'
 import { eq } from 'drizzle-orm'
 
@@ -36,18 +37,11 @@ async function seed() {
     console.log('✅ User already exists:', user.email)
   }
 
+  // Delete all conversations
+  await db.delete(aiConversations).where(eq(aiConversations.userId, user.id))
+
   // Delete all tables
   await db.delete(aiTables).where(eq(aiTables.userId, user.id))
-
-  // 2. Delete existing table if it exists
-  const existingTable = await db.query.aiTables.findFirst({
-    where: eq(aiTables.id, SEED_TABLE_ID),
-  })
-
-  if (existingTable) {
-    await db.delete(aiTables).where(eq(aiTables.id, SEED_TABLE_ID))
-    console.log('🗑️  Deleted existing table:', SEED_TABLE_ID)
-  }
 
   // 3. Create new Stock Portfolio Analysis table
   const [table] = await db

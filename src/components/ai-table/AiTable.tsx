@@ -36,6 +36,7 @@ import { useDebouncer } from '@tanstack/react-pacer/debouncer'
 import { Skeleton } from '@/components/ui/skeleton'
 
 import React from 'react'
+import { cn } from '@/lib/utils'
 
 interface TableBlockWrapperProps {
   tableId: string
@@ -193,7 +194,7 @@ function AiTableInternal({
     defaultColumn: {
       size: 200,
       minSize: 100,
-      maxSize: 400,
+      maxSize: 600,
     },
     state: {
       columnSizing: aiTable.columnSizing || {},
@@ -222,9 +223,10 @@ function AiTableInternal({
     <div className="flex flex-row min-w-0">
       <div className="flex gap-2 flex-1 min-w-0 overflow-auto">
         <Table
+          className="min-w-full"
           style={{
             ...columnSizeVars,
-            width: table.getTotalSize(),
+            ...(aiColumns.length > 1 ? { width: table.getTotalSize() } : {}),
           }}
         >
           <TableHeader>
@@ -279,17 +281,17 @@ function AiTableInternal({
             {/* Add Record Row */}
             <TableRow className="hover:bg-transparent">
               <TableCell
-                colSpan={tableColumns.length}
+                colSpan={table.getAllLeafColumns().length}
                 className="p-0 !border-r-0 !border-b-0"
               >
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-10 w-full justify-start hover:bg-muted/70 text-muted-foreground hover:text-foreground border-0 rounded-none font-normal px-2 cursor-pointer"
+                  className="h-10 w-full justify-start hover:bg-muted/70 text-muted-foreground hover:text-foreground border-0 rounded-none font-normal px-2 cursor-pointer "
                   onClick={handleAddRow}
                 >
                   <Plus className="size-4 mr-2" />
-                  Add record
+                  Add row
                 </Button>
               </TableCell>
             </TableRow>
@@ -364,11 +366,12 @@ function Rows({ table }: { table: TanTable<GridRow> }) {
               return (
                 <TableCell
                   key={cell.id}
-                  className={
+                  className={cn(
                     cell.column.id === '__add_column__'
-                      ? 'w-12 min-w-12 p-0 !border-r-0 !border-b-0'
-                      : 'p-1'
-                  }
+                      ? 'w-12 min-w-12 p-0'
+                      : 'p-0',
+                    'hover:bg-muted/50',
+                  )}
                   style={
                     cell.column.id === '__add_column__'
                       ? undefined
