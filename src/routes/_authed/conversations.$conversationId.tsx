@@ -56,7 +56,6 @@ function ConversationPage() {
   })
 
   useEffectOnce(() => {
-    console.log('trigger this')
     if (status === 'ready' && existingMessages.length === 1) {
       sendMessage()
     }

@@ -25,7 +25,7 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command'
-import { Calendar as CalendarIcon, X } from 'lucide-react'
+import { Calendar as CalendarIcon, X, Type, FileText, Tag, Tags } from 'lucide-react'
 import { format, parse, isValid } from 'date-fns'
 import { cn } from '@/lib/utils'
 import type {
@@ -42,7 +42,6 @@ import {
   multiSelectConfigSchema,
   dateConfigSchema,
 } from './output-types'
-import { getBadgeColors } from './formatters'
 
 // ============================================================================
 // Type Definitions
@@ -60,7 +59,8 @@ export interface EditableCellProps {
 export interface OutputTypeDefinition {
   id: OutputType
   label: string
-  icon: string
+  icon: React.ComponentType<{ className?: string }>
+  tooltip: string
   description: string
 
   // Config validation schema
@@ -163,7 +163,8 @@ function formatDateValue(
 const TEXT_TYPE: OutputTypeDefinition = {
   id: 'text',
   label: '📝 Text - Brief single-line text',
-  icon: '📝',
+  icon: Type,
+  tooltip: 'Single-line text',
   description: 'A brief single-line text response',
 
   configSchema: textConfigSchema,
@@ -196,7 +197,8 @@ const TEXT_TYPE: OutputTypeDefinition = {
 const LONG_TEXT_TYPE: OutputTypeDefinition = {
   id: 'long_text',
   label: '📄 Long Text - Multi-paragraph text',
-  icon: '📄',
+  icon: FileText,
+  tooltip: 'Multi-paragraph text',
   description: 'A detailed multi-paragraph text response',
 
   configSchema: longTextConfigSchema,
@@ -230,7 +232,8 @@ const LONG_TEXT_TYPE: OutputTypeDefinition = {
 const SINGLE_SELECT_TYPE: OutputTypeDefinition = {
   id: 'single_select',
   label: '🏷️ Single Select - One choice from options',
-  icon: '🏷️',
+  icon: Tag,
+  tooltip: 'Single choice',
   description: 'AI chooses one value, displayed as a colored badge',
 
   configSchema: singleSelectConfigSchema,
@@ -316,7 +319,8 @@ const SINGLE_SELECT_TYPE: OutputTypeDefinition = {
 const MULTI_SELECT_TYPE: OutputTypeDefinition = {
   id: 'multi_select',
   label: '🏷️ Multi Select - Multiple choices',
-  icon: '🏷️',
+  icon: Tags,
+  tooltip: 'Multiselect',
   description: 'AI chooses multiple values, displayed as multiple badges',
 
   configSchema: multiSelectConfigSchema,
@@ -533,7 +537,8 @@ const MULTI_SELECT_TYPE: OutputTypeDefinition = {
 const DATE_TYPE: OutputTypeDefinition = {
   id: 'date',
   label: '📅 Date - Date values',
-  icon: '📅',
+  icon: CalendarIcon,
+  tooltip: 'Date',
   description: 'Date values with formatted display',
 
   configSchema: dateConfigSchema,

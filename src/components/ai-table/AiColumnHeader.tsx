@@ -1,31 +1,46 @@
 import { useState } from 'react'
-import { Edit2, Trash2 } from 'lucide-react'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
+  Edit2,
+  Trash2,
+  ChevronDown,
+  Info,
+  ArrowDown,
+  ArrowUp,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from '@/components/ui/tooltip'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu'
 import { useLiveQuery } from '@tanstack/react-db'
 import type { TableCollections, Column } from '@/lib/ai-table/collections'
 import { useAppForm } from '@/hooks/use-app-form'
 import { toast } from 'sonner'
 import type { OutputType, OutputTypeConfig } from '@/lib/ai-table/output-types'
-import { getAllOutputTypes } from '@/lib/ai-table/output-type-registry'
+import {
+  getAllOutputTypes,
+  getOutputTypeDefinition,
+} from '@/lib/ai-table/output-type-registry'
+import { cn } from '@/lib/utils'
 
 type ColumnHeaderProps = {
   column: Column
   collections: TableCollections
 }
 
-export function AiColumnHeader({
-  column,
-  collections,
-}: ColumnHeaderProps) {
+type ViewMode = 'menu' | 'edit'
+
+export function AiColumnHeader({ column, collections }: ColumnHeaderProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [viewMode, setViewMode] = useState<ViewMode>('menu')
 
   // Get all columns to check if this is the last one
   const { data: allColumns = [] } = useLiveQuery((q) =>
@@ -34,13 +49,21 @@ export function AiColumnHeader({
 
   const isLastColumn = allColumns.length <= 1
 
-  // Parse existing config for form
+  // Get output type definition for icon
+  const outputType = (column.outputType || 'text') as OutputType
+  const outputTypeDef = getOutputTypeDefinition(outputType)
   const existingConfig = column.outputTypeConfig as OutputTypeConfig | null
 
   // Extract config values based on type
   const getOptionsString = () => {
-    if (existingConfig && 'options' in existingConfig && existingConfig.options) {
-      return existingConfig.options.map((opt: { value: string }) => opt.value).join(', ')
+    if (
+      existingConfig &&
+      'options' in existingConfig &&
+      existingConfig.options
+    ) {
+      return existingConfig.options
+        .map((opt: { value: string }) => opt.value)
+        .join(', ')
     }
     return ''
   }
@@ -95,7 +118,10 @@ export function AiColumnHeader({
           .filter((opt: string) => opt.length > 0)
           .map((opt: string) => ({ value: opt }))
 
-        const config: { options?: Array<{ value: string; color?: string }>; maxSelections?: number } = {
+        const config: {
+          options?: Array<{ value: string; color?: string }>
+          maxSelections?: number
+        } = {
           ...(optionsArray.length > 0 && { options: optionsArray }),
         }
 
@@ -125,6 +151,7 @@ export function AiColumnHeader({
         draft.outputTypeConfig = outputTypeConfig
       })
       setIsOpen(false)
+      toast.success('Column updated')
     },
   })
 
@@ -134,6 +161,11 @@ export function AiColumnHeader({
   }
 
   const handleDelete = () => {
+    if (column.primary) {
+      toast.error('Cannot delete primary column')
+      return
+    }
+
     if (isLastColumn) {
       toast.error('Cannot delete the last column')
       return
@@ -144,187 +176,239 @@ export function AiColumnHeader({
     toast.success('Column deleted')
   }
 
+  const handleEditClick = (e: Event) => {
+    e.preventDefault()
+    setViewMode('edit')
+  }
+
+  const handleDropdownOpenChange = (open: boolean) => {
+    setIsOpen(open)
+    if (open) {
+      setViewMode('menu')
+    }
+  }
+
   return (
     <>
       <div className="flex w-full items-center justify-between gap-2">
         <div className="flex items-center gap-2">
+          {/* Column type icon with tooltip */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex items-center justify-center">
+                <outputTypeDef.icon className="h-4 w-4 text-muted-foreground" />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>{outputTypeDef.tooltip}</p>
+            </TooltipContent>
+          </Tooltip>
+
+          {/* Column name */}
           <span>{column.name}</span>
         </div>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-6 w-6"
-          onClick={() => setIsOpen(true)}
-        >
-          <Edit2 className="h-4 w-4 opacity-30" />
-        </Button>
-      </div>
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Column</DialogTitle>
-          </DialogHeader>
+        {/* Right side: Info icon and dropdown menu */}
+        <div className="flex items-center gap-1">
+          {/* Description info icon with tooltip */}
+          {column.description && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus:outline-none"
+                  aria-label="Column description"
+                >
+                  <Info className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs">
+                <p>{column.description}</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
 
-          <div className="grid gap-4 py-4">
-            {/* Column Name */}
-            <form.AppField
-              name="name"
-              validators={{
-                onBlur: ({ value }) => {
-                  if (!value || value.trim().length === 0) {
-                    return 'Column name is required'
-                  }
-                  return undefined
-                },
-              }}
-            >
-              {(field) => (
-                <field.TextField label="Name" placeholder="Column name" />
-              )}
-            </form.AppField>
-
-            {/* Description */}
-            <form.AppField name="description">
-              {(field) => <field.TextArea label="Description" rows={2} />}
-            </form.AppField>
-
-            {/* AI Prompt */}
-            <form.AppField name="aiPrompt">
-              {(field) => (
-                <div className="grid gap-2">
-                  <div className="space-y-1">
-                    <Label>AI Prompt</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Define how AI should generate values for this column (optional)
-                    </p>
-                  </div>
-                  <field.TextArea label="" rows={3} />
-                </div>
-              )}
-            </form.AppField>
-
-            {/* Output Type */}
-            <form.AppField name="outputType">
-              {(field) => (
-                <div className="grid gap-2">
-                  <div className="space-y-1">
-                    <Label>Output Type</Label>
-                    <p className="text-xs text-muted-foreground">
-                      How should values be formatted in this column?
-                    </p>
-                  </div>
-                  <field.Select
-                    label=""
-                    placeholder="Select output type"
-                    values={getAllOutputTypes()}
-                  />
-                </div>
-              )}
-            </form.AppField>
-
-            {/* Output Type Config - Conditional based on outputType */}
-            <form.Subscribe selector={(state) => state.values.outputType}>
-              {(outputType) => (
-                <>
-                  {/* Options for single_select and multi_select */}
-                  {(outputType === 'single_select' ||
-                    outputType === 'multi_select') && (
-                    <form.AppField name="options">
-                      {(field) => (
-                        <div className="grid gap-2">
-                          <div className="space-y-1">
-                            <Label>Options (Optional)</Label>
-                            <p className="text-xs text-muted-foreground">
-                              Enter options separated by commas or new lines
-                              (e.g. "Low, Medium, High"). Leave empty for
-                              free-form suggestions.
-                            </p>
-                          </div>
-                          <field.TextArea label="" rows={3} />
-                        </div>
-                      )}
-                    </form.AppField>
-                  )}
-
-                  {/* Max selections for multi_select */}
-                  {outputType === 'multi_select' && (
-                    <form.AppField name="maxSelections">
-                      {(field) => (
-                        <field.TextField
-                          label="Max Selections (Optional)"
-                          placeholder="Leave empty for unlimited"
-                        />
-                      )}
-                    </form.AppField>
-                  )}
-
-                  {/* Date format for date */}
-                  {outputType === 'date' && (
-                    <form.AppField name="dateFormat">
-                      {(field) => (
-                        <field.RadioGroupField
-                          label="Date Format"
-                          options={[
-                            {
-                              value: 'YYYY-MM-DD',
-                              label: 'YYYY-MM-DD (2024-01-15)',
-                            },
-                            {
-                              value: 'MM/DD/YYYY',
-                              label: 'MM/DD/YYYY (01/15/2024)',
-                            },
-                            {
-                              value: 'DD/MM/YYYY',
-                              label: 'DD/MM/YYYY (15/01/2024)',
-                            },
-                            {
-                              value: 'MMM DD, YYYY',
-                              label: 'MMM DD, YYYY (Jan 15, 2024)',
-                            },
-                            {
-                              value: 'MMMM DD, YYYY',
-                              label: 'MMMM DD, YYYY (January 15, 2024)',
-                            },
-                          ]}
-                        />
-                      )}
-                    </form.AppField>
-                  )}
-                </>
-              )}
-            </form.Subscribe>
-          </div>
-
-          <DialogFooter className="flex items-center justify-between gap-2 sm:justify-between">
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleDelete}
-              disabled={isLastColumn}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </Button>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleCancel}>
-                Cancel
+          {/* Dropdown menu */}
+          <DropdownMenu open={isOpen} onOpenChange={handleDropdownOpenChange}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                aria-label="Column options"
+              >
+                <ChevronDown className="h-4 w-4" />
               </Button>
-              <form.AppForm>
-                <form.SubscribeButton
-                  label="Save"
-                  size="sm"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    form.handleSubmit()
-                  }}
-                />
-              </form.AppForm>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className={cn('w-80 p-0', {
+                'w-100': viewMode === 'edit',
+              })}
+            >
+              {viewMode === 'menu' ? (
+                <>
+                  <DropdownMenuItem onSelect={handleEditClick}>
+                    <Edit2 className="h-4 w-4" />
+                    <span>Edit column</span>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuSeparator />
+
+                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                    <ArrowDown className="h-4 w-4" />
+                    <span>Sort A → Z</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                    <ArrowUp className="h-4 w-4" />
+                    <span>Sort Z → A</span>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuSeparator />
+
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onSelect={(e) => {
+                      e.preventDefault()
+                      handleDelete()
+                    }}
+                    disabled={column.primary || isLastColumn}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>Delete column</span>
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                <div className="p-4 space-y-4">
+                  {/* Column Name */}
+                  <form.AppField
+                    name="name"
+                    validators={{
+                      onBlur: ({ value }) => {
+                        if (!value || value.trim().length === 0) {
+                          return 'Column name is required'
+                        }
+                        return undefined
+                      },
+                    }}
+                  >
+                    {(field) => (
+                      <field.TextField
+                        label="Column Name"
+                        placeholder="Enter column name"
+                      />
+                    )}
+                  </form.AppField>
+
+                  {/* Output Type */}
+                  <form.AppField name="outputType">
+                    {(field) => (
+                      <field.Select
+                        label="Output Type"
+                        placeholder="Select output type"
+                        values={getAllOutputTypes()}
+                      />
+                    )}
+                  </form.AppField>
+
+                  {/* Description */}
+                  <form.AppField name="description">
+                    {(field) => (
+                      <field.TextArea label="Description (Optional)" rows={2} />
+                    )}
+                  </form.AppField>
+
+                  {/* AI Prompt */}
+                  <form.AppField name="aiPrompt">
+                    {(field) => (
+                      <field.TextArea label="AI Prompt (Optional)" rows={3} />
+                    )}
+                  </form.AppField>
+
+                  {/* Output Type Config - Conditional based on outputType */}
+                  <form.Subscribe selector={(state) => state.values.outputType}>
+                    {(outputType) => (
+                      <>
+                        {/* Options for single_select and multi_select */}
+                        {(outputType === 'single_select' ||
+                          outputType === 'multi_select') && (
+                          <form.AppField name="options">
+                            {(field) => (
+                              <field.TextArea
+                                label="Options (Optional)"
+                                rows={2}
+                              />
+                            )}
+                          </form.AppField>
+                        )}
+
+                        {/* Max selections for multi_select */}
+                        {outputType === 'multi_select' && (
+                          <form.AppField name="maxSelections">
+                            {(field) => (
+                              <field.TextField
+                                label="Max Selections (Optional)"
+                                placeholder="Leave empty for unlimited"
+                              />
+                            )}
+                          </form.AppField>
+                        )}
+
+                        {/* Date format for date */}
+                        {outputType === 'date' && (
+                          <form.AppField name="dateFormat">
+                            {(field) => (
+                              <field.RadioGroupField
+                                label="Date Format"
+                                options={[
+                                  {
+                                    value: 'YYYY-MM-DD',
+                                    label: 'YYYY-MM-DD',
+                                  },
+                                  {
+                                    value: 'MM/DD/YYYY',
+                                    label: 'MM/DD/YYYY',
+                                  },
+                                  {
+                                    value: 'DD/MM/YYYY',
+                                    label: 'DD/MM/YYYY',
+                                  },
+                                ]}
+                              />
+                            )}
+                          </form.AppField>
+                        )}
+                      </>
+                    )}
+                  </form.Subscribe>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCancel}
+                    >
+                      Cancel
+                    </Button>
+                    <form.AppForm>
+                      <form.SubscribeButton
+                        label="Save"
+                        size="sm"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          form.handleSubmit()
+                        }}
+                      />
+                    </form.AppForm>
+                  </div>
+                </div>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
     </>
   )
 }
-

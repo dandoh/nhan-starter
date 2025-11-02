@@ -9,8 +9,7 @@ import { toast } from 'sonner'
 import { TopNav, AppPageWrapper } from '@/components/AppPageWrapper'
 import { serverFnTriggerComputeAllCells } from '@/serverFns/ai-tables'
 import { tablesCollection } from '@/lib/ai-table/collections'
-import { useLiveQuery } from 'node_modules/@tanstack/react-db/dist/esm/useLiveQuery'
-import { eq } from '@tanstack/react-db'
+import { eq, useLiveQuery } from '@tanstack/react-db'
 
 export const Route = createFileRoute('/_authed/tables/$tableId')({
   ssr: false,
@@ -57,7 +56,10 @@ function TableEditorPage() {
   return (
     <AppPageWrapper>
       <TopNav
-        breadcrumbs={[{ label: 'Tables', href: '/tables' }, { label: table?.name ?? 'Untitled' }]}
+        breadcrumbs={[
+          { label: 'Tables', href: '/tables' },
+          { label: table?.name ?? 'Untitled' },
+        ]}
       />
 
       {/* Main content area */}

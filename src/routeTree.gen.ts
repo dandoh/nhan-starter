@@ -23,7 +23,6 @@ import { Route as AuthedTablesIndexRouteImport } from './routes/_authed/tables/i
 import { Route as DemoFormAddressRouteImport } from './routes/demo/form.address'
 import { Route as DemoApiTqTodosRouteImport } from './routes/demo/api.tq-todos'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
-import { Route as ApiAuthedApiDbChatApiRouteImport } from './routes/api/_authed-api/db-chat-api'
 import { Route as AuthedTablesTableIdRouteImport } from './routes/_authed/tables/$tableId'
 import { Route as AuthedConversationsConversationIdRouteImport } from './routes/_authed/conversations.$conversationId'
 import { Route as ApiAuthedApiChatConversationIdRouteImport } from './routes/api/_authed-api/chat.$conversationId'
@@ -97,11 +96,6 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAuthedApiDbChatApiRoute = ApiAuthedApiDbChatApiRouteImport.update({
-  id: '/api/_authed-api/db-chat-api',
-  path: '/api/db-chat-api',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthedTablesTableIdRoute = AuthedTablesTableIdRouteImport.update({
   id: '/tables/$tableId',
   path: '/tables/$tableId',
@@ -132,7 +126,6 @@ export interface FileRoutesByFullPath {
   '/demo/team': typeof DemoTeamRoute
   '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/tables/$tableId': typeof AuthedTablesTableIdRoute
-  '/api/db-chat-api': typeof ApiAuthedApiDbChatApiRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/demo/api/tq-todos': typeof DemoApiTqTodosRoute
   '/demo/form/address': typeof DemoFormAddressRoute
@@ -151,7 +144,6 @@ export interface FileRoutesByTo {
   '/demo/team': typeof DemoTeamRoute
   '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/tables/$tableId': typeof AuthedTablesTableIdRoute
-  '/api/db-chat-api': typeof ApiAuthedApiDbChatApiRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/demo/api/tq-todos': typeof DemoApiTqTodosRoute
   '/demo/form/address': typeof DemoFormAddressRoute
@@ -172,7 +164,6 @@ export interface FileRoutesById {
   '/demo/team': typeof DemoTeamRoute
   '/_authed/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/_authed/tables/$tableId': typeof AuthedTablesTableIdRoute
-  '/api/_authed-api/db-chat-api': typeof ApiAuthedApiDbChatApiRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/demo/api/tq-todos': typeof DemoApiTqTodosRoute
   '/demo/form/address': typeof DemoFormAddressRoute
@@ -193,7 +184,6 @@ export interface FileRouteTypes {
     | '/demo/team'
     | '/conversations/$conversationId'
     | '/tables/$tableId'
-    | '/api/db-chat-api'
     | '/api/auth/$'
     | '/demo/api/tq-todos'
     | '/demo/form/address'
@@ -212,7 +202,6 @@ export interface FileRouteTypes {
     | '/demo/team'
     | '/conversations/$conversationId'
     | '/tables/$tableId'
-    | '/api/db-chat-api'
     | '/api/auth/$'
     | '/demo/api/tq-todos'
     | '/demo/form/address'
@@ -232,7 +221,6 @@ export interface FileRouteTypes {
     | '/demo/team'
     | '/_authed/conversations/$conversationId'
     | '/_authed/tables/$tableId'
-    | '/api/_authed-api/db-chat-api'
     | '/api/auth/$'
     | '/demo/api/tq-todos'
     | '/demo/form/address'
@@ -247,7 +235,6 @@ export interface RootRouteChildren {
   ApiInngestRoute: typeof ApiInngestRoute
   DemoCareerRoute: typeof DemoCareerRoute
   DemoTeamRoute: typeof DemoTeamRoute
-  ApiAuthedApiDbChatApiRoute: typeof ApiAuthedApiDbChatApiRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   DemoApiTqTodosRoute: typeof DemoApiTqTodosRoute
   DemoFormAddressRoute: typeof DemoFormAddressRoute
@@ -354,13 +341,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/_authed-api/db-chat-api': {
-      id: '/api/_authed-api/db-chat-api'
-      path: '/api/db-chat-api'
-      fullPath: '/api/db-chat-api'
-      preLoaderRoute: typeof ApiAuthedApiDbChatApiRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_authed/tables/$tableId': {
       id: '/_authed/tables/$tableId'
       path: '/tables/$tableId'
@@ -416,7 +396,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiInngestRoute: ApiInngestRoute,
   DemoCareerRoute: DemoCareerRoute,
   DemoTeamRoute: DemoTeamRoute,
-  ApiAuthedApiDbChatApiRoute: ApiAuthedApiDbChatApiRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   DemoApiTqTodosRoute: DemoApiTqTodosRoute,
   DemoFormAddressRoute: DemoFormAddressRoute,

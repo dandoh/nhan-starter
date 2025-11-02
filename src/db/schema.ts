@@ -133,7 +133,7 @@ export const aiMessages = pgTable('ai_messages', {
   conversationId: uuid('conversation_id')
     .notNull()
     .references(() => aiConversations.id, { onDelete: 'cascade' }),
-  role: varchar('role', { length: 20 }).notNull(), // 'system' | 'user' | 'assistant'
+  role: varchar('role', { length: 20 }).$type<('system' | 'user' | 'assistant')>().notNull(), // 'system' | 'user' | 'assistant'
   parts: jsonb('parts').notNull().$type<any>(), // Array of UIMessagePart (text, tool calls, reasoning, files, etc.)
   metadata: jsonb('metadata').$type<any>(), // Optional custom metadata
   createdAt: timestamp('created_at', { withTimezone: true })
@@ -176,6 +176,16 @@ export const AI_TABLE_OUTPUT_TYPES = [
 
 export type AiTableOutputType = (typeof AI_TABLE_OUTPUT_TYPES)[number]
 
+// Zod schema for output type validation
+// Using z.union with z.literal ensures proper literal type inference
+export const aiTableOutputTypeSchema = z.union([
+  z.literal(AI_TABLE_OUTPUT_TYPES[0]),
+  z.literal(AI_TABLE_OUTPUT_TYPES[1]),
+  z.literal(AI_TABLE_OUTPUT_TYPES[2]),
+  z.literal(AI_TABLE_OUTPUT_TYPES[3]),
+  z.literal(AI_TABLE_OUTPUT_TYPES[4]),
+])
+
 export const aiTableColumns = pgTable('ai_table_columns', {
   id: uuid('id').primaryKey().defaultRandom(),
   tableId: uuid('table_id')
@@ -192,6 +202,7 @@ export const aiTableColumns = pgTable('ai_table_columns', {
     maxSelections?: number
     dateFormat?: string
   }>(),
+  primary: boolean('primary').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -199,7 +210,10 @@ export const aiTableColumns = pgTable('ai_table_columns', {
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
-}, (table) => [index('ai_table_columns_table_id_idx').on(table.tableId)])
+}, (table) => [
+  index('ai_table_columns_table_id_idx').on(table.tableId),
+  index('ai_table_columns_primary_idx').on(table.primary),
+])
 
 export type AiTableColumn = typeof aiTableColumns.$inferSelect
 export type NewAiTableColumn = typeof aiTableColumns.$inferInsert

@@ -8,6 +8,7 @@ import {
   aiTableColumns,
   aiTableRecords,
   aiTableCells,
+  aiTableOutputTypeSchema,
 } from '@/db/schema'
 import { eq, and, gt, sql, inArray, ne, isNotNull } from 'drizzle-orm'
 import { inngest } from '@/inngest/client'
@@ -63,6 +64,7 @@ const createTableDef = defineFunction({
         tableId: newTable.id,
         aiPrompt: '',
         outputTypeConfig: null,
+        primary: true,
       })
 
       return newTable
@@ -201,9 +203,7 @@ export const serverFnCreateColumn = createServerFn({
       tableId: z.string().uuid(),
       name: z.string().min(1).max(255),
       description: z.string().optional(),
-      outputType: z
-        .enum(['text', 'long_text', 'single_select', 'multi_select', 'date'])
-        .default('text'),
+      outputType: aiTableOutputTypeSchema.default('text'),
       aiPrompt: z.string().default(''),
       outputTypeConfig: z
         .object({
@@ -297,9 +297,7 @@ const updateColumnDef = defineFunction({
     columnId: z.string().uuid(),
     name: z.string().min(1).max(255).optional(),
     description: z.string().optional(),
-    outputType: z
-      .enum(['text', 'long_text', 'single_select', 'multi_select', 'date'])
-      .optional(),
+    outputType: aiTableOutputTypeSchema.optional(),
     aiPrompt: z.string().optional(),
     outputTypeConfig: z
       .object({
@@ -380,6 +378,11 @@ const deleteColumnDef = defineFunction({
 
     if (!column || column.table.userId !== context.user.id) {
       throw new Error('Column not found')
+    }
+
+    // Prevent deleting primary columns
+    if (column.primary) {
+      throw new Error('Cannot delete primary column')
     }
 
     // Prevent deleting the last column

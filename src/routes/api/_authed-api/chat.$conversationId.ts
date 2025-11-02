@@ -11,8 +11,8 @@ import {
 } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import {
-  convertToModelMessages,
-  streamText,
+  ToolLoopAgent,
+  createAgentUIStreamResponse,
   tool,
   stepCountIs,
   type UIMessage,
@@ -239,41 +239,31 @@ Be helpful in inferring the right column configuration based on user intent. If 
 You can use createColumn tool multiple times to create multiple columns.
 `
 
-        // Generate AI response with streaming (agent mode with looping)
-        
-        const result = streamText({
+        // Create agent with tools
+        const agent = new ToolLoopAgent({
           model: anthropic('claude-3-7-sonnet-latest'),
-          messages: convertToModelMessages(uiMessages),
+          instructions: systemPrompt,
           ...(tableId && {
             tools: {
               createColumn: createColumnTool,
             },
           }),
-          // stopWhen: (params) => {
-          //   console.log(params.steps[0].content[0].type);
-          //   return params.steps[0].toolCalls.length === 0;
-          // },
-          stopWhen: stepCountIs(1),
-
-          system: systemPrompt,
+          stopWhen: stepCountIs(20), // Allow up to 20 steps for tool calls
           experimental_telemetry: {
             isEnabled: true,
             tracer: getTracer(),
           },
         })
 
-        // Return streaming response
-        const response = result.toUIMessageStreamResponse({
-          originalMessages: uiMessages,
-          onFinish: async ({ messages: newMessages }) => {
+        // Return streaming response using the agent
+        const response = createAgentUIStreamResponse({
+          agent,
+          messages: uiMessages,
+          onFinish: async (args) => {
+            const { messages: newMessages, isAborted, isContinuation } = args
             // Wrap in transaction, use bulk insert
             try {
               await db.transaction(async (trx) => {
-                // Delete all existing messages
-                await trx
-                  .delete(aiMessages)
-                  .where(eq(aiMessages.conversationId, conversationId))
-
                 // Insert all new messages to database in bulk
                 if (newMessages.length > 0) {
                   await trx.insert(aiMessages).values(
