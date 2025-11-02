@@ -154,6 +154,56 @@ export const serverFnDeleteTable = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
   .handler(deleteTableDef.handler)
 
+/**
+ * Update table metadata (e.g., columnSizing)
+ */
+const updateTableDef = defineFunction({
+  input: z.object({
+    tableId: z.string().uuid(),
+    columnSizing: z.record(z.string(), z.number()).optional().nullable(),
+  }),
+  handler: async ({ data: input, context }) => {
+    // Verify table ownership
+    const table = await db.query.aiTables.findFirst({
+      where: and(
+        eq(aiTables.id, input.tableId),
+        eq(aiTables.userId, context.user.id),
+      ),
+    })
+
+    if (!table) {
+      throw new Error('Table not found')
+    }
+
+    const updatedFields = {
+      ...(input.columnSizing && {
+        columnSizing: input.columnSizing,
+      }),
+    }
+
+    if (Object.keys(updatedFields).length === 0) {
+      return table
+    }
+
+    const [updated] = await db
+      .update(aiTables)
+      .set(updatedFields)
+      .where(eq(aiTables.id, input.tableId))
+      .returning()
+
+    if (!updated) {
+      throw new Error('Failed to update table')
+    }
+
+    return updated
+  },
+})
+
+export const serverFnUpdateTable = createServerFn({ method: 'POST' })
+  .inputValidator(updateTableDef.input)
+  .middleware([authMiddleware])
+  .handler(updateTableDef.handler)
+
 // ============================================================================
 // Column Operations
 // ============================================================================

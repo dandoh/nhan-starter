@@ -70,7 +70,7 @@ function TableEditorPage() {
             <div className="h-full flex flex-col">
               {/* Table Block - scrollable */}
               <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-                <AiTable tableId={tableId} />
+                {table && <AiTable tableId={tableId} />}
               </div>
 
               {/* <div className="flex items-center gap-2 mt-4 shrink-0">
