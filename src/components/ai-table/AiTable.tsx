@@ -21,6 +21,7 @@ import {
 import { AiTableCell } from '@/components/ai-table/AiTableCell'
 import { AiColumnHeader } from '@/components/ai-table/AiColumnHeader'
 import type { Record as TableRecord } from '@/lib/ai-table/collections'
+import { AiTableColumn } from '@/db/schema'
 
 interface TableBlockWrapperProps {
   tableId: string
@@ -61,7 +62,7 @@ export function AiTable({ tableId }: TableBlockWrapperProps) {
       outputTypeConfig: {},
       createdAt: new Date(),
       updatedAt: new Date(),
-    })
+    } as AiTableColumn)
   }, [columnsCollection, tableId])
 
   // Handle adding a new row
@@ -121,7 +122,14 @@ export function AiTable({ tableId }: TableBlockWrapperProps) {
     })
 
     return [...dataColumns, addColumnColumn]
-  }, [columns, columnsCollection, recordsCollection, cellsCollection, tableId, handleAddColumn])
+  }, [
+    columns,
+    columnsCollection,
+    recordsCollection,
+    cellsCollection,
+    tableId,
+    handleAddColumn,
+  ])
 
   // Build table data - just records with id
   const tableData = useMemo<GridRow[]>(() => {
