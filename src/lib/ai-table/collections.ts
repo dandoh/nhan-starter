@@ -1,5 +1,3 @@
-import { createCollection } from '@tanstack/react-db'
-import { queryCollectionOptions } from '@tanstack/query-db-collection'
 import { queryClient } from '@/integrations/tanstack-query/root-provider'
 
 import type {
@@ -22,27 +20,28 @@ import {
   serverFnGetRecords,
   serverFnCreateRecord,
   serverFnDeleteRecord,
+  serverFnUpdateTable,
 } from '@/serverFns/ai-tables'
+import { queryCollectionOptions } from '@tanstack/query-db-collection'
 
-// Create a single query client instance for collections with no refetching
-
-// Re-export types for convenience
-export type Table = AiTable
-export type Column = AiTableColumn
-export type Record = AiTableRecord
-export type Cell = AiTableCell
+import {
+  createPacedMutations,
+  debounceStrategy,
+  queueStrategy,
+  createTransaction,
+  createCollection,
+} from '@tanstack/db'
 
 // ============================================================================
 // Tables List Collection
 // ============================================================================
-
 export const tablesCollection = createCollection(
-  queryCollectionOptions<Table>({
+  queryCollectionOptions<AiTable>({
     queryClient,
     queryKey: ['ai-tables', 'tables'],
     queryFn: async () => {
       const tables = await serverFnListTables({})
-      return tables as Table[]
+      return tables
     },
     getKey: (table) => table.id,
     onInsert: async ({ transaction }) => {
@@ -62,8 +61,49 @@ export const tablesCollection = createCollection(
         },
       })
     },
+
+    onUpdate: async ({ transaction }) => {
+      for (const mutation of transaction.mutations) {
+        const { original, changes } = mutation
+        await serverFnUpdateTable({
+          data: {
+            tableId: original.id,
+            ...changes,
+          },
+        })
+      }
+    },
   }),
 )
+
+export const updateTableColumnSizing = createPacedMutations<
+  {
+    tableId: string
+    columnSizing: Record<string, number>
+  },
+  AiTable
+>({
+  onMutate: ({ tableId, columnSizing }) => {
+    tablesCollection.update(tableId, (draft) => {
+      draft.columnSizing = columnSizing
+    })
+  },
+
+  mutationFn: async ({ transaction }) => {
+    for (const mutation of transaction.mutations) {
+      const { original, changes, modified } = mutation
+      await serverFnUpdateTable({
+        data: {
+          tableId: (original as AiTable).id,
+          ...changes,
+        },
+      })
+
+      tablesCollection.utils.writeUpdate(modified)
+    }
+  },
+  strategy: debounceStrategy({ wait: 500 }),
+})
 
 // ============================================================================
 // Table-Specific Collections Factory
@@ -72,7 +112,7 @@ export const tablesCollection = createCollection(
 export function createTableCollections(tableId: string) {
   // Cells collection (declared first so other collections can reference it)
   const cellsCollection = createCollection(
-    queryCollectionOptions<Cell>({
+    queryCollectionOptions<AiTableCell>({
       queryClient,
       queryKey: ['ai-tables', tableId, 'cells'],
       queryFn: async () => {
@@ -81,7 +121,7 @@ export function createTableCollections(tableId: string) {
             tableId,
           },
         })
-        return cells as Cell[]
+        return cells
       },
       getKey: (cell) => cell.id,
       onInsert: async ({ transaction }) => {
@@ -124,7 +164,7 @@ export function createTableCollections(tableId: string) {
 
   // Columns collection
   const columnsCollection = createCollection(
-    queryCollectionOptions<Column>({
+    queryCollectionOptions<AiTableColumn>({
       queryClient,
       queryKey: ['ai-tables', tableId, 'columns'],
       queryFn: async () => {
@@ -147,7 +187,6 @@ export function createTableCollections(tableId: string) {
             data: {
               tableId,
               name: newColumn.name,
-              type: newColumn.type,
               description: newColumn.description || undefined,
               outputType: newColumn.outputType,
               aiPrompt: newColumn.aiPrompt || '',
@@ -179,7 +218,6 @@ export function createTableCollections(tableId: string) {
             data: {
               columnId: original.id,
               name: modified.name,
-              type: modified.type,
               description: modified.description || undefined,
               outputType: modified.outputType,
               aiPrompt: modified.aiPrompt,
@@ -204,7 +242,7 @@ export function createTableCollections(tableId: string) {
 
   // Records collection
   const recordsCollection = createCollection(
-    queryCollectionOptions<Record>({
+    queryCollectionOptions<AiTableRecord>({
       queryClient,
       queryKey: ['ai-tables', tableId, 'records'],
       queryFn: async () => {

@@ -151,6 +151,7 @@ export const aiTables = pgTable('ai_tables', {
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   name: varchar('name', { length: 255 }).notNull(),
+  columnSizing: jsonb('column_sizing').$type<Record<string, number>>(),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
