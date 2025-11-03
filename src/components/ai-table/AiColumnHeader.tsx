@@ -6,6 +6,8 @@ import {
   Info,
   ArrowDown,
   ArrowUp,
+  Pin,
+  PinOff,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -21,7 +23,9 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { useLiveQuery } from '@tanstack/react-db'
-import type { TableCollections, Column } from '@/lib/ai-table/collections'
+import type { TableCollections } from '@/lib/ai-table/collections'
+import type { AiTableColumn as DbAiTableColumn } from '@/db/schema'
+import type { Column as TSColumn } from '@tanstack/react-table'
 import { useAppForm } from '@/hooks/use-app-form'
 import { toast } from 'sonner'
 import type { OutputType, OutputTypeConfig } from '@/lib/ai-table/output-types'
@@ -32,13 +36,14 @@ import {
 import { cn } from '@/lib/utils'
 
 type ColumnHeaderProps = {
-  column: Column
+  column: DbAiTableColumn
+  tanstackColumn?: TSColumn<any>;
   collections: TableCollections
 }
 
 type ViewMode = 'menu' | 'edit'
 
-export function AiColumnHeader({ column, collections }: ColumnHeaderProps) {
+export function AiColumnHeader({ column, tanstackColumn, collections }: ColumnHeaderProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('menu')
 
@@ -188,6 +193,9 @@ export function AiColumnHeader({ column, collections }: ColumnHeaderProps) {
     }
   }
 
+  const isPinnedLeft = tanstackColumn?.getIsPinned() === 'left'
+  const canPin = tanstackColumn?.getCanPin?.() ?? false
+
   return (
     <>
       <div className="flex w-full items-center justify-between gap-2">
@@ -248,6 +256,33 @@ export function AiColumnHeader({ column, collections }: ColumnHeaderProps) {
             >
               {viewMode === 'menu' ? (
                 <>
+                  {canPin && (
+                    <>
+                      <DropdownMenuItem
+                        onSelect={(e) => {
+                          if (!tanstackColumn) return
+                          if (isPinnedLeft) {
+                            tanstackColumn.pin(false)
+                          } else {
+                            tanstackColumn.pin('left')
+                          }
+                        }}
+                      >
+                        {isPinnedLeft ? (
+                          <>
+                            <PinOff className="h-4 w-4" />
+                            <span>Unpin</span>
+                          </>
+                        ) : (
+                          <>
+                            <Pin className="h-4 w-4" />
+                            <span>Pin left</span>
+                          </>
+                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
                   <DropdownMenuItem onSelect={handleEditClick}>
                     <Edit2 className="h-4 w-4" />
                     <span>Edit column</span>

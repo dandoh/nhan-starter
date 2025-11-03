@@ -67,6 +67,7 @@ async function seed() {
         outputType: 'text',
         aiPrompt: '',
         outputTypeConfig: null,
+        primary: true,
       },
       // Column: Sentiment (single_select)
       {

@@ -125,7 +125,7 @@ export const computeAiCell = inngest.createFunction(
     const aiResult = await step.run('generate-ai-value', async () => {
       try {
         const response = await generateObject({
-          model: anthropic('claude-3-5-sonnet-20241022'),
+          model: anthropic('claude-sonnet-4-0'),
           schema: responseSchema,
           prompt: contextString,
           experimental_telemetry: {
