@@ -108,18 +108,19 @@ export const AiTableCell = memo(function TableCell({
   const outputType = (column.outputType || 'text') as OutputType
   const outputTypeConfig = column.outputTypeConfig
   const outputTypeDef = getOutputTypeDefinition(outputType)
+  const EditableCell = outputTypeDef.EditableCell
 
-  // Pass raw value - deserialization is handled inside renderEditable
+  // Pass raw value - deserialization is handled inside EditableCell
   return (
     <div className="h-full w-full">
-      {outputTypeDef.renderEditable({
-        value: localValue,
-        config: outputTypeConfig,
-        onChange: handleChange,
-        onBlur: handleBlur,
-        onFocus: handleFocus,
-        isEditing,
-      })}
+      <EditableCell
+        value={localValue}
+        config={outputTypeConfig}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        onFocus={handleFocus}
+        isEditing={isEditing}
+      />
     </div>
   )
 })

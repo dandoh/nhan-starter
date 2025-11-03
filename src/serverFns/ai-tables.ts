@@ -27,6 +27,15 @@ const listTablesDef = defineFunction({
     const tables = await db.query.aiTables.findMany({
       where: eq(aiTables.userId, context.user.id),
       orderBy: (t, { desc }) => [desc(t.createdAt)],
+      with: {
+        user: {
+          columns: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
     })
 
     return tables
@@ -155,11 +164,13 @@ export const serverFnDeleteTable = createServerFn({ method: 'POST' })
   .handler(deleteTableDef.handler)
 
 /**
- * Update table metadata (e.g., columnSizing)
+ * Update table metadata (e.g., name, description, columnSizing)
  */
 const updateTableDef = defineFunction({
   input: z.object({
     tableId: z.string().uuid(),
+    name: z.string().min(1).max(255).optional(),
+    description: z.string().optional().nullable(),
     columnSizing: z.record(z.string(), z.number()).optional().nullable(),
   }),
   handler: async ({ data: input, context }) => {
@@ -176,7 +187,11 @@ const updateTableDef = defineFunction({
     }
 
     const updatedFields = {
-      ...(input.columnSizing && {
+      ...(input.name !== undefined && { name: input.name }),
+      ...(input.description !== undefined && {
+        description: input.description,
+      }),
+      ...(input.columnSizing !== undefined && {
         columnSizing: input.columnSizing,
       }),
     }

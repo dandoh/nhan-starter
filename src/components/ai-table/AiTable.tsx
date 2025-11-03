@@ -1,18 +1,20 @@
-import { useMemo, useCallback, useRef } from 'react'
-import { eq, useLiveQuery, usePacedMutations } from '@tanstack/react-db'
+import { useMemo, useCallback } from 'react'
+import { eq, useLiveQuery } from '@tanstack/react-db'
 import {
   type ColumnDef,
   ColumnSizingState,
   type Table as TanTable,
+  type Column as TSColumn,
   Updater,
   createColumnHelper,
   flexRender,
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { Plus } from 'lucide-react'
+import { Plus, Sparkles } from 'lucide-react'
 import { useTableSync } from '@/hooks/use-table-sync'
 import { Button } from '@/components/ui/button'
+import { serverFnTriggerComputeAllCells } from '@/serverFns/ai-tables'
 import {
   Table,
   TableBody,
@@ -32,10 +34,10 @@ import {
   AiTableColumn,
   AiTableRecord,
 } from '@/db/schema'
-import { useDebouncer } from '@tanstack/react-pacer/debouncer'
 import { Skeleton } from '@/components/ui/skeleton'
 
 import React from 'react'
+import { cn } from '@/lib/utils'
 
 interface TableBlockWrapperProps {
   tableId: string
@@ -45,6 +47,27 @@ type GridRow = AiTableRecord & { id: string }
 
 // Create column helper - defined outside component for stable reference
 const columnHelper = createColumnHelper<GridRow>()
+
+function getCommonPinningStyles(
+  column: TSColumn<GridRow>,
+): React.CSSProperties {
+  const isPinned = column.getIsPinned()
+
+  return {
+    left: isPinned === 'left' ? `${column.getStart('left')}px` : undefined,
+    right: isPinned === 'right' ? `${column.getAfter('right')}px` : undefined,
+  }
+}
+
+function getCommonPinningClasses(isPinned: boolean | string): string {
+  return cn(
+    isPinned ? 'sticky' : 'relative',
+    isPinned && 'bg-card z-20',
+    isPinned && 'border-r-0',
+    isPinned &&
+      "after:content-[''] after:absolute after:top-0 after:right-0 after:h-full after:w-px after:bg-border after:pointer-events-none",
+  )
+}
 
 function AiTableInternal({
   tableId,
@@ -63,6 +86,11 @@ function AiTableInternal({
   recordsCollection: ReturnType<typeof useTableSync>['recordsCollection']
   cellsCollection: ReturnType<typeof useTableSync>['cellsCollection']
 }) {
+  const [columnPinning, setColumnPinning] = React.useState<{
+    left?: string[]
+    right?: string[]
+  }>({})
+  const [isComputing, setIsComputing] = React.useState(false)
   // Handle adding a new column
   const handleAddColumn = useCallback(() => {
     columnsCollection.insert({
@@ -89,15 +117,33 @@ function AiTableInternal({
     })
   }, [recordsCollection, tableId, aiRecords.length])
 
+  // Handle compute AI
+  const handleComputeAI = useCallback(async () => {
+    setIsComputing(true)
+    try {
+      await serverFnTriggerComputeAllCells({
+        data: { tableId },
+      })
+    } catch (error) {
+      console.error('Failed to trigger AI computation:', error)
+    } finally {
+      setIsComputing(false)
+    }
+  }, [tableId])
+
   // Map DB columns to TanStack Table columns + Add Column button
   const tableColumns = useMemo<ColumnDef<GridRow>[]>(() => {
     const dataColumns = aiColumns.map((col) =>
       columnHelper.display({
+        meta: {
+          name: col.name,
+        },
         id: col.id,
         enableResizing: true,
-        header: () => (
+        header: (ctx) => (
           <AiColumnHeader
             column={col}
+            tanstackColumn={ctx.header.column as TSColumn<GridRow>}
             collections={{
               columnsCollection,
               recordsCollection,
@@ -193,12 +239,14 @@ function AiTableInternal({
     defaultColumn: {
       size: 200,
       minSize: 100,
-      maxSize: 400,
+      maxSize: 600,
     },
     state: {
       columnSizing: aiTable.columnSizing || {},
+      columnPinning,
     },
     onColumnSizingChange: saveColumnSizing,
+    onColumnPinningChange: setColumnPinning,
   })
 
   /**
@@ -216,57 +264,60 @@ function AiTableInternal({
       colSizes[`--col-${header.column.id}-size`] = header.column.getSize()
     }
     return colSizes
-  }, [table.getState().columnSizingInfo, table.getState().columnSizing])
+  }, [
+    table.getState().columnSizingInfo,
+    table.getState().columnSizing,
+    table.getState().columnPinning,
+  ])
 
   return (
-    <div className="flex flex-row min-w-0">
+    <div className="flex flex-col min-w-0">
       <div className="flex gap-2 flex-1 min-w-0 overflow-auto">
         <Table
+          className="min-w-full"
           style={{
             ...columnSizeVars,
-            width: table.getTotalSize(),
+            ...(aiColumns.length > 1 ? { width: table.getTotalSize() } : {}),
           }}
         >
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead
-                    key={header.id}
-                    className={
-                      header.id === '__add_column__'
-                        ? 'relative w-12 min-w-12 p-0 !border-r-0'
-                        : 'relative'
-                    }
-                    style={
-                      header.id === '__add_column__'
-                        ? undefined
-                        : {
-                            width: `calc(var(--header-${header.id}-size) * 1px)`,
+                {headerGroup.headers.map((header) => {
+                  const isPinned = header.column.getIsPinned()
+                  return (
+                    <TableHead
+                      key={header.id}
+                      className={cn(getCommonPinningClasses(!!isPinned))}
+                      style={{
+                        width: `calc(var(--header-${header.id}-size) * 1px)`,
+                        ...getCommonPinningStyles(header.column),
+                      }}
+                    >
+                      {/* <PinnableContent isPinned={!!isPinned}> */}
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
+                      {header.column.getCanResize() && (
+                        <div
+                          onDoubleClick={() => header.column.resetSize()}
+                          onMouseDown={header.getResizeHandler()}
+                          onTouchStart={header.getResizeHandler()}
+                          className={
+                            'absolute top-0 right-0 h-full w-1 cursor-col-resize select-none touch-none bg-transparent ' +
+                            (header.column.getIsResizing()
+                              ? 'border-r-primary border-r-2'
+                              : '')
                           }
-                    }
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                    {header.column.getCanResize() && (
-                      <div
-                        onDoubleClick={() => header.column.resetSize()}
-                        onMouseDown={header.getResizeHandler()}
-                        onTouchStart={header.getResizeHandler()}
-                        className={
-                          'absolute top-0 right-0 h-full w-1 cursor-col-resize select-none touch-none bg-transparent ' +
-                          (header.column.getIsResizing()
-                            ? 'border-r-primary border-r-2'
-                            : '')
-                        }
-                      />
-                    )}
-                  </TableHead>
-                ))}
+                        />
+                      )}
+                      {/* </PinnableContent> */}
+                    </TableHead>
+                  )
+                })}
               </TableRow>
             ))}
           </TableHeader>
@@ -279,22 +330,34 @@ function AiTableInternal({
             {/* Add Record Row */}
             <TableRow className="hover:bg-transparent">
               <TableCell
-                colSpan={tableColumns.length}
+                colSpan={table.getAllLeafColumns().length}
                 className="p-0 !border-r-0 !border-b-0"
               >
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-10 w-full justify-start hover:bg-muted/70 text-muted-foreground hover:text-foreground border-0 rounded-none font-normal px-2 cursor-pointer"
+                  className="h-10 w-full justify-start hover:bg-muted/70 text-muted-foreground hover:text-foreground border-0 rounded-none font-normal px-2 cursor-pointer "
                   onClick={handleAddRow}
                 >
                   <Plus className="size-4 mr-2" />
-                  Add record
+                  Add row
                 </Button>
               </TableCell>
             </TableRow>
           </TableBody>
         </Table>
+      </div>
+      {/* Run AI Cells Button - Below table, aligned right */}
+      <div className="flex justify-end mt-4">
+        <Button
+          onClick={handleComputeAI}
+          disabled={isComputing}
+          className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg"
+          size="lg"
+        >
+          <Sparkles className="size-4 mr-2" />
+          {isComputing ? 'Running...' : 'Run AI cells'}
+        </Button>
       </div>
     </div>
   )
@@ -361,25 +424,27 @@ function Rows({ table }: { table: TanTable<GridRow> }) {
               // for (let i = 0; i < 10000; i++) {
               //   Math.random()
               // }
+              const isPinned = cell.column.getIsPinned()
               return (
                 <TableCell
                   key={cell.id}
-                  className={
-                    cell.column.id === '__add_column__'
-                      ? 'w-12 min-w-12 p-0 !border-r-0 !border-b-0'
-                      : 'p-1'
-                  }
-                  style={
-                    cell.column.id === '__add_column__'
-                      ? undefined
-                      : {
-                          width: `calc(var(--col-${cell.column.id}-size) * 1px)`,
-                        }
-                  }
+                  className={cn(
+                    'hover:bg-muted',
+                    getCommonPinningClasses(!!isPinned),
+                    '!px-0 !py-0',
+                  )}
+                  style={{
+                    width: `calc(var(--col-${cell.column.id}-size) * 1px)`,
+                    ...(getCommonPinningStyles(
+                      cell.column,
+                    ) as React.CSSProperties),
+                  }}
                 >
+                  {/* <PinnableContent isPinned={!!isPinned}> */}
                   {cell.column.id === '__add_column__'
                     ? null
                     : flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  {/* </PinnableContent> */}
                 </TableCell>
               )
             })}
