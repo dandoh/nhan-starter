@@ -30,7 +30,7 @@ import {
   ToolInput,
   ToolOutput,
 } from '@/components/ai-elements/tool'
-import { useSuspenseQuery } from '@tanstack/react-query'
+import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
 import type { ToolUIPart } from 'ai'
 import type { ConversationContext } from '@/db/schema'
 import { serverFnGetConversationsForContext } from '@/serverFns/conversations'
@@ -85,12 +85,28 @@ function AiChatInternal({
   const conversation = conversations[0]
   const existingMessages = transformMessages(conversation.messages || [])
 
+  const queryClient = useQueryClient()
+
   const { messages, sendMessage, status, error } = useChat({
     id: conversation.id,
     transport: new DefaultChatTransport({
       api: `/api/chat/${conversation.id}`,
     }),
     messages: existingMessages,
+    onFinish: () => {
+      // Refresh columns, records, and cells after AI chat finishes (for table context)
+      if (context.type === 'table') {
+        queryClient.invalidateQueries({
+          queryKey: ['ai-tables', context.tableId, 'columns'],
+        })
+        queryClient.invalidateQueries({
+          queryKey: ['ai-tables', context.tableId, 'records'],
+        })
+        queryClient.invalidateQueries({
+          queryKey: ['ai-tables', context.tableId, 'cells'],
+        })
+      }
+    },
   })
 
   const handleSubmit = async (message: PromptInputMessage) => {

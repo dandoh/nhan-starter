@@ -55,79 +55,91 @@ async function seed() {
 
   console.log('✅ Created table:', table.name)
 
-  // 4. Create columns - one example of each output type
-  const columns = await db
-    .insert(aiTableColumns)
-    .values([
-      // Column: Ticker (text)
-      {
-        tableId: table.id,
-        name: 'Ticker',
-        description: 'Stock ticker symbol',
-        outputType: 'text',
-        aiPrompt: '',
-        outputTypeConfig: null,
-        primary: true,
+  // 4. Create columns - one example of each output type (insert one by one to maintain createdAt order)
+  const columnDefinitions = [
+    // Column: Ticker (text)
+    {
+      tableId: table.id,
+      name: 'Ticker',
+      description: 'Stock ticker symbol',
+      outputType: 'text',
+      aiPrompt: '',
+      outputTypeConfig: null,
+      primary: true,
+    },
+    // Column: Sentiment (single_select)
+    {
+      tableId: table.id,
+      name: 'Sentiment',
+      description: 'Market sentiment analysis',
+      outputType: 'single_select',
+      aiPrompt:
+        'Analyze the recent market sentiment and news for this stock. Choose one: Positive, Negative, or Neutral.',
+      outputTypeConfig: {
+        options: [
+          { value: 'Positive' },
+          { value: 'Neutral' },
+          { value: 'Negative' },
+        ],
       },
-      // Column: Sentiment (single_select)
-      {
-        tableId: table.id,
-        name: 'Sentiment',
-        description: 'Market sentiment analysis',
-        outputType: 'single_select',
-        aiPrompt:
-          'Analyze the recent market sentiment and news for this stock. Choose one: Positive, Negative, or Neutral.',
-        outputTypeConfig: {
-          options: [
-            { value: 'Positive' },
-            { value: 'Neutral' },
-            { value: 'Negative' },
-          ],
-        },
+    },
+    // Column: Tags (multi_select)
+    {
+      tableId: table.id,
+      name: 'Tags',
+      description: 'Multiple tags for categorization',
+      outputType: 'multi_select',
+      aiPrompt:
+        'Generate relevant tags for this stock based on industry, sector, and characteristics. Choose from: Technology, Finance, Healthcare, Energy, Consumer, Industrial, or leave empty for free-form suggestions.',
+      outputTypeConfig: {
+        options: [
+          { value: 'Technology' },
+          { value: 'Finance' },
+          { value: 'Healthcare' },
+          { value: 'Energy' },
+          { value: 'Consumer' },
+          { value: 'Industrial' },
+        ],
       },
-      // Column: Tags (multi_select)
-      {
-        tableId: table.id,
-        name: 'Tags',
-        description: 'Multiple tags for categorization',
-        outputType: 'multi_select',
-        aiPrompt:
-          'Generate relevant tags for this stock based on industry, sector, and characteristics. Choose from: Technology, Finance, Healthcare, Energy, Consumer, Industrial, or leave empty for free-form suggestions.',
-        outputTypeConfig: {
-          options: [
-            { value: 'Technology' },
-            { value: 'Finance' },
-            { value: 'Healthcare' },
-            { value: 'Energy' },
-            { value: 'Consumer' },
-            { value: 'Industrial' },
-          ],
-        },
+    },
+    // Column: Risk Analysis (long_text)
+    {
+      tableId: table.id,
+      name: 'Risk Analysis',
+      description: 'Detailed risk assessment',
+      outputType: 'long_text',
+      aiPrompt:
+        'Provide a detailed risk analysis for this stock, covering market volatility, sector risks, company-specific factors, and overall risk level (Low/Medium/High). Be specific and analytical.',
+      outputTypeConfig: null,
+    },
+    // Column: Recommendation (single_select)
+    {
+      tableId: table.id,
+      name: 'Recommendation',
+      description: 'Investment recommendation for this stock',
+      outputType: 'single_select',
+      aiPrompt:
+        'Based on the stock analysis, provide an investment recommendation. Choose one: Strong Buy, Buy, Hold, Sell, or Strong Sell.',
+      outputTypeConfig: {
+        options: [
+          { value: 'Strong Buy' },
+          { value: 'Buy' },
+          { value: 'Hold' },
+          { value: 'Sell' },
+          { value: 'Strong Sell' },
+        ],
       },
-      // Column: Analysis Date (date)
-      {
-        tableId: table.id,
-        name: 'Analysis Date',
-        description: 'Date when analysis was performed',
-        outputType: 'date',
-        aiPrompt:
-          'Determine the most recent date when this stock was analyzed or when significant market events occurred.',
-        outputTypeConfig: {
-          dateFormat: 'YYYY-MM-DD',
-        },
-      },
-      // Column: Risk Analysis (long_text)
-      {
-        tableId: table.id,
-        name: 'Risk Analysis',
-        description: 'Detailed risk assessment',
-        outputType: 'long_text',
-        aiPrompt:
-          'Provide a detailed risk analysis for this stock, covering market volatility, sector risks, company-specific factors, and overall risk level (Low/Medium/High). Be specific and analytical.',
-        outputTypeConfig: null,
-      },
-    ])
-    .returning()
+    },
+  ]
+
+  const columns = []
+  for (const columnDef of columnDefinitions) {
+    const [column] = await db
+      .insert(aiTableColumns)
+      .values(columnDef)
+      .returning()
+    columns.push(column)
+  }
 
   console.log('✅ Created columns:', columns.length)
 

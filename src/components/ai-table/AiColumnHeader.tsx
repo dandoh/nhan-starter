@@ -195,6 +195,7 @@ export function AiColumnHeader({ column, tanstackColumn, collections }: ColumnHe
 
   const isPinnedLeft = tanstackColumn?.getIsPinned() === 'left'
   const canPin = tanstackColumn?.getCanPin?.() ?? false
+  const isPrimary = column.primary
 
   return (
     <>
@@ -256,10 +257,17 @@ export function AiColumnHeader({ column, tanstackColumn, collections }: ColumnHe
             >
               {viewMode === 'menu' ? (
                 <>
-                  {canPin && (
+                  <DropdownMenuItem onSelect={handleEditClick}>
+                    <Edit2 className="h-4 w-4" />
+                    <span>Edit column</span>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuSeparator />
+
+                  {canPin && !isPrimary && (
                     <>
                       <DropdownMenuItem
-                        onSelect={(e) => {
+                        onSelect={() => {
                           if (!tanstackColumn) return
                           if (isPinnedLeft) {
                             tanstackColumn.pin(false)
@@ -283,12 +291,6 @@ export function AiColumnHeader({ column, tanstackColumn, collections }: ColumnHe
                       <DropdownMenuSeparator />
                     </>
                   )}
-                  <DropdownMenuItem onSelect={handleEditClick}>
-                    <Edit2 className="h-4 w-4" />
-                    <span>Edit column</span>
-                  </DropdownMenuItem>
-
-                  <DropdownMenuSeparator />
 
                   <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                     <ArrowDown className="h-4 w-4" />
