@@ -116,6 +116,11 @@ export const updateTableColumnSizing =
     draft.columnSizing = value
   })
 
+export const updateTableColumnPinning =
+  createTableUpdateMutation<'columnPinning'>('columnPinning', (draft, value) => {
+    draft.columnPinning = value
+  })
+
 export const updateTableName = createTableUpdateMutation<'name'>(
   'name',
   (draft, value) => {

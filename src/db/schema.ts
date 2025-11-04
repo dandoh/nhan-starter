@@ -153,6 +153,7 @@ export const aiTables = pgTable('ai_tables', {
   name: varchar('name', { length: 255 }).notNull(),
   description: text('description').default(''),
   columnSizing: jsonb('column_sizing').$type<Record<string, number>>(),
+  columnPinning: jsonb('column_pinning').$type<{ left?: string[]; right?: string[] }>(),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),

@@ -3,6 +3,7 @@ import { eq, useLiveQuery } from '@tanstack/react-db'
 import {
   type ColumnDef,
   ColumnSizingState,
+  ColumnPinningState,
   type Table as TanTable,
   type Column as TSColumn,
   Updater,
@@ -28,6 +29,7 @@ import { AiColumnHeader } from '@/components/ai-table/AiColumnHeader'
 import {
   tablesCollection,
   updateTableColumnSizing,
+  updateTableColumnPinning,
 } from '@/lib/ai-table/collections'
 import {
   AiTable as AiTableType,
@@ -86,10 +88,6 @@ function AiTableInternal({
   recordsCollection: ReturnType<typeof useTableSync>['recordsCollection']
   cellsCollection: ReturnType<typeof useTableSync>['cellsCollection']
 }) {
-  const [columnPinning, setColumnPinning] = React.useState<{
-    left?: string[]
-    right?: string[]
-  }>({})
   const [isComputing, setIsComputing] = React.useState(false)
   // Handle adding a new column
   const handleAddColumn = useCallback(() => {
@@ -135,11 +133,9 @@ function AiTableInternal({
   const tableColumns = useMemo<ColumnDef<GridRow>[]>(() => {
     const dataColumns = aiColumns.map((col) =>
       columnHelper.display({
-        meta: {
-          name: col.name,
-        },
         id: col.id,
         enableResizing: true,
+        enablePinning: !col.primary, // Disable pinning for primary columns
         header: (ctx) => (
           <AiColumnHeader
             column={col}
@@ -192,23 +188,6 @@ function AiTableInternal({
     handleAddColumn,
   ])
 
-  // Debounced callback to save columnSizing changes
-  const saveColumnSizing = async (
-    columnSizingUpdater: Updater<ColumnSizingState>,
-  ) => {
-    const newColumnSizing =
-      typeof columnSizingUpdater === 'function'
-        ? columnSizingUpdater(aiTable?.columnSizing ?? {})
-        : columnSizingUpdater
-
-    updateTableColumnSizing({
-      tableId,
-      columnSizing: newColumnSizing,
-    })
-  }
-
-  // const { } = usePacedMutations()
-
   // Build table data - just records with id
   const tableData = useMemo<GridRow[]>(() => {
     return aiRecords.map((rec) => ({
@@ -217,18 +196,59 @@ function AiTableInternal({
     }))
   }, [aiRecords])
 
-  // Get column sizing - filter to only include columns that exist
-  // const columnSizingState = useMemo(() => {
-  //   const savedSizing = aiTable?.columnSizing || {}
-  //   const columnIds = new Set(aiColumns.map((col) => col.id))
-  //   const filtered: ColumnSizingState = {}
-  //   for (const [columnId, size] of Object.entries(savedSizing)) {
-  //     if (columnIds.has(columnId)) {
-  //       filtered[columnId] = size
-  //     }
-  //   }
-  //   return filtered
-  // }, [aiTable?.columnSizing, aiColumns])
+  const columnSizing = useMemo(() => {
+    const savedSizing = aiTable?.columnSizing || {}
+    const columnIds = new Set(aiColumns.map((col) => col.id))
+    const res = { ...savedSizing }
+    for (const columnId of columnIds) {
+      if (!savedSizing[columnId]) {
+        res[columnId] = 200
+      }
+    }
+    return res
+  }, [aiTable?.columnSizing, aiColumns])
+
+  const onColumnSizingChange = async (
+    columnSizingUpdater: Updater<ColumnSizingState>,
+  ) => {
+    const newColumnSizing =
+      typeof columnSizingUpdater === 'function'
+        ? columnSizingUpdater(columnSizing)
+        : columnSizingUpdater
+
+    updateTableColumnSizing({
+      tableId,
+      columnSizing: newColumnSizing,
+    })
+  }
+
+  const columnPinning = useMemo(() => {
+    // Make sure primary column is always pinned to the left
+    const primaryColumns = aiColumns.filter((col) => col.primary)
+    const res = { left: [...(aiTable.columnPinning?.left ?? [])] }
+
+    for (const column of primaryColumns) {
+      if (!res.left.includes(column.id)) {
+        res.left.push(column.id)
+      }
+    }
+
+    return res
+  }, [aiTable.columnPinning, aiColumns])
+
+  const onColumnPinningChange = async (
+    columnPinningUpdater: Updater<ColumnPinningState>,
+  ) => {
+    const newColumnPinning =
+      typeof columnPinningUpdater === 'function'
+        ? columnPinningUpdater(columnPinning)
+        : columnPinningUpdater
+
+    updateTableColumnPinning({
+      tableId,
+      columnPinning: newColumnPinning,
+    })
+  }
 
   const table = useReactTable({
     data: tableData,
@@ -242,11 +262,11 @@ function AiTableInternal({
       maxSize: 600,
     },
     state: {
-      columnSizing: aiTable.columnSizing || {},
+      columnSizing,
       columnPinning,
     },
-    onColumnSizingChange: saveColumnSizing,
-    onColumnPinningChange: setColumnPinning,
+    onColumnSizingChange,
+    onColumnPinningChange,
   })
 
   /**
@@ -270,11 +290,18 @@ function AiTableInternal({
     table.getState().columnPinning,
   ])
 
+  const hasPinnedColumns = useMemo(() => {
+    return (
+      (aiTable.columnPinning?.left?.length ?? 0) > 0 ||
+      (aiTable.columnPinning?.right?.length ?? 0) > 0
+    )
+  }, [aiTable.columnPinning])
+
   return (
-    <div className="flex flex-col min-w-0">
-      <div className="flex gap-2 flex-1 min-w-0 overflow-auto">
+    <div className="flex flex-col min-w-0 max-h-full">
+      <div className="flex gap-2 flex-1 min-w-0 overflow-auto !scrollbar scrollbar-track-amber-300 scrollbar-thumb-transparent">
         <Table
-          className="min-w-full"
+          // className="min-w-full"
           style={{
             ...columnSizeVars,
             ...(aiColumns.length > 1 ? { width: table.getTotalSize() } : {}),
@@ -330,8 +357,16 @@ function AiTableInternal({
             {/* Add Record Row */}
             <TableRow className="hover:bg-transparent">
               <TableCell
-                colSpan={table.getAllLeafColumns().length}
-                className="p-0 !border-r-0 !border-b-0"
+                colSpan={
+                  hasPinnedColumns ? aiTable.columnPinning?.left?.length : 1
+                }
+                className={cn(
+                  'p-0 !border-r-0 !border-b-0',
+                  getCommonPinningClasses(true),
+                )}
+                style={{
+                  left: 0,
+                }}
               >
                 <Button
                   variant="ghost"

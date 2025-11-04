@@ -172,6 +172,10 @@ const updateTableDef = defineFunction({
     name: z.string().min(1).max(255).optional(),
     description: z.string().optional().nullable(),
     columnSizing: z.record(z.string(), z.number()).optional().nullable(),
+    columnPinning: z.object({
+      left: z.array(z.string()).optional(),
+      right: z.array(z.string()).optional(),
+    }).optional().nullable(),
   }),
   handler: async ({ data: input, context }) => {
     // Verify table ownership
@@ -193,6 +197,9 @@ const updateTableDef = defineFunction({
       }),
       ...(input.columnSizing !== undefined && {
         columnSizing: input.columnSizing,
+      }),
+      ...(input.columnPinning !== undefined && {
+        columnPinning: input.columnPinning,
       }),
     }
 
