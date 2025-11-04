@@ -22,6 +22,7 @@ import { Route as AuthedAppRouteImport } from './routes/_authed/app'
 import { Route as AuthedTablesIndexRouteImport } from './routes/_authed/tables/index'
 import { Route as DemoFormAddressRouteImport } from './routes/demo/form.address'
 import { Route as DemoApiTqTodosRouteImport } from './routes/demo/api.tq-todos'
+import { Route as ApiRpcSplatRouteImport } from './routes/api/rpc.$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
 import { Route as AuthedTablesTableIdRouteImport } from './routes/_authed/tables/$tableId'
 import { Route as AuthedConversationsConversationIdRouteImport } from './routes/_authed/conversations.$conversationId'
@@ -91,6 +92,11 @@ const DemoApiTqTodosRoute = DemoApiTqTodosRouteImport.update({
   path: '/demo/api/tq-todos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiRpcSplatRoute = ApiRpcSplatRouteImport.update({
+  id: '/api/rpc/$',
+  path: '/api/rpc/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -127,6 +133,7 @@ export interface FileRoutesByFullPath {
   '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/tables/$tableId': typeof AuthedTablesTableIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/rpc/$': typeof ApiRpcSplatRoute
   '/demo/api/tq-todos': typeof DemoApiTqTodosRoute
   '/demo/form/address': typeof DemoFormAddressRoute
   '/tables': typeof AuthedTablesIndexRoute
@@ -145,6 +152,7 @@ export interface FileRoutesByTo {
   '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/tables/$tableId': typeof AuthedTablesTableIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/rpc/$': typeof ApiRpcSplatRoute
   '/demo/api/tq-todos': typeof DemoApiTqTodosRoute
   '/demo/form/address': typeof DemoFormAddressRoute
   '/tables': typeof AuthedTablesIndexRoute
@@ -165,6 +173,7 @@ export interface FileRoutesById {
   '/_authed/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/_authed/tables/$tableId': typeof AuthedTablesTableIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/rpc/$': typeof ApiRpcSplatRoute
   '/demo/api/tq-todos': typeof DemoApiTqTodosRoute
   '/demo/form/address': typeof DemoFormAddressRoute
   '/_authed/tables/': typeof AuthedTablesIndexRoute
@@ -185,6 +194,7 @@ export interface FileRouteTypes {
     | '/conversations/$conversationId'
     | '/tables/$tableId'
     | '/api/auth/$'
+    | '/api/rpc/$'
     | '/demo/api/tq-todos'
     | '/demo/form/address'
     | '/tables'
@@ -203,6 +213,7 @@ export interface FileRouteTypes {
     | '/conversations/$conversationId'
     | '/tables/$tableId'
     | '/api/auth/$'
+    | '/api/rpc/$'
     | '/demo/api/tq-todos'
     | '/demo/form/address'
     | '/tables'
@@ -222,6 +233,7 @@ export interface FileRouteTypes {
     | '/_authed/conversations/$conversationId'
     | '/_authed/tables/$tableId'
     | '/api/auth/$'
+    | '/api/rpc/$'
     | '/demo/api/tq-todos'
     | '/demo/form/address'
     | '/_authed/tables/'
@@ -236,6 +248,7 @@ export interface RootRouteChildren {
   DemoCareerRoute: typeof DemoCareerRoute
   DemoTeamRoute: typeof DemoTeamRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiRpcSplatRoute: typeof ApiRpcSplatRoute
   DemoApiTqTodosRoute: typeof DemoApiTqTodosRoute
   DemoFormAddressRoute: typeof DemoFormAddressRoute
   ApiAuthedApiChatConversationIdRoute: typeof ApiAuthedApiChatConversationIdRoute
@@ -334,6 +347,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoApiTqTodosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/rpc/$': {
+      id: '/api/rpc/$'
+      path: '/api/rpc/$'
+      fullPath: '/api/rpc/$'
+      preLoaderRoute: typeof ApiRpcSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -397,6 +417,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoCareerRoute: DemoCareerRoute,
   DemoTeamRoute: DemoTeamRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiRpcSplatRoute: ApiRpcSplatRoute,
   DemoApiTqTodosRoute: DemoApiTqTodosRoute,
   DemoFormAddressRoute: DemoFormAddressRoute,
   ApiAuthedApiChatConversationIdRoute: ApiAuthedApiChatConversationIdRoute,

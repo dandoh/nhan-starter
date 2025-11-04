@@ -15,7 +15,7 @@ import {
 import { Plus, Sparkles } from 'lucide-react'
 import { useTableSync } from '@/hooks/use-table-sync'
 import { Button } from '@/components/ui/button'
-import { serverFnTriggerComputeAllCells } from '@/serverFns/ai-tables'
+import { orpcClient } from '@/orpc/client'
 import {
   Table,
   TableBody,
@@ -119,8 +119,8 @@ function AiTableInternal({
   const handleComputeAI = useCallback(async () => {
     setIsComputing(true)
     try {
-      await serverFnTriggerComputeAllCells({
-        data: { tableId },
+      await orpcClient.aiTables.triggerComputeAllCells({
+        tableId,
       })
     } catch (error) {
       console.error('Failed to trigger AI computation:', error)

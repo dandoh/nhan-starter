@@ -1,7 +1,6 @@
-import { createServerFn } from '@tanstack/react-start'
+import { os } from '@orpc/server'
 import * as z from 'zod'
-import { authMiddleware } from '@/serverFns/middleware/auth-middleware'
-import { defineFunction } from '@/serverFns/utils'
+import { authMiddleware } from '../middleware/auth'
 import { db } from '@/db'
 import {
   aiConversations,
@@ -19,13 +18,16 @@ import { eq, and, isNull } from 'drizzle-orm'
  * - Optionally accepts an initial prompt which will be saved as the first user message
  * - Returns new conversation object
  */
-const createConversationDef = defineFunction({
-  input: z.object({
-    title: z.string().optional().describe("The title of the conversation"),
-    initialPrompt: z.string().optional().describe("The initial prompt for the conversation"),
-    context: conversationContextSchema.optional().describe("The context of the conversation"),
-  }),
-  handler: async ({ data: input, context }) => {
+export const createConversation = os
+  .use(authMiddleware)
+  .input(
+    z.object({
+      title: z.string().optional().describe('The title of the conversation'),
+      initialPrompt: z.string().optional().describe('The initial prompt for the conversation'),
+      context: conversationContextSchema.optional().describe('The context of the conversation'),
+    }),
+  )
+  .handler(async ({ input, context }) => {
     // Validate context if provided
     if (input.context) {
       if (input.context.type === 'table') {
@@ -71,24 +73,21 @@ const createConversationDef = defineFunction({
     }
 
     return newConversation
-  },
-})
-
-export const serverFnCreateConversation = createServerFn({ method: 'POST' })
-  .inputValidator(createConversationDef.input)
-  .middleware([authMiddleware])
-  .handler(createConversationDef.handler)
+  })
 
 /**
  * Get conversation with messages
  * - Requires authentication and validates ownership
  * - Returns conversation details and all messages
  */
-const getConversationDef = defineFunction({
-  input: z.object({
-    conversationId: z.string().uuid(),
-  }),
-  handler: async ({ data: input, context }) => {
+export const getConversation = os
+  .use(authMiddleware)
+  .input(
+    z.object({
+      conversationId: z.string().uuid(),
+    }),
+  )
+  .handler(async ({ input, context }) => {
     const { conversationId } = input
 
     // Validate existing conversation
@@ -109,26 +108,23 @@ const getConversationDef = defineFunction({
       throw new Error('You do not have access to this conversation')
     }
 
-    return conversation 
-  },
-})
-
-export const serverFnGetConversation = createServerFn({ method: 'GET' })
-  .inputValidator(getConversationDef.input)
-  .middleware([authMiddleware])
-  .handler(getConversationDef.handler)
+    return conversation
+  })
 
 /**
  * Find or create a conversation for a specific context
  * - Useful for table/project/document chat where we want one conversation per context
  * - Returns existing conversation if found, creates new one if not
  */
-const findOrCreateConversationForContextDef = defineFunction({
-  input: z.object({
-    context: conversationContextSchema,
-    title: z.string().optional(),
-  }),
-  handler: async ({ data: input, context }) => {
+export const findOrCreateConversationForContext = os
+  .use(authMiddleware)
+  .input(
+    z.object({
+      context: conversationContextSchema,
+      title: z.string().optional(),
+    }),
+  )
+  .handler(async ({ input, context }) => {
     // Validate context access
     if (input.context.type === 'table') {
       const table = await db.query.aiTables.findFirst({
@@ -181,13 +177,7 @@ const findOrCreateConversationForContextDef = defineFunction({
       ...newConversation,
       messages: [],
     } as any
-  },
-})
-
-export const findOrCreateConversationForContext = createServerFn({ method: 'POST' })
-  .inputValidator(findOrCreateConversationForContextDef.input)
-  .middleware([authMiddleware])
-  .handler(findOrCreateConversationForContextDef.handler)
+  })
 
 /**
  * Get conversations for a specific context
@@ -195,12 +185,15 @@ export const findOrCreateConversationForContext = createServerFn({ method: 'POST
  * - Creates a new conversation if none exist
  * - Optimized for React Query / Suspense usage
  */
-const getConversationsForContextDef = defineFunction({
-  input: z.object({
-    context: conversationContextSchema,
-    limit: z.number().min(1).max(50).default(10),
-  }),
-  handler: async ({ data: input, context }) => {
+export const getConversationsForContext = os
+  .use(authMiddleware)
+  .input(
+    z.object({
+      context: conversationContextSchema,
+      limit: z.number().min(1).max(50).default(10),
+    }),
+  )
+  .handler(async ({ input, context }) => {
     // Validate context access
     if (input.context.type === 'table') {
       const table = await db.query.aiTables.findFirst({
@@ -257,10 +250,5 @@ const getConversationsForContextDef = defineFunction({
     }
 
     return conversations
-  },
-})
+  })
 
-export const serverFnGetConversationsForContext = createServerFn({ method: 'GET' })
-  .inputValidator(getConversationsForContextDef.input)
-  .middleware([authMiddleware])
-  .handler(getConversationsForContextDef.handler)

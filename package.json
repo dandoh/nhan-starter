@@ -27,10 +27,12 @@
     "@faker-js/faker": "^10.0.0",
     "@hookform/resolvers": "^5.2.2",
     "@lmnr-ai/lmnr": "^0.7.4",
+    "@orpc/ai-sdk": "^1.10.3",
     "@orpc/client": "^1.7.5",
+    "@orpc/contract": "^1.10.3",
     "@orpc/json-schema": "^1.7.5",
     "@orpc/openapi": "^1.7.5",
-    "@orpc/server": "^1.7.5",
+    "@orpc/server": "^1.10.3",
     "@orpc/tanstack-query": "^1.7.5",
     "@orpc/zod": "^1.7.5",
     "@radix-ui/react-accordion": "^1.2.12",
@@ -146,6 +148,7 @@
     "tsx": "^4.20.6",
     "typescript": "^5.7.2",
     "vite": "^7.1.7",
+    "vite-plugin-node-polyfills": "^0.24.0",
     "vitest": "^3.0.5",
     "web-vitals": "^5.1.0"
   }

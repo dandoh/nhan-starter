@@ -20,6 +20,8 @@ import {
 import { anthropic } from '@ai-sdk/anthropic'
 import { z } from 'zod'
 import { getTracer } from '@lmnr-ai/lmnr'
+import { createColumn, updateColumn } from '@/orpc/router/ai-tables'
+import { createTool } from '@orpc/ai-sdk'
 
 // Define createColumn tool (only available for table conversations)
 const createColumnToolSchema = z.object({
@@ -146,97 +148,33 @@ export const Route = createFileRoute('/api/_authed-api/chat/$conversationId')({
           })
 
           if (table) {
-            tableContext = `\n\nCurrent table context:\nTable name: ${table.name}\nExisting columns:\n${table.columns.map((col) => `- ${col.name} (${col.outputType}${col.aiPrompt ? `, AI prompt: "${col.aiPrompt}"` : ''})`).join('\n')}`
+            tableContext = `
+<table_context>
+${JSON.stringify(table, null, 2)}
+</table_context>
+            `
           }
         }
 
-        const createColumnTool = tool({
-          description:
-            'Create a new column in the AI table with specified name and configuration. Use this when the user asks to add, create, or make a new column.',
-          inputSchema: createColumnToolSchema,
-          execute: async ({
-            name,
-            outputType,
-            description,
-            aiPrompt,
-            outputTypeConfig,
-          }) => {
-            if (!tableId) {
-              return {
-                success: false,
-                error: 'This conversation is not associated with a table',
-              }
-            }
-
-            try {
-              const newColumn = await db.transaction(async (tx) => {
-                // Create column
-                const [column] = await tx
-                  .insert(aiTableColumns)
-                  .values({
-                    tableId: tableId,
-                    name,
-                    description: description || '',
-                    outputType,
-                    aiPrompt: aiPrompt || '',
-                    outputTypeConfig: outputTypeConfig ?? null,
-                  })
-                  .returning()
-
-                // Get all existing records
-                const records = await tx.query.aiTableRecords.findMany({
-                  where: eq(aiTableRecords.tableId, tableId),
-                })
-
-                // Create cells for all existing records
-                if (records.length > 0) {
-                  const cellsToInsert = records.map((record) => ({
-                    recordId: record.id,
-                    columnId: column.id,
-                    value: '',
-                  }))
-
-                  await tx.insert(aiTableCells).values(cellsToInsert)
-                }
-
-                return column
-              })
-
-              return {
-                success: true,
-                columnId: newColumn.id,
-                columnName: newColumn.name,
-                message: `Successfully created column "${name}"${aiPrompt ? ' with AI generation' : ''}`,
-              }
-            } catch (error) {
-              return {
-                success: false,
-                error:
-                  error instanceof Error
-                    ? error.message
-                    : 'Failed to create column',
-              }
-            }
+        const createColumnTool = createTool(createColumn, {
+          description: 'Create a new column in the table',
+          context: {
+            user,
+          },
+        })
+        const updateColumnTool = createTool(updateColumn, {
+          description: 'Update an existing column in the table',
+          context: {
+            user,
           },
         })
 
         // Build system prompt
-        const systemPrompt = `You are an AI assistant helping users manage their data tables.${tableContext}
+        const systemPrompt = `You are an AI assistant helping users manage their data tables.
+        
+${tableContext}
 
-When users ask to create, add, or make new columns, use the createColumn tool to add them to the table.
-
-Guidelines for creating columns:
-- For sentiment analysis, scoring, or categorization: Use "ai" type with "single_select" output type and provide appropriate options
-- For calculations or analysis referencing other data: Use "ai" type with "text" or "long_text"
-- For dates or deadlines: Use "date" output type
-- For categories with predefined options: Use "single_select" with options in outputTypeConfig
-- For user-entered data: Use "manual" type
-- Always provide a clear, descriptive column name
-- For AI columns, write clear prompts that explain what to generate and reference relevant columns
-
-Be helpful in inferring the right column configuration based on user intent. If the request is unclear, make reasonable assumptions and explain your choices.
-
-You can use createColumn tool multiple times to create multiple columns.
+You have access to tools to collaborate with the user on modifying the table.
 `
 
         // Create agent with tools
@@ -246,6 +184,7 @@ You can use createColumn tool multiple times to create multiple columns.
           ...(tableId && {
             tools: {
               createColumn: createColumnTool,
+              updateColumn: updateColumnTool,
             },
           }),
           stopWhen: stepCountIs(20), // Allow up to 20 steps for tool calls

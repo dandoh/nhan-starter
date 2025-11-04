@@ -4,7 +4,7 @@ import {
   createTableCollections,
   type TableCollections,
 } from '@/lib/ai-table/collections'
-import { serverFnGetTableUpdates } from '@/serverFns/ai-tables'
+import { orpcClient } from '@/orpc/client'
 
 /**
  * Hook to sync a table's data with the server using delta updates
@@ -26,11 +26,9 @@ export function useTableSync(tableId: string): TableCollections {
     const interval = setInterval(async () => {
       try {
         // Fetch only changes since last sync
-        const updates = await serverFnGetTableUpdates({
-          data: {
-            tableId,
-            since: lastSyncRef.current,
-          },
+        const updates = await orpcClient.aiTables.getUpdates({
+          tableId,
+          since: lastSyncRef.current,
         })
 
         // Apply incremental updates to collections

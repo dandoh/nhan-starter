@@ -1,19 +1,20 @@
-import { createServerFn } from '@tanstack/react-start'
+import { implement, os } from '@orpc/server'
 import * as z from 'zod'
-import { authMiddleware } from '@/serverFns/middleware/auth-middleware'
-import { defineFunction } from '@/serverFns/utils'
+import { oc } from '@orpc/contract'
+import { authMiddleware } from '../middleware/auth'
 import { db } from '@/db'
+import { createTool } from '@orpc/ai-sdk'
 import {
-  aiTables,
-  aiTableColumns,
-  aiTableRecords,
   aiTableCells,
+  aiTableColumns,
   aiTableOutputTypeSchema,
+  aiTableRecords,
+  aiTables,
 } from '@/db/schema'
-import { eq, and, gt, sql, inArray, ne, isNotNull } from 'drizzle-orm'
 import { inngest } from '@/inngest/client'
-import { optionSchema } from '@/lib/ai-table/output-types'
 import { validateOutputTypeConfig } from '@/lib/ai-table/output-type-registry'
+import { optionSchema } from '@/lib/ai-table/output-types'
+import { and, eq, gt, inArray, isNotNull, ne, sql } from 'drizzle-orm'
 
 // ============================================================================
 // Table Management
@@ -22,8 +23,10 @@ import { validateOutputTypeConfig } from '@/lib/ai-table/output-type-registry'
 /**
  * List all tables for the authenticated user
  */
-const listTablesDef = defineFunction({
-  handler: async ({ context }) => {
+export const listTables = os
+  .use(authMiddleware)
+  .input(z.object({}))
+  .handler(async ({ context }) => {
     const tables = await db.query.aiTables.findMany({
       where: eq(aiTables.userId, context.user.id),
       orderBy: (t, { desc }) => [desc(t.createdAt)],
@@ -39,22 +42,20 @@ const listTablesDef = defineFunction({
     })
 
     return tables
-  },
-})
-
-export const serverFnListTables = createServerFn({ method: 'GET' })
-  .middleware([authMiddleware])
-  .handler(listTablesDef.handler)
+  })
 
 /**
  * Create a new table with an initial "Main" column
  */
-const createTableDef = defineFunction({
-  input: z.object({
-    id: z.string().uuid().optional(),
-    name: z.string().min(1).max(255),
-  }),
-  handler: async ({ data: input, context }) => {
+export const createTable = os
+  .use(authMiddleware)
+  .input(
+    z.object({
+      id: z.string().uuid().optional(),
+      name: z.string().min(1).max(255),
+    }),
+  )
+  .handler(async ({ input, context }) => {
     // Create table and main column in a transaction
     const result = await db.transaction(async (tx) => {
       // Create table
@@ -80,22 +81,19 @@ const createTableDef = defineFunction({
     })
 
     return result
-  },
-})
-
-export const serverFnCreateTable = createServerFn({ method: 'POST' })
-  .inputValidator(createTableDef.input)
-  .middleware([authMiddleware])
-  .handler(createTableDef.handler)
+  })
 
 /**
  * Get table details with columns and record count
  */
-const getTableDef = defineFunction({
-  input: z.object({
-    tableId: z.string().uuid(),
-  }),
-  handler: async ({ data: input, context }) => {
+export const getTable = os
+  .use(authMiddleware)
+  .input(
+    z.object({
+      tableId: z.string().uuid(),
+    }),
+  )
+  .handler(async ({ input, context }) => {
     const table = await db.query.aiTables.findFirst({
       where: and(
         eq(aiTables.id, input.tableId),
@@ -123,22 +121,19 @@ const getTableDef = defineFunction({
       ...table,
       recordCount,
     }
-  },
-})
-
-export const serverFnGetTable = createServerFn({ method: 'GET' })
-  .inputValidator(getTableDef.input)
-  .middleware([authMiddleware])
-  .handler(getTableDef.handler)
+  })
 
 /**
  * Delete a table and all related data
  */
-const deleteTableDef = defineFunction({
-  input: z.object({
-    tableId: z.string().uuid(),
-  }),
-  handler: async ({ data: input, context }) => {
+export const deleteTable = os
+  .use(authMiddleware)
+  .input(
+    z.object({
+      tableId: z.string().uuid(),
+    }),
+  )
+  .handler(async ({ input, context }) => {
     // Verify ownership and delete
     const result = await db
       .delete(aiTables)
@@ -155,29 +150,29 @@ const deleteTableDef = defineFunction({
     }
 
     return { success: true }
-  },
-})
-
-export const serverFnDeleteTable = createServerFn({ method: 'POST' })
-  .inputValidator(deleteTableDef.input)
-  .middleware([authMiddleware])
-  .handler(deleteTableDef.handler)
+  })
 
 /**
  * Update table metadata (e.g., name, description, columnSizing)
  */
-const updateTableDef = defineFunction({
-  input: z.object({
-    tableId: z.string().uuid(),
-    name: z.string().min(1).max(255).optional(),
-    description: z.string().optional().nullable(),
-    columnSizing: z.record(z.string(), z.number()).optional().nullable(),
-    columnPinning: z.object({
-      left: z.array(z.string()).optional(),
-      right: z.array(z.string()).optional(),
-    }).optional().nullable(),
-  }),
-  handler: async ({ data: input, context }) => {
+export const updateTable = os
+  .use(authMiddleware)
+  .input(
+    z.object({
+      tableId: z.string().uuid(),
+      name: z.string().min(1).max(255).optional(),
+      description: z.string().optional().nullable(),
+      columnSizing: z.record(z.string(), z.number()).optional().nullable(),
+      columnPinning: z
+        .object({
+          left: z.array(z.string()).optional(),
+          right: z.array(z.string()).optional(),
+        })
+        .optional()
+        .nullable(),
+    }),
+  )
+  .handler(async ({ input, context }) => {
     // Verify table ownership
     const table = await db.query.aiTables.findFirst({
       where: and(
@@ -218,13 +213,7 @@ const updateTableDef = defineFunction({
     }
 
     return updated
-  },
-})
-
-export const serverFnUpdateTable = createServerFn({ method: 'POST' })
-  .inputValidator(updateTableDef.input)
-  .middleware([authMiddleware])
-  .handler(updateTableDef.handler)
+  })
 
 // ============================================================================
 // Column Operations
@@ -233,11 +222,14 @@ export const serverFnUpdateTable = createServerFn({ method: 'POST' })
 /**
  * Get all columns for a table
  */
-const getColumnsDef = defineFunction({
-  input: z.object({
-    tableId: z.string().uuid(),
-  }),
-  handler: async ({ data: input, context }) => {
+export const getColumns = os
+  .use(authMiddleware)
+  .input(
+    z.object({
+      tableId: z.string().uuid(),
+    }),
+  )
+  .handler(async ({ input, context }) => {
     // Verify table ownership
     const table = await db.query.aiTables.findFirst({
       where: and(
@@ -256,38 +248,51 @@ const getColumnsDef = defineFunction({
     })
 
     return columns
-  },
-})
+  })
 
-export const serverFnGetColumns = createServerFn({ method: 'GET' })
-  .inputValidator(getColumnsDef.input)
-  .middleware([authMiddleware])
-  .handler(getColumnsDef.handler)
+const createColumnContract = oc.input(
+  z.object({
+    tableId: z
+      .string()
+      .uuid()
+      .describe('The ID of the table to create the column in'),
+    name: z
+      .string()
+      .min(1)
+      .max(255)
+      .describe('The name of the column to create'),
+    description: z
+      .string()
+      .optional()
+      .describe('The description of the column to create'),
+    outputType: aiTableOutputTypeSchema
+      .default('text')
+      .describe('The output type of the column to create'),
+    aiPrompt: z
+      .string()
+      .default('')
+      .describe(
+        'If the column is AI-generated, the prompt that tells the AI how to generate values',
+      ),
+    outputTypeConfig: z
+      .object({
+        options: z.array(optionSchema).optional(),
+        maxSelections: z.number().int().positive().optional(),
+        dateFormat: z.string().optional(),
+      })
+      .optional()
+      .describe(
+        'The configuration for the output type of the column to create',
+      ),
+  }),
+)
 
 /**
- * Create a new column and initialize cells for existing records
+ * Create a new column in a table
  */
-export const serverFnCreateColumn = createServerFn({
-  method: 'POST',
-})
-  .inputValidator(
-    z.object({
-      tableId: z.string().uuid(),
-      name: z.string().min(1).max(255),
-      description: z.string().optional(),
-      outputType: aiTableOutputTypeSchema.default('text'),
-      aiPrompt: z.string().default(''),
-      outputTypeConfig: z
-        .object({
-          options: z.array(optionSchema).optional(),
-          maxSelections: z.number().int().positive().optional(),
-          dateFormat: z.string().optional(),
-        })
-        .optional(),
-    }),
-  )
-  .middleware([authMiddleware])
-  .handler(async ({ data: input, context }) => {
+export const createColumn = implement(createColumnContract)
+  .use(authMiddleware)
+  .handler(async ({ input, context }) => {
     // Verify table ownership
     const table = await db.query.aiTables.findFirst({
       where: and(
@@ -361,11 +366,8 @@ export const serverFnCreateColumn = createServerFn({
     return result
   })
 
-/**
- * Update column name or config
- */
-const updateColumnDef = defineFunction({
-  input: z.object({
+const updateColumnContract = oc.input(
+  z.object({
     columnId: z.string().uuid(),
     name: z.string().min(1).max(255).optional(),
     description: z.string().optional(),
@@ -380,7 +382,11 @@ const updateColumnDef = defineFunction({
       .optional()
       .nullable(),
   }),
-  handler: async ({ data: input, context }) => {
+)
+
+export const updateColumn = implement(updateColumnContract)
+  .use(authMiddleware)
+  .handler(async ({ input, context }) => {
     // Verify ownership through table
     const column = await db.query.aiTableColumns.findFirst({
       where: eq(aiTableColumns.id, input.columnId),
@@ -424,22 +430,19 @@ const updateColumnDef = defineFunction({
       .returning()
 
     return updated
-  },
-})
-
-export const serverFnUpdateColumn = createServerFn({ method: 'POST' })
-  .inputValidator(updateColumnDef.input)
-  .middleware([authMiddleware])
-  .handler(updateColumnDef.handler)
+  })
 
 /**
  * Delete a column and its cells
  */
-const deleteColumnDef = defineFunction({
-  input: z.object({
-    columnId: z.string().uuid(),
-  }),
-  handler: async ({ data: input, context }) => {
+export const deleteColumn = os
+  .use(authMiddleware)
+  .input(
+    z.object({
+      columnId: z.string().uuid(),
+    }),
+  )
+  .handler(async ({ input, context }) => {
     // Verify ownership through table
     const column = await db.query.aiTableColumns.findFirst({
       where: eq(aiTableColumns.id, input.columnId),
@@ -471,13 +474,7 @@ const deleteColumnDef = defineFunction({
     await db.delete(aiTableColumns).where(eq(aiTableColumns.id, input.columnId))
 
     return { success: true }
-  },
-})
-
-export const serverFnDeleteColumn = createServerFn({ method: 'POST' })
-  .inputValidator(deleteColumnDef.input)
-  .middleware([authMiddleware])
-  .handler(deleteColumnDef.handler)
+  })
 
 // ============================================================================
 // Record Operations
@@ -486,11 +483,14 @@ export const serverFnDeleteColumn = createServerFn({ method: 'POST' })
 /**
  * Get all records for a table (without cell data)
  */
-const getRecordsDef = defineFunction({
-  input: z.object({
-    tableId: z.string().uuid(),
-  }),
-  handler: async ({ data: input, context }) => {
+export const getRecords = os
+  .use(authMiddleware)
+  .input(
+    z.object({
+      tableId: z.string().uuid(),
+    }),
+  )
+  .handler(async ({ input, context }) => {
     // Verify table ownership
     const table = await db.query.aiTables.findFirst({
       where: and(
@@ -509,23 +509,20 @@ const getRecordsDef = defineFunction({
     })
 
     return records
-  },
-})
-
-export const serverFnGetRecords = createServerFn({ method: 'GET' })
-  .inputValidator(getRecordsDef.input)
-  .middleware([authMiddleware])
-  .handler(getRecordsDef.handler)
+  })
 
 /**
  * Create a new record with empty cells for all columns
  */
-const createRecordDef = defineFunction({
-  input: z.object({
-    id: z.string().uuid().optional(),
-    tableId: z.string().uuid(),
-  }),
-  handler: async ({ data: input, context }) => {
+export const createRecord = os
+  .use(authMiddleware)
+  .input(
+    z.object({
+      id: z.string().uuid().optional(),
+      tableId: z.string().uuid(),
+    }),
+  )
+  .handler(async ({ input, context }) => {
     // Verify table ownership
     const table = await db.query.aiTables.findFirst({
       where: and(
@@ -582,22 +579,19 @@ const createRecordDef = defineFunction({
     // TODO: Trigger Inngest for AI columns (Phase 3)
 
     return result
-  },
-})
-
-export const serverFnCreateRecord = createServerFn({ method: 'POST' })
-  .inputValidator(createRecordDef.input)
-  .middleware([authMiddleware])
-  .handler(createRecordDef.handler)
+  })
 
 /**
  * Delete a record and its cells
  */
-const deleteRecordDef = defineFunction({
-  input: z.object({
-    recordId: z.string().uuid(),
-  }),
-  handler: async ({ data: input, context }) => {
+export const deleteRecord = os
+  .use(authMiddleware)
+  .input(
+    z.object({
+      recordId: z.string().uuid(),
+    }),
+  )
+  .handler(async ({ input, context }) => {
     // Verify ownership through table
     const record = await db.query.aiTableRecords.findFirst({
       where: eq(aiTableRecords.id, input.recordId),
@@ -613,13 +607,7 @@ const deleteRecordDef = defineFunction({
     await db.delete(aiTableRecords).where(eq(aiTableRecords.id, input.recordId))
 
     return { success: true }
-  },
-})
-
-export const serverFnDeleteRecord = createServerFn({ method: 'POST' })
-  .inputValidator(deleteRecordDef.input)
-  .middleware([authMiddleware])
-  .handler(deleteRecordDef.handler)
+  })
 
 // ============================================================================
 // Cell Operations
@@ -628,11 +616,14 @@ export const serverFnDeleteRecord = createServerFn({ method: 'POST' })
 /**
  * Get all cells for a table (initial load)
  */
-const getCellsDef = defineFunction({
-  input: z.object({
-    tableId: z.string().uuid(),
-  }),
-  handler: async ({ data: input, context }) => {
+export const getCells = os
+  .use(authMiddleware)
+  .input(
+    z.object({
+      tableId: z.string().uuid(),
+    }),
+  )
+  .handler(async ({ input, context }) => {
     // Verify table ownership
     const table = await db.query.aiTables.findFirst({
       where: and(
@@ -663,23 +654,20 @@ const getCellsDef = defineFunction({
       .where(eq(aiTableRecords.tableId, input.tableId))
 
     return cells
-  },
-})
-
-export const serverFnGetCells = createServerFn({ method: 'GET' })
-  .inputValidator(getCellsDef.input)
-  .middleware([authMiddleware])
-  .handler(getCellsDef.handler)
+  })
 
 /**
  * Update a cell value
  */
-const updateCellDef = defineFunction({
-  input: z.object({
-    cellId: z.string().uuid(),
-    value: z.string().optional(),
-  }),
-  handler: async ({ data: input, context }) => {
+export const updateCell = os
+  .use(authMiddleware)
+  .input(
+    z.object({
+      cellId: z.string().uuid(),
+      value: z.string().optional(),
+    }),
+  )
+  .handler(async ({ input, context }) => {
     // Verify ownership through table
     const cell = await db.query.aiTableCells.findFirst({
       where: eq(aiTableCells.id, input.cellId),
@@ -714,23 +702,20 @@ const updateCellDef = defineFunction({
     // TODO: Trigger dependent AI columns (Phase 3)
 
     return updated
-  },
-})
-
-export const serverFnUpdateCell = createServerFn({ method: 'POST' })
-  .inputValidator(updateCellDef.input)
-  .middleware([authMiddleware])
-  .handler(updateCellDef.handler)
+  })
 
 /**
  * Get table updates since a given timestamp (delta sync)
  */
-const getTableUpdatesDef = defineFunction({
-  input: z.object({
-    tableId: z.string().uuid(),
-    since: z.date(),
-  }),
-  handler: async ({ data: input, context }) => {
+export const getTableUpdates = os
+  .use(authMiddleware)
+  .input(
+    z.object({
+      tableId: z.string().uuid(),
+      since: z.date(),
+    }),
+  )
+  .handler(async ({ input, context }) => {
     // Verify table ownership
     const table = await db.query.aiTables.findFirst({
       where: and(
@@ -787,13 +772,7 @@ const getTableUpdatesDef = defineFunction({
       columns: updatedColumns,
       timestamp: new Date(),
     }
-  },
-})
-
-export const serverFnGetTableUpdates = createServerFn({ method: 'GET' })
-  .inputValidator(getTableUpdatesDef.input)
-  .middleware([authMiddleware])
-  .handler(getTableUpdatesDef.handler)
+  })
 
 // ============================================================================
 // AI Computation Triggers
@@ -802,11 +781,14 @@ export const serverFnGetTableUpdates = createServerFn({ method: 'GET' })
 /**
  * Manually trigger computation for all AI cells in a table
  */
-const triggerComputeAllCellsDef = defineFunction({
-  input: z.object({
-    tableId: z.string().uuid(),
-  }),
-  handler: async ({ data: input, context }) => {
+export const triggerComputeAllCells = os
+  .use(authMiddleware)
+  .input(
+    z.object({
+      tableId: z.string().uuid(),
+    }),
+  )
+  .handler(async ({ input, context }) => {
     console.log('triggerComputeAllCells', input)
     // Verify table ownership
     const table = await db.query.aiTables.findFirst({
@@ -877,10 +859,4 @@ const triggerComputeAllCellsDef = defineFunction({
       triggered: cellIds.length,
       message: `Triggered computation for ${cellIds.length} AI cells`,
     }
-  },
-})
-
-export const serverFnTriggerComputeAllCells = createServerFn({ method: 'POST' })
-  .inputValidator(triggerComputeAllCellsDef.input)
-  .middleware([authMiddleware])
-  .handler(triggerComputeAllCellsDef.handler)
+  })

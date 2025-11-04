@@ -64,10 +64,10 @@ function TableEditorPage() {
       <div className="flex flex-1 overflow-hidden">
         {/* Table content */}
         <div className="flex flex-col flex-1 min-w-0">
-          <div className="flex-1 overflow-hidden p-4">
+          <div className="flex-1 overflow-hidden p-2">
             <div className="h-full flex flex-col space-y-2">
               {/* Name and Description Section */}
-              <div className="shrink-0 space-y-2 ">
+              {/* <div className="shrink-0 space-y-2 ">
                 <div className="">
                   <Input
                     value={table?.name || ''}
@@ -77,8 +77,8 @@ function TableEditorPage() {
                     hover:ring-primary/50 hover:ring-1 
                     focus-visible:ring-primary focus-visible:ring-1"
                   />
-                </div>
-                {/* <div className="">
+                </div> */}
+              {/* <div className="">
                   <Input
                     value={table?.description || ''}
                     onChange={(e) => handleDescriptionChange(e.target.value)}
@@ -89,7 +89,7 @@ function TableEditorPage() {
                     focus-visible:ring-primary focus-visible:ring-1 focus-visible:ring-inset min-h-0 text-foreground/80"
                   />
                 </div> */}
-              </div>
+              {/* </div> */}
               {/* Table Block - scrollable */}
               <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
                 <AiTable tableId={tableId} />

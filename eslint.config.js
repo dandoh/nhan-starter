@@ -17,6 +17,14 @@ export default [
       '@typescript-eslint/array-type': 'off',
       "@typescript-eslint/require-await": 'off',
       '@typescript-eslint/no-unnecessary-condition': 'off',
+      // Enforce separate type imports
+      '@typescript-eslint/consistent-type-imports': [
+        'error',
+        {
+          prefer: 'type-imports',
+          fixStyle: 'separate-type-imports',
+        },
+      ],
     },
   },
 ]
