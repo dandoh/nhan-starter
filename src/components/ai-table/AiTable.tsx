@@ -301,7 +301,7 @@ function AiTableInternal({
     <div className="flex flex-col min-w-0 max-h-full">
       <div className="flex gap-2 flex-1 min-w-0 overflow-auto !scrollbar scrollbar-track-amber-300 scrollbar-thumb-transparent">
         <Table
-          // className="min-w-full"
+          className="min-w-full"
           style={{
             ...columnSizeVars,
             ...(aiColumns.length > 1 ? { width: table.getTotalSize() } : {}),

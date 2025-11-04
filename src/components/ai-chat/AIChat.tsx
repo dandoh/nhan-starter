@@ -3,7 +3,7 @@
 import { Suspense } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport, type UIMessage } from 'ai'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, Plus, X } from 'lucide-react'
 import {
   Conversation,
   ConversationContent,
@@ -34,12 +34,17 @@ import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
 import type { ToolUIPart } from 'ai'
 import type { ConversationContext } from '@/db/schema'
 import { serverFnGetConversationsForContext } from '@/serverFns/conversations'
+import { serverFnCreateConversation } from '@/serverFns/conversations'
+import { Button } from '@/components/ui/button'
 
 interface AIChatProps {
   context: Exclude<ConversationContext, { type: 'general' }>
   title?: string
   description?: string
   quickActions?: string[]
+  onNewChat?: () => void
+  onMinimize?: () => void
+  minimized?: boolean
 }
 
 // Helper function to transform messages to UI format
@@ -73,7 +78,12 @@ function AiChatInternal({
     'What trends do you see?',
     'Generate a report',
   ],
+  onNewChat,
+  onMinimize,
+  minimized = false,
 }: AIChatProps) {
+  const queryClient = useQueryClient()
+
   // Use oRPC's auto-generated query hook with Suspense
   const { data: conversations } = useSuspenseQuery({
     queryKey: ['conversations', context],
@@ -85,7 +95,22 @@ function AiChatInternal({
   const conversation = conversations[0]
   const existingMessages = transformMessages(conversation.messages || [])
 
-  const queryClient = useQueryClient()
+  const handleNewChat = async () => {
+    try {
+      await serverFnCreateConversation({
+        data: {
+          context,
+        },
+      })
+      // Invalidate conversations query to refetch
+      queryClient.invalidateQueries({
+        queryKey: ['conversations', context],
+      })
+      onNewChat?.()
+    } catch (error) {
+      console.error('Failed to create new conversation:', error)
+    }
+  }
 
   const { messages, sendMessage, status, error } = useChat({
     id: conversation.id,
@@ -124,6 +149,28 @@ function AiChatInternal({
 
   return (
     <div className="flex flex-col h-full max-h-full">
+      {/* Topbar */}
+      <div className="flex items-center justify-end gap-1 p-2 border-b border-border shrink-0 w-full">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={handleNewChat}
+          className="h-7 w-7"
+          aria-label="New chat"
+        >
+          <Plus className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onMinimize}
+          className="h-7 w-7"
+          aria-label="Minimize chat"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
       {/* Conversation Area */}
       <Conversation className="flex-1 min-h-0 ">
         <ConversationContent className="scrollbar scrollbar-track-transparent scrollbar-thumb-transparent hover:scrollbar-thumb-interactive">
@@ -233,6 +280,25 @@ function AiChatInternal({
         </div>
       </div>
     </div>
+  )
+}
+
+// Floating button component for minimized state
+export function AiChatFloatingButton({
+  onClick,
+}: {
+  onClick: () => void
+}) {
+  return (
+    <Button
+      onClick={onClick}
+      size="icon-lg"
+      variant="outline"
+      className="rounded-full w-14 h-14 shadow-lg hover:shadow-xl transition-all hover:scale-110 active:scale-95 border-primary bg-card hover:bg-card"
+      aria-label="Open AI chat"
+    >
+      <Sparkles className="h-6 w-6 text-primary" />
+    </Button>
   )
 }
 
