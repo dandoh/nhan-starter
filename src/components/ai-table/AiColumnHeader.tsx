@@ -8,6 +8,7 @@ import {
   ArrowUp,
   Pin,
   PinOff,
+  Sparkles,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -34,6 +35,7 @@ import {
   getOutputTypeDefinition,
 } from '@/lib/ai-table/output-type-registry'
 import { cn } from '@/lib/utils'
+import { useAIChat } from '@/components/ai-chat/ai-chat-context'
 
 type ColumnHeaderProps = {
   column: DbAiTableColumn
@@ -46,6 +48,7 @@ type ViewMode = 'menu' | 'edit'
 export function AiColumnHeader({ column, tanstackColumn, collections }: ColumnHeaderProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('menu')
+  const { setInput } = useAIChat()
 
   // Get all columns to check if this is the last one
   const { data: allColumns = [] } = useLiveQuery((q) =>
@@ -193,6 +196,15 @@ export function AiColumnHeader({ column, tanstackColumn, collections }: ColumnHe
     }
   }
 
+  const handleMentionInAI = () => {
+    setIsOpen(false)
+    // Add mention text (e.g., @column:ColumnName), appending to existing text
+    setInput((oldValue) => {
+      const mentionText = `@${column.name} `
+      return oldValue ? `${oldValue}${mentionText}` : mentionText
+    })
+  }
+
   const isPinnedLeft = tanstackColumn?.getIsPinned() === 'left'
   const canPin = tanstackColumn?.getCanPin?.() ?? false
   const isPrimary = column.primary
@@ -260,6 +272,11 @@ export function AiColumnHeader({ column, tanstackColumn, collections }: ColumnHe
                   <DropdownMenuItem onSelect={handleEditClick}>
                     <Edit2 className="h-4 w-4" />
                     <span>Edit column</span>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem onSelect={handleMentionInAI}>
+                    <Sparkles className="h-4 w-4" />
+                    <span>Mention in AI</span>
                   </DropdownMenuItem>
 
                   <DropdownMenuSeparator />

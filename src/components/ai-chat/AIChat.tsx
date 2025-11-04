@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense } from 'react'
+import { Suspense, useRef, useEffect, useMemo } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport, type UIMessage } from 'ai'
 import { Sparkles, Plus, X } from 'lucide-react'
@@ -35,6 +35,7 @@ import type { ToolUIPart } from 'ai'
 import type { ConversationContext } from '@/db/schema'
 import { Button } from '@/components/ui/button'
 import { orpcClient, orpcQuery } from '@/orpc/client'
+import { useAIChatContext, useAIChat } from './ai-chat-context'
 
 interface AIChatProps {
   context: Exclude<ConversationContext, { type: 'general' }>
@@ -79,214 +80,260 @@ function AiChatInternal({
   ],
   onNewChat,
   onMinimize,
-  minimized = false,
 }: AIChatProps) {
   const queryClient = useQueryClient()
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const { setChatRef } = useAIChatContext()
 
-  // Use oRPC's auto-generated query hook with Suspense
-  const { data: conversations } = useSuspenseQuery(
-    orpcQuery.conversations.getForContext.queryOptions({
-      input: { context, limit: 10 },
+  // Create a stable handle object that closes over textareaRef
+  const handle = useMemo(
+    () => ({
+      focus: () => {
+        setTimeout(() => {
+          textareaRef.current?.focus()
+        }, 100)
+      },
+      setInput: (value: string | ((oldValue: string) => string)) => {
+        if (textareaRef.current) {
+          const oldValue = textareaRef.current.value || ''
+          const newValue =
+            typeof value === 'function' ? value(oldValue) : value
+          textareaRef.current.value = newValue
+          // Trigger input event to ensure React tracks the change
+          const inputEvent = new Event('input', { bubbles: true })
+          textareaRef.current.dispatchEvent(inputEvent)
+          // // Focus the input
+          setTimeout(() => {
+            textareaRef.current?.focus()
+            // Set cursor to the end of the input
+            textareaRef.current?.setSelectionRange(newValue.length, newValue.length)
+          }, 200)
+        }
+      },
     }),
+    [], // textareaRef is stable, so this handle is stable
   )
 
-  // Use the most recent conversation (first in the array)
-  const conversation = conversations[0]
-  const existingMessages = transformMessages(conversation.messages || [])
+  // Register this handle with the context
+  useEffect(() => {
+    setChatRef(handle)
+  }, [handle, setChatRef])
 
-  const handleNewChat = async () => {
-    try {
-      await orpcClient.conversations.create({
-        context,
-      })
-      // Invalidate conversations query to refetch
-      queryClient.invalidateQueries({
-        queryKey: orpcQuery.conversations.getForContext.queryKey({
-          input: { context, limit: 10 },
-        }),
-      })
-      onNewChat?.()
-    } catch (error) {
-      console.error('Failed to create new conversation:', error)
-    }
-  }
+    // Use oRPC's auto-generated query hook with Suspense
+    const { data: conversations } = useSuspenseQuery(
+      orpcQuery.conversations.getForContext.queryOptions({
+        input: { context, limit: 10 },
+      }),
+    )
 
-  const { messages, sendMessage, status, error } = useChat({
-    id: conversation.id,
-    transport: new DefaultChatTransport({
-      api: `/api/chat/${conversation.id}`,
-    }),
-    messages: existingMessages,
-    onFinish: () => {
-      // Refresh columns, records, and cells after AI chat finishes (for table context)
-      if (context.type === 'table') {
-        queryClient.invalidateQueries({
-          queryKey: ['ai-tables', context.tableId, 'columns'],
+    // Use the most recent conversation (first in the array)
+    const conversation = conversations[0]
+    const existingMessages = transformMessages(conversation.messages || [])
+
+    const handleNewChat = async () => {
+      try {
+        await orpcClient.conversations.create({
+          context,
         })
+        // Invalidate conversations query to refetch
         queryClient.invalidateQueries({
-          queryKey: ['ai-tables', context.tableId, 'records'],
+          queryKey: orpcQuery.conversations.getForContext.queryKey({
+            input: { context, limit: 10 },
+          }),
         })
-        queryClient.invalidateQueries({
-          queryKey: ['ai-tables', context.tableId, 'cells'],
-        })
+        onNewChat?.()
+      } catch (error) {
+        console.error('Failed to create new conversation:', error)
       }
-    },
-  })
+    }
 
-  const handleSubmit = async (message: PromptInputMessage) => {
-    const text = message.text?.trim()
-    if (!text) return
+    const { messages, sendMessage, status, error } = useChat({
+      id: conversation.id,
+      transport: new DefaultChatTransport({
+        api: `/api/chat/${conversation.id}`,
+      }),
+      messages: existingMessages,
+      onFinish: () => {
+        // Refresh columns, records, and cells after AI chat finishes (for table context)
+        if (context.type === 'table') {
+          queryClient.invalidateQueries({
+            queryKey: ['ai-tables', context.tableId, 'columns'],
+          })
+          queryClient.invalidateQueries({
+            queryKey: ['ai-tables', context.tableId, 'records'],
+          })
+          queryClient.invalidateQueries({
+            queryKey: ['ai-tables', context.tableId, 'cells'],
+          })
+        }
+      },
+    })
 
-    sendMessage({ text })
-  }
+    const handleSubmit = async (message: PromptInputMessage) => {
+      const text = message.text?.trim()
+      if (!text) return
 
-  const isLoading = status === 'submitted' || status === 'streaming'
+      sendMessage({ text })
+    }
 
-  const handleSuggestionClick = (suggestion: string) => {
-    handleSubmit({ text: suggestion })
-  }
+    const isLoading = status === 'submitted' || status === 'streaming'
 
-  return (
-    <div className="flex flex-col h-full max-h-full">
-      {/* Topbar */}
-      <div className="flex items-center justify-end gap-1 p-2 shrink-0 w-full">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={handleNewChat}
-          className="h-7 w-7"
-          aria-label="New chat"
-        >
-          <Plus className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onMinimize}
-          className="h-7 w-7"
-          aria-label="Minimize chat"
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
+    const handleSuggestionClick = (suggestion: string) => {
+      handleSubmit({ text: suggestion })
+    }
 
-      {/* Conversation Area */}
-      <Conversation className="flex-1 min-h-0 ">
-        <ConversationContent className="scrollbar scrollbar-track-transparent scrollbar-thumb-transparent hover:scrollbar-thumb-interactive">
-          {messages.length === 0 ? (
-            <ConversationEmptyState
-              icon={
-                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10">
-                  <Sparkles className="h-6 w-6 text-primary" />
-                </div>
-              }
-              title={title}
-              description={description}
-            />
-          ) : (
-            <>
-              {messages.map((message) => (
-                <Message key={message.id} from={message.role}>
-                  <MessageContent variant="flat">
-                    {message.parts.map((part, index) => {
-                      // Handle text parts
-                      if (part.type === 'text') {
-                        return <Response key={index}>{part.text}</Response>
-                      }
+    return (
+      <div className="flex flex-col h-full max-h-full">
+        {/* Topbar */}
+        <div className="flex items-center justify-end gap-1 p-2 shrink-0 w-full">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={handleNewChat}
+            className="h-7 w-7"
+            aria-label="New chat"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onMinimize}
+            className="h-7 w-7"
+            aria-label="Minimize chat"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
 
-                      // Handle tool calls
-                      if (part.type.startsWith('tool-')) {
-                        const toolPart = part as ToolUIPart
-                        // Auto-open tools that are completed or errored
-                        // const shouldDefaultOpen =
-                        //   toolPart.state === 'output-available' ||
-                        //   toolPart.state === 'output-error'
+        {/* Conversation Area */}
+        <Conversation className="flex-1 min-h-0 ">
+          <ConversationContent className="scrollbar scrollbar-track-transparent scrollbar-thumb-transparent hover:scrollbar-thumb-interactive">
+            {messages.length === 0 ? (
+              <ConversationEmptyState
+                icon={
+                  <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10">
+                    <Sparkles className="h-6 w-6 text-primary" />
+                  </div>
+                }
+                title={title}
+                description={description}
+              />
+            ) : (
+              <>
+                {messages.map((message) => (
+                  <Message key={message.id} from={message.role}>
+                    <MessageContent variant="flat">
+                      {message.parts.map((part, index) => {
+                        // Handle text parts
+                        if (part.type === 'text') {
+                          return <Response key={index}>{part.text}</Response>
+                        }
 
-                        return (
-                          <Tool key={index} open={false}>
-                            <ToolHeader
-                              type={toolPart.type}
-                              state={toolPart.state}
-                            />
-                            <ToolContent>
-                              <ToolInput input={toolPart.input} />
-                              <ToolOutput
-                                output={toolPart.output}
-                                errorText={toolPart.errorText}
+                        // Handle tool calls
+                        if (part.type.startsWith('tool-')) {
+                          const toolPart = part as ToolUIPart
+                          // Auto-open tools that are completed or errored
+                          // const shouldDefaultOpen =
+                          //   toolPart.state === 'output-available' ||
+                          //   toolPart.state === 'output-error'
+
+                          return (
+                            <Tool key={index} open={false}>
+                              <ToolHeader
+                                type={toolPart.type}
+                                state={toolPart.state}
                               />
-                            </ToolContent>
-                          </Tool>
-                        )
-                      }
+                              <ToolContent>
+                                <ToolInput input={toolPart.input} />
+                                <ToolOutput
+                                  output={toolPart.output}
+                                  errorText={toolPart.errorText}
+                                />
+                              </ToolContent>
+                            </Tool>
+                          )
+                        }
 
-                      return null
-                    })}
-                  </MessageContent>
-                </Message>
+                        return null
+                      })}
+                    </MessageContent>
+                  </Message>
+                ))}
+              </>
+            )}
+          </ConversationContent>
+          <ConversationScrollButton />
+        </Conversation>
+
+        {/* Quick Actions - Show only when no messages */}
+        {messages.length === 0 && (
+          <div className="p-4 space-y-2">
+            <div className="flex flex-col gap-2">
+              {quickActions.map((action) => (
+                <Suggestion
+                  key={action}
+                  suggestion={action}
+                  onClick={handleSuggestionClick}
+                  className="justify-start w-fit"
+                  variant="outline"
+                  size="sm"
+                />
               ))}
-            </>
-          )}
-        </ConversationContent>
-        <ConversationScrollButton />
-      </Conversation>
-
-      {/* Quick Actions - Show only when no messages */}
-      {messages.length === 0 && (
-        <div className="p-4 space-y-2">
-          <div className="flex flex-col gap-2">
-            {quickActions.map((action) => (
-              <Suggestion
-                key={action}
-                suggestion={action}
-                onClick={handleSuggestionClick}
-                className="justify-start w-fit"
-                variant="outline"
-                size="sm"
-              />
-            ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Error Display */}
-      {error && (
-        <div className="px-4 pb-2">
-          <div className="p-2 bg-destructive/10 text-destructive text-xs rounded">
-            Error: {error.message}
+        {/* Error Display */}
+        {error && (
+          <div className="px-4 pb-2">
+            <div className="p-2 bg-destructive/10 text-destructive text-xs rounded">
+              Error: {error.message}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Input Area */}
-      <div>
-        <div className="p-4">
-          <PromptInput onSubmit={handleSubmit}>
-            <PromptInputBody>
-              <PromptInputTextarea
-                placeholder="Ask AI to help..."
-                disabled={isLoading}
-              />
-            </PromptInputBody>
-            <PromptInputFooter>
-              <PromptInputTools>
-                {/* <span className="text-xs text-muted-foreground">
+        {/* Input Area */}
+        <div>
+          <div className="p-4">
+            <PromptInput onSubmit={handleSubmit}>
+              <PromptInputBody>
+                <PromptInputTextarea
+                  ref={textareaRef}
+                  placeholder="Ask AI to help..."
+                  disabled={isLoading}
+                />
+              </PromptInputBody>
+              <PromptInputFooter>
+                <PromptInputTools>
+                  {/* <span className="text-xs text-muted-foreground">
                   Press Enter to send, Shift+Enter for new line
                 </span> */}
-              </PromptInputTools>
-              <PromptInputSubmit status={status} />
-            </PromptInputFooter>
-          </PromptInput>
+                </PromptInputTools>
+                <PromptInputSubmit status={status} />
+              </PromptInputFooter>
+            </PromptInput>
+          </div>
         </div>
-      </div>
-    </div>
-  )
+       </div>
+     )
 }
 
 // Floating button component for minimized state
 export function AiChatFloatingButton({ onClick }: { onClick: () => void }) {
+  const { focus } = useAIChat()
+
+  const handleClick = () => {
+    onClick()
+    // Focus the chat input after opening
+    setTimeout(() => {
+      focus()
+    }, 100)
+  }
+
   return (
     <Button
-      onClick={onClick}
+      onClick={handleClick}
       size="icon-lg"
       variant="outline"
       className="rounded-full w-14 h-14 shadow-lg hover:shadow-xl transition-all hover:scale-110 active:scale-95 border-primary bg-card hover:bg-card"
