@@ -1,8 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useSidebar } from '@/components/ui/sidebar'
 import { AiTable } from '@/components/ai-table/AiTable'
-import { AiChat } from '@/components/ai-chat/AiChat'
+import { AiChat, AiChatFloatingButton } from '@/components/ai-chat/AiChat'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { TopNav, AppPageWrapper } from '@/components/AppPageWrapper'
@@ -21,6 +21,7 @@ export const Route = createFileRoute('/_authed/tables/$tableId')({
 function TableEditorPage() {
   const { tableId } = Route.useParams()
   const { setOpen: setSidebarOpen } = useSidebar()
+  const [isChatMinimized, setIsChatMinimized] = useState(false)
   const { data: table } = useLiveQuery((q) =>
     q
       .from({ table: tablesCollection })
@@ -98,7 +99,13 @@ function TableEditorPage() {
         </div>
 
         {/* AI Chat Panel */}
-        <div className="flex flex-col w-96 shrink-0 bg-card border-l border-border">
+        <div
+          className={`flex flex-col shrink-0 bg-card border-l border-border transition-all duration-300 ease-in-out overflow-hidden ${
+            isChatMinimized
+              ? 'w-0 opacity-0 pointer-events-none'
+              : 'w-96 opacity-100'
+          }`}
+        >
           <AiChat
             context={{ type: 'table', tableId }}
             title="Table AI Assistant"
@@ -109,7 +116,20 @@ function TableEditorPage() {
               'Calculate statistics',
               'Export to CSV',
             ]}
+            onMinimize={() => setIsChatMinimized(true)}
+            minimized={isChatMinimized}
           />
+        </div>
+
+        {/* Floating button when minimized */}
+        <div
+          className={`fixed bottom-6 right-6 z-50 transition-all duration-300 ease-in-out ${
+            isChatMinimized
+              ? 'opacity-100 scale-100 translate-y-0'
+              : 'opacity-0 scale-95 translate-y-2 pointer-events-none'
+          }`}
+        >
+          <AiChatFloatingButton onClick={() => setIsChatMinimized(false)} />
         </div>
       </div>
     </AppPageWrapper>
