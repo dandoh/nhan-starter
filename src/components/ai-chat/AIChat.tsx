@@ -33,9 +33,9 @@ import {
 import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
 import type { ToolUIPart } from 'ai'
 import type { ConversationContext } from '@/db/schema'
-import { serverFnGetConversationsForContext } from '@/serverFns/conversations'
 import { serverFnCreateConversation } from '@/serverFns/conversations'
 import { Button } from '@/components/ui/button'
+import { orpcQuery } from '@/orpc/client'
 
 interface AIChatProps {
   context: Exclude<ConversationContext, { type: 'general' }>
@@ -85,11 +85,11 @@ function AiChatInternal({
   const queryClient = useQueryClient()
 
   // Use oRPC's auto-generated query hook with Suspense
-  const { data: conversations } = useSuspenseQuery({
-    queryKey: ['conversations', context],
-    queryFn: () =>
-      serverFnGetConversationsForContext({ data: { context, limit: 10 } }),
-  })
+  const { data: conversations } = useSuspenseQuery(
+    orpcQuery.conversations.getForContext.queryOptions({
+      input: { context, limit: 10 },
+    }),
+  )
 
   // Use the most recent conversation (first in the array)
   const conversation = conversations[0]
@@ -104,7 +104,9 @@ function AiChatInternal({
       })
       // Invalidate conversations query to refetch
       queryClient.invalidateQueries({
-        queryKey: ['conversations', context],
+        queryKey: orpcQuery.conversations.getForContext.queryKey({
+          input: { context, limit: 10 },
+        }),
       })
       onNewChat?.()
     } catch (error) {
@@ -150,7 +152,7 @@ function AiChatInternal({
   return (
     <div className="flex flex-col h-full max-h-full">
       {/* Topbar */}
-      <div className="flex items-center justify-end gap-1 p-2 border-b border-border shrink-0 w-full">
+      <div className="flex items-center justify-end gap-1 p-2 shrink-0 w-full">
         <Button
           variant="ghost"
           size="icon-sm"
@@ -284,11 +286,7 @@ function AiChatInternal({
 }
 
 // Floating button component for minimized state
-export function AiChatFloatingButton({
-  onClick,
-}: {
-  onClick: () => void
-}) {
+export function AiChatFloatingButton({ onClick }: { onClick: () => void }) {
   return (
     <Button
       onClick={onClick}
