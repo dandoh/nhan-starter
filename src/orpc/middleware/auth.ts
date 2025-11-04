@@ -1,5 +1,6 @@
 import { os, ORPCError } from '@orpc/server'
 import { auth } from '@/auth/auth-config'
+import { User } from '@/db/schema'
 
 /**
  * Authentication middleware for oRPC routes.
@@ -7,8 +8,16 @@ import { auth } from '@/auth/auth-config'
  * Throws 401 UNAUTHORIZED if no valid session is found.
  */
 export const authMiddleware = os
-  .$context<{ headers?: Headers }>()
+  .$context<{ headers?: Headers; user?: { id: string } }>()
   .middleware(async ({ context, next }) => {
+    if (context.user) {
+      return next({
+        context: {
+          user: context.user,
+        },
+      })
+    }
+
     if (!context.headers) {
       throw new ORPCError('UNAUTHORIZED', {
         message: 'Auth headers missing',
@@ -29,7 +38,7 @@ export const authMiddleware = os
     return next({
       context: {
         user: sessionData.user,
-        session: sessionData.session,
+        // session: sessionData.session,
       },
     })
   })

@@ -29,6 +29,7 @@ export default {
     list: aiTables.listTables,
     create: aiTables.createTable,
     get: aiTables.getTable,
+    update: aiTables.updateTable,
     delete: aiTables.deleteTable,
     
     // Column operations

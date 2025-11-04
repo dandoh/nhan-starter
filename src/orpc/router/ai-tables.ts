@@ -1,7 +1,9 @@
-import { os } from '@orpc/server'
+import { implement, os } from '@orpc/server'
 import * as z from 'zod'
+import { oc } from '@orpc/contract'
 import { authMiddleware } from '../middleware/auth'
 import { db } from '@/db'
+import { createTool } from '@orpc/ai-sdk'
 import {
   aiTableCells,
   aiTableColumns,
@@ -248,27 +250,48 @@ export const getColumns = os
     return columns
   })
 
+const createColumnContract = oc.input(
+  z.object({
+    tableId: z
+      .string()
+      .uuid()
+      .describe('The ID of the table to create the column in'),
+    name: z
+      .string()
+      .min(1)
+      .max(255)
+      .describe('The name of the column to create'),
+    description: z
+      .string()
+      .optional()
+      .describe('The description of the column to create'),
+    outputType: aiTableOutputTypeSchema
+      .default('text')
+      .describe('The output type of the column to create'),
+    aiPrompt: z
+      .string()
+      .default('')
+      .describe(
+        'If the column is AI-generated, the prompt that tells the AI how to generate values',
+      ),
+    outputTypeConfig: z
+      .object({
+        options: z.array(optionSchema).optional(),
+        maxSelections: z.number().int().positive().optional(),
+        dateFormat: z.string().optional(),
+      })
+      .optional()
+      .describe(
+        'The configuration for the output type of the column to create',
+      ),
+  }),
+)
+
 /**
  * Create a new column in a table
  */
-export const createColumn = os
+export const createColumn = implement(createColumnContract)
   .use(authMiddleware)
-  .input(
-    z.object({
-      tableId: z.string().uuid(),
-      name: z.string().min(1).max(255),
-      description: z.string().optional(),
-      outputType: aiTableOutputTypeSchema.default('text'),
-      aiPrompt: z.string().default(''),
-      outputTypeConfig: z
-        .object({
-          options: z.array(optionSchema).optional(),
-          maxSelections: z.number().int().positive().optional(),
-          dateFormat: z.string().optional(),
-        })
-        .optional(),
-    }),
-  )
   .handler(async ({ input, context }) => {
     // Verify table ownership
     const table = await db.query.aiTables.findFirst({
@@ -343,28 +366,26 @@ export const createColumn = os
     return result
   })
 
-/**
- * Update column name or config
- */
-export const updateColumn = os
+const updateColumnContract = oc.input(
+  z.object({
+    columnId: z.string().uuid(),
+    name: z.string().min(1).max(255).optional(),
+    description: z.string().optional(),
+    outputType: aiTableOutputTypeSchema.optional(),
+    aiPrompt: z.string().optional(),
+    outputTypeConfig: z
+      .object({
+        options: z.array(optionSchema).optional(),
+        maxSelections: z.number().int().positive().optional(),
+        dateFormat: z.string().optional(),
+      })
+      .optional()
+      .nullable(),
+  }),
+)
+
+export const updateColumn = implement(updateColumnContract)
   .use(authMiddleware)
-  .input(
-    z.object({
-      columnId: z.string().uuid(),
-      name: z.string().min(1).max(255).optional(),
-      description: z.string().optional(),
-      outputType: aiTableOutputTypeSchema.optional(),
-      aiPrompt: z.string().optional(),
-      outputTypeConfig: z
-        .object({
-          options: z.array(optionSchema).optional(),
-          maxSelections: z.number().int().positive().optional(),
-          dateFormat: z.string().optional(),
-        })
-        .optional()
-        .nullable(),
-    }),
-  )
   .handler(async ({ input, context }) => {
     // Verify ownership through table
     const column = await db.query.aiTableColumns.findFirst({
@@ -839,4 +860,3 @@ export const triggerComputeAllCells = os
       message: `Triggered computation for ${cellIds.length} AI cells`,
     }
   })
-

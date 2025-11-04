@@ -7,21 +7,7 @@ import type {
   AiTableCell,
 } from '@/db/schema'
 import type { OutputTypeConfig } from '@/lib/ai-table/output-types'
-import {
-  serverFnCreateTable,
-  serverFnDeleteTable,
-  serverFnGetCells,
-  serverFnGetColumns,
-  serverFnListTables,
-  serverFnUpdateCell,
-  serverFnUpdateColumn,
-  serverFnCreateColumn,
-  serverFnDeleteColumn,
-  serverFnGetRecords,
-  serverFnCreateRecord,
-  serverFnDeleteRecord,
-  serverFnUpdateTable,
-} from '@/serverFns/ai-tables'
+import { orpcClient } from '@/orpc/client'
 import { queryCollectionOptions } from '@tanstack/query-db-collection'
 
 import {
@@ -38,37 +24,31 @@ export const tablesCollection = createCollection(
     queryClient,
     queryKey: ['ai-tables', 'tables'],
     queryFn: async () => {
-      const tables = await serverFnListTables({})
+      const tables = await orpcClient.aiTables.list({})
       return tables
     },
     getKey: (table) => table.id,
     onInsert: async ({ transaction }) => {
       const { modified: newTable } = transaction.mutations[0]
-      await serverFnCreateTable({
-        data: {
-          id: newTable.id,
-          name: newTable.name,
-        },
+      await orpcClient.aiTables.create({
+        id: newTable.id,
+        name: newTable.name,
       })
     },
 
     onDelete: async ({ transaction }) => {
       const { original } = transaction.mutations[0]
-      await serverFnDeleteTable({
-        data: {
-          tableId: original.id,
-        },
+      await orpcClient.aiTables.delete({
+        tableId: original.id,
       })
     },
 
     onUpdate: async ({ transaction }) => {
       for (const mutation of transaction.mutations) {
         const { original, changes } = mutation
-        await serverFnUpdateTable({
-          data: {
-            tableId: original.id,
-            ...changes,
-          },
+        await orpcClient.aiTables.update({
+          tableId: original.id,
+          ...changes,
         })
       }
     },
@@ -97,11 +77,9 @@ function createTableUpdateMutation<Key extends keyof AiTable>(
     mutationFn: async ({ transaction }) => {
       for (const mutation of transaction.mutations) {
         const { original, changes, modified } = mutation
-        await serverFnUpdateTable({
-          data: {
-            tableId: (original as AiTable).id,
-            ...changes,
-          },
+        await orpcClient.aiTables.update({
+          tableId: (original as AiTable).id,
+          ...changes,
         })
 
         tablesCollection.utils.writeUpdate(modified)
@@ -146,10 +124,8 @@ export function createTableCollections(tableId: string) {
       queryClient,
       queryKey: ['ai-tables', tableId, 'cells'],
       queryFn: async () => {
-        const cells = await serverFnGetCells({
-          data: {
-            tableId,
-          },
+        const cells = await orpcClient.aiTables.getCells({
+          tableId,
         })
         return cells
       },
@@ -176,11 +152,9 @@ export function createTableCollections(tableId: string) {
       onUpdate: async ({ transaction }) => {
         for (const mutation of transaction.mutations) {
           const { original, changes } = mutation
-          const updatedCell = await serverFnUpdateCell({
-            data: {
-              cellId: original.id,
-              value: changes.value || undefined,
-            },
+          const updatedCell = await orpcClient.aiTables.updateCell({
+            cellId: original.id,
+            value: changes.value || undefined,
           })
           cellsCollection.utils.writeUpdate(updatedCell)
         }
@@ -198,10 +172,8 @@ export function createTableCollections(tableId: string) {
       queryClient,
       queryKey: ['ai-tables', tableId, 'columns'],
       queryFn: async () => {
-        const columns = await serverFnGetColumns({
-          data: {
-            tableId,
-          },
+        const columns = await orpcClient.aiTables.getColumns({
+          tableId,
         })
         return columns
       },
@@ -213,15 +185,13 @@ export function createTableCollections(tableId: string) {
           const outputTypeConfig = newColumn.outputTypeConfig as
             | OutputTypeConfig
             | undefined
-          const { cells } = await serverFnCreateColumn({
-            data: {
-              tableId,
-              name: newColumn.name,
-              description: newColumn.description || undefined,
-              outputType: newColumn.outputType,
-              aiPrompt: newColumn.aiPrompt || '',
-              outputTypeConfig,
-            },
+          const { cells } = await orpcClient.aiTables.createColumn({
+            tableId,
+            name: newColumn.name,
+            description: newColumn.description || undefined,
+            outputType: newColumn.outputType,
+            aiPrompt: newColumn.aiPrompt || '',
+            outputTypeConfig,
           })
 
           // Insert created cells into cells collection
@@ -244,15 +214,13 @@ export function createTableCollections(tableId: string) {
           const outputTypeConfig = modified.outputTypeConfig as
             | OutputTypeConfig
             | undefined
-          await serverFnUpdateColumn({
-            data: {
-              columnId: original.id,
-              name: modified.name,
-              description: modified.description || undefined,
-              outputType: modified.outputType,
-              aiPrompt: modified.aiPrompt,
-              outputTypeConfig,
-            },
+          await orpcClient.aiTables.updateColumn({
+            columnId: original.id,
+            name: modified.name,
+            description: modified.description || undefined,
+            outputType: modified.outputType,
+            aiPrompt: modified.aiPrompt,
+            outputTypeConfig,
           })
         }
       },
@@ -260,10 +228,8 @@ export function createTableCollections(tableId: string) {
       onDelete: async ({ transaction }) => {
         for (const mutation of transaction.mutations) {
           const { original } = mutation
-          await serverFnDeleteColumn({
-            data: {
-              columnId: original.id,
-            },
+          await orpcClient.aiTables.deleteColumn({
+            columnId: original.id,
           })
         }
       },
@@ -276,10 +242,8 @@ export function createTableCollections(tableId: string) {
       queryClient,
       queryKey: ['ai-tables', tableId, 'records'],
       queryFn: async () => {
-        const records = await serverFnGetRecords({
-          data: {
-            tableId,
-          },
+        const records = await orpcClient.aiTables.getRecords({
+          tableId,
         })
         return records
       },
@@ -288,11 +252,9 @@ export function createTableCollections(tableId: string) {
       onInsert: async ({ transaction }) => {
         for (const mutation of transaction.mutations) {
           const { modified: newRecord } = mutation
-          const { cells } = await serverFnCreateRecord({
-            data: {
-              tableId,
-              id: newRecord.id,
-            },
+          const { cells } = await orpcClient.aiTables.createRecord({
+            tableId,
+            id: newRecord.id,
           })
 
           // Insert created cells into cells collection
@@ -312,10 +274,8 @@ export function createTableCollections(tableId: string) {
       onDelete: async ({ transaction }) => {
         for (const mutation of transaction.mutations) {
           const { original } = mutation
-          await serverFnDeleteRecord({
-            data: {
-              recordId: original.id,
-            },
+          await orpcClient.aiTables.deleteRecord({
+            recordId: original.id,
           })
         }
       },

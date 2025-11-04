@@ -33,9 +33,8 @@ import {
 import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
 import type { ToolUIPart } from 'ai'
 import type { ConversationContext } from '@/db/schema'
-import { serverFnCreateConversation } from '@/serverFns/conversations'
 import { Button } from '@/components/ui/button'
-import { orpcQuery } from '@/orpc/client'
+import { orpcClient, orpcQuery } from '@/orpc/client'
 
 interface AIChatProps {
   context: Exclude<ConversationContext, { type: 'general' }>
@@ -97,10 +96,8 @@ function AiChatInternal({
 
   const handleNewChat = async () => {
     try {
-      await serverFnCreateConversation({
-        data: {
-          context,
-        },
+      await orpcClient.conversations.create({
+        context,
       })
       // Invalidate conversations query to refetch
       queryClient.invalidateQueries({
