@@ -24,6 +24,8 @@
     "@ai-sdk/anthropic": "3.0.0-beta.49",
     "@ai-sdk/openai": "3.0.0-beta.47",
     "@ai-sdk/react": "3.0.0-beta.92",
+    "@composio/core": "^0.2.3",
+    "@composio/vercel": "^0.2.15",
     "@faker-js/faker": "^10.0.0",
     "@hookform/resolvers": "^5.2.2",
     "@lmnr-ai/lmnr": "^0.7.4",

@@ -22,6 +22,8 @@ import { z } from 'zod'
 import { getTracer } from '@lmnr-ai/lmnr'
 import { createColumn, updateColumn } from '@/orpc/router/ai-tables'
 import { createTool } from '@orpc/ai-sdk'
+import { Composio } from '@composio/core'
+import { VercelProvider } from '@composio/vercel'
 
 // Define createColumn tool (only available for table conversations)
 const createColumnToolSchema = z.object({
@@ -168,6 +170,12 @@ ${JSON.stringify(table, null, 2)}
             user,
           },
         })
+        const composio = new Composio({
+          provider: new VercelProvider(),
+        })
+        const composioTools = await composio.tools.get(user.id, {
+          toolkits: ['LINEAR'],
+        })
 
         // Build system prompt
         const systemPrompt = `You are an AI assistant helping users manage their data tables.
@@ -175,18 +183,20 @@ ${JSON.stringify(table, null, 2)}
 ${tableContext}
 
 You have access to tools to collaborate with the user on modifying the table.
+
 `
 
         // Create agent with tools
         const agent = new ToolLoopAgent({
           model: anthropic('claude-3-7-sonnet-latest'),
           instructions: systemPrompt,
-          ...(tableId && {
-            tools: {
+          tools: {
+            ...(tableId && {
               createColumn: createColumnTool,
               updateColumn: updateColumnTool,
-            },
-          }),
+            }),
+            ...composioTools,
+          },
           stopWhen: stepCountIs(20), // Allow up to 20 steps for tool calls
           experimental_telemetry: {
             isEnabled: true,

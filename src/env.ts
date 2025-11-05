@@ -7,6 +7,7 @@ export const env = createEnv({
     ANTHROPIC_API_KEY: z.string().min(1),
     INNGEST_EVENT_KEY: z.string().optional(),
     INNGEST_SIGNING_KEY: z.string().optional(),
+    COMPOSIO_API_KEY: z.string().min(1),
   },
 
   /**

@@ -6,6 +6,7 @@ import {
   getConversationsForContext 
 } from './conversations'
 import * as aiTables from './ai-tables'
+import * as connectors from './connectors'
 
 export default {
   listTodos,
@@ -50,5 +51,11 @@ export default {
     
     // AI computation
     triggerComputeAllCells: aiTables.triggerComputeAllCells,
+  },
+  
+  // Connectors
+  connectors: {
+    initiateConnection: connectors.initiateConnection,
+    listConnections: connectors.listConnections,
   },
 }
