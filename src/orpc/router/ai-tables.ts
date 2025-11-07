@@ -162,6 +162,7 @@ export const updateTable = os
       name: z.string().min(1).max(255).optional(),
       description: z.string().optional().nullable(),
       columnSizing: z.record(z.string(), z.number()).optional().nullable(),
+      columnOrder: z.array(z.string()).optional().nullable(),
       columnPinning: z
         .object({
           left: z.array(z.string()).optional(),
@@ -185,15 +186,18 @@ export const updateTable = os
     }
 
     const updatedFields = {
-      ...(input.name !== undefined && { name: input.name }),
-      ...(input.description !== undefined && {
+      ...(input.name && { name: input.name }),
+      ...(input.description && {
         description: input.description,
       }),
-      ...(input.columnSizing !== undefined && {
+      ...(input.columnSizing && {
         columnSizing: input.columnSizing,
       }),
-      ...(input.columnPinning !== undefined && {
+      ...(input.columnPinning && {
         columnPinning: input.columnPinning,
+      }),
+      ...(input.columnOrder && {
+        columnOrder: input.columnOrder,
       }),
     }
 

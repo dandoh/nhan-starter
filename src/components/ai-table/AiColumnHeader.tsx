@@ -45,6 +45,17 @@ type ColumnHeaderProps = {
 
 type ViewMode = 'menu' | 'edit'
 
+// Helper function to prevent drag events from interfering with interactive elements
+// Note: We don't stop onClick to allow menu interactions to work properly
+const stopDragPropagation = {
+  onMouseDown: (e: React.MouseEvent) => {
+    // Only stop propagation if it's the start of a drag (not a click)
+    // We check if the mouse moves after mousedown to distinguish drag from click
+    e.stopPropagation()
+  },
+  onTouchStart: (e: React.TouchEvent) => e.stopPropagation(),
+}
+
 export function AiColumnHeader({ column, tanstackColumn, collections }: ColumnHeaderProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('menu')
@@ -225,47 +236,26 @@ export function AiColumnHeader({ column, tanstackColumn, collections }: ColumnHe
             </TooltipContent>
           </Tooltip>
 
-          {/* Column name */}
-          <span>{column.name}</span>
-        </div>
-
-        {/* Right side: Info icon and dropdown menu */}
-        <div className="flex items-center gap-1">
-          {/* Description info icon with tooltip */}
-          {column.description && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  className="inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus:outline-none"
-                  aria-label="Column description"
-                >
-                  <Info className="h-3.5 w-3.5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-xs">
-                <p>{column.description}</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-
           {/* Dropdown menu */}
           <DropdownMenu open={isOpen} onOpenChange={handleDropdownOpenChange}>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-muted-foreground transition-colors hover:bg-primary/20 hover:text-foreground focus:outline-none"
                 aria-label="Column options"
+                {...stopDragPropagation}
               >
-                <ChevronDown className="h-4 w-4" />
-              </Button>
+                {/* Column name */}
+                <span className="transition-colors">{column.name}</span>
+                <ChevronDown className="h-4 w-4 transition-colors" />
+              </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
               className={cn('w-80 p-0', {
                 'w-100': viewMode === 'edit',
               })}
+              {...stopDragPropagation}
             >
               {viewMode === 'menu' ? (
                 <>
@@ -461,6 +451,25 @@ export function AiColumnHeader({ column, tanstackColumn, collections }: ColumnHe
               )}
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Description info icon with tooltip - COMMENTED OUT */}
+          {/* {column.description && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus:outline-none"
+                  aria-label="Column description"
+                  {...stopDragPropagation}
+                >
+                  <Info className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs">
+                <p>{column.description}</p>
+              </TooltipContent>
+            </Tooltip>
+          )} */}
         </div>
       </div>
     </>

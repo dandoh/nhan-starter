@@ -103,6 +103,14 @@ export const updateTableColumnPinning =
     },
   )
 
+export const updateTableColumnOrder =
+  createTableUpdateMutation<'columnOrder'>(
+    'columnOrder',
+    (draft, value) => {
+      draft.columnOrder = value
+    },
+  )
+
 export const updateTableName = createTableUpdateMutation<'name'>(
   'name',
   (draft, value) => {

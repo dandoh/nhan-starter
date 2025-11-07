@@ -130,6 +130,67 @@ async function seed() {
         ],
       },
     },
+    // Column: Price (text)
+    {
+      tableId: table.id,
+      name: 'Price',
+      description: 'Current stock price',
+      outputType: 'text',
+      aiPrompt:
+        'Provide the current stock price for this ticker. Format as a number with up to 2 decimal places (e.g., 150.25).',
+      outputTypeConfig: null,
+    },
+    // Column: Market Cap (text)
+    {
+      tableId: table.id,
+      name: 'Market Cap',
+      description: 'Market capitalization in billions',
+      outputType: 'text',
+      aiPrompt:
+        'Provide the market capitalization for this stock. Format as a number in billions with 2 decimal places followed by "B" (e.g., 2.5B, 150.75B).',
+      outputTypeConfig: null,
+    },
+    // Column: Sector (single_select)
+    {
+      tableId: table.id,
+      name: 'Sector',
+      description: 'Industry sector classification',
+      outputType: 'single_select',
+      aiPrompt:
+        'Identify the primary industry sector for this stock. Choose one: Technology, Healthcare, Financial Services, Consumer Discretionary, Consumer Staples, Energy, Industrials, Materials, Real Estate, Utilities, or Communication Services.',
+      outputTypeConfig: {
+        options: [
+          { value: 'Technology' },
+          { value: 'Healthcare' },
+          { value: 'Financial Services' },
+          { value: 'Consumer Discretionary' },
+          { value: 'Consumer Staples' },
+          { value: 'Energy' },
+          { value: 'Industrials' },
+          { value: 'Materials' },
+          { value: 'Real Estate' },
+          { value: 'Utilities' },
+          { value: 'Communication Services' },
+        ],
+      },
+    },
+    // Column: Analyst Rating (single_select)
+    {
+      tableId: table.id,
+      name: 'Analyst Rating',
+      description: 'Consensus analyst rating',
+      outputType: 'single_select',
+      aiPrompt:
+        'Based on recent analyst reports and consensus, provide the analyst rating. Choose one: Overweight, Equal Weight, Underweight, or Not Rated.',
+      outputTypeConfig: {
+        options: [
+          { value: 'Overweight' },
+          { value: 'Equal Weight' },
+          { value: 'Underweight' },
+          { value: 'Not Rated' },
+        ],
+      },
+    },
   ]
 
   const columns = []
