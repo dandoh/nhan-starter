@@ -2,6 +2,8 @@ import { useMemo, useCallback } from 'react'
 import { eq, useLiveQuery } from '@tanstack/react-db'
 import {
   type ColumnDef,
+  type Cell,
+  type Header,
   ColumnSizingState,
   ColumnPinningState,
   type Table as TanTable,
@@ -30,6 +32,7 @@ import {
   tablesCollection,
   updateTableColumnSizing,
   updateTableColumnPinning,
+  updateTableColumnOrder,
 } from '@/lib/ai-table/collections'
 import {
   AiTable as AiTableType,
@@ -40,7 +43,25 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 import React from 'react'
 import { cn } from '@/lib/utils'
-
+import {
+  DndContext,
+  DragEndEvent,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
+  closestCorners,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import { restrictToParentElement } from '@dnd-kit/modifiers'
+import {
+  arrayMove,
+  SortableContext,
+  horizontalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { chain } from 'lodash-es'
 interface TableBlockWrapperProps {
   tableId: string
 }
@@ -68,6 +89,178 @@ function getCommonPinningClasses(isPinned: boolean | string): string {
     isPinned && 'border-r-0',
     isPinned &&
       "after:content-[''] after:absolute after:top-0 after:right-0 after:h-full after:w-px after:bg-border after:pointer-events-none",
+  )
+}
+
+function DraggableTableHeader({
+  header,
+}: {
+  header: Header<GridRow, unknown>
+}) {
+  const isAddColumn = header.column.id === '__add_column__'
+  const isPinned = header.column.getIsPinned()
+  const enableDragging = !isPinned && !isAddColumn
+
+  const {
+    attributes,
+    isDragging,
+    listeners,
+    setNodeRef,
+    items,
+    transform,
+    index,
+    overIndex,
+    isOver,
+    activeIndex,
+  } = useSortable({
+    id: header.column.id,
+    disabled: !enableDragging,
+  })
+
+  const styleForPinningAndResizing = {
+    width: `calc(var(--header-${header.id}-size) * 1px)`,
+    ...getCommonPinningStyles(header.column),
+  }
+
+  const styleForDraggingAndDropping: React.CSSProperties = enableDragging
+    ? {
+        opacity: isDragging ? 0.8 : 1,
+        position: 'relative',
+        transform: isDragging ? CSS.Translate.toString(transform) : undefined,
+        transition: 'width transform 0.2s ease-in-out',
+        zIndex: isDragging ? 1 : 0,
+      }
+    : {}
+
+  const classNamesForPinning = cn(getCommonPinningClasses(!!isPinned))
+  const classNamesForDraggingAndDropping = enableDragging
+    ? cn(
+        // overIndex
+        isDragging && 'bg-primary/20!',
+        isDragging && 'active:cursor-grabbing',
+      )
+    : ''
+
+  const classNamesForPositionHint = isPinned
+    ? ''
+    : cn(
+        index === overIndex &&
+          index <= activeIndex &&
+          'border-l-primary border-l-2',
+        index === overIndex + 1 &&
+          index > activeIndex + 1 &&
+          'border-l-primary border-l-2',
+      )
+
+  const onResizeDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      header.column.resetSize()
+    },
+    [header.column],
+  )
+
+  const onResizeMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      header.getResizeHandler()(e)
+    },
+    [header.getResizeHandler],
+  )
+
+  const onResizeTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      e.stopPropagation()
+      header.getResizeHandler()(e)
+    },
+    [header.getResizeHandler],
+  )
+
+  return (
+    <TableHead
+      key={header.id}
+      ref={setNodeRef as unknown as React.Ref<HTMLTableCellElement>}
+      className={cn(
+        classNamesForPinning,
+        classNamesForDraggingAndDropping,
+        classNamesForPositionHint,
+      )}
+      style={{ ...styleForDraggingAndDropping, ...styleForPinningAndResizing }}
+      {...(!isAddColumn ? { ...attributes, ...listeners } : {})}
+    >
+      {header.isPlaceholder
+        ? null
+        : flexRender(header.column.columnDef.header, header.getContext())}
+      {header.column.getCanResize() && (
+        <div
+          onDoubleClick={onResizeDoubleClick}
+          onMouseDown={onResizeMouseDown}
+          onTouchStart={onResizeTouchStart}
+          className={
+            'absolute top-0 right-0 h-full w-4 cursor-col-resize select-none touch-none bg-transparent z-10 ' +
+            (header.column.getIsResizing() ? 'border-r-primary border-r-2' : '')
+          }
+        />
+      )}
+    </TableHead>
+  )
+}
+
+function DragAlongCell({ cell }: { cell: Cell<GridRow, unknown> }) {
+  const isAddColumn = cell.column.id === '__add_column__'
+  const isPinned = cell.column.getIsPinned()
+  const enableDragging = !isPinned && !isAddColumn
+
+  const { isDragging, setNodeRef, transform, index, overIndex, activeIndex } =
+    useSortable({
+      id: cell.column.id,
+      disabled: !enableDragging,
+    })
+
+  const styleForDraggingAndDropping: React.CSSProperties = enableDragging
+    ? {
+        opacity: isDragging ? 0.8 : 1,
+        position: 'relative',
+        transform: isDragging ? CSS.Translate.toString(transform) : undefined,
+        transition: 'width transform 0.2s ease-in-out',
+        zIndex: isDragging ? 1 : 0,
+      }
+    : {}
+  const styleForPinningAndResizing = {
+    width: `calc(var(--col-${cell.column.id}-size) * 1px)`,
+    ...getCommonPinningStyles(cell.column),
+  }
+  const classNamesForPinning = cn(getCommonPinningClasses(!!isPinned))
+  const classNamesForDraggingAndDropping = enableDragging
+    ? cn(isDragging && 'bg-primary/20!', isDragging && 'active:cursor-grabbing')
+    : ''
+
+  const classNamesForPositionHint = isPinned
+    ? ''
+    : cn(
+        index === overIndex &&
+          index <= activeIndex &&
+          'border-l-primary border-l-2',
+        index === overIndex + 1 &&
+          index > activeIndex + 1 &&
+          'border-l-primary border-l-2',
+      )
+
+  return (
+    <TableCell
+      ref={setNodeRef as unknown as React.Ref<HTMLTableCellElement>}
+      className={cn(
+        'hover:bg-muted',
+        classNamesForPinning,
+        classNamesForDraggingAndDropping,
+        classNamesForPositionHint,
+      )}
+      style={{ ...styleForDraggingAndDropping, ...styleForPinningAndResizing }}
+    >
+      {isAddColumn
+        ? null
+        : flexRender(cell.column.columnDef.cell, cell.getContext())}
+    </TableCell>
   )
 }
 
@@ -109,11 +302,10 @@ function AiTableInternal({
     recordsCollection.insert({
       id: crypto.randomUUID(),
       tableId,
-      position: aiRecords.length,
       createdAt: new Date(),
       updatedAt: new Date(),
     })
-  }, [recordsCollection, tableId, aiRecords.length])
+  }, [recordsCollection, tableId])
 
   // Handle compute AI
   const handleComputeAI = useCallback(async () => {
@@ -225,7 +417,11 @@ function AiTableInternal({
   const columnPinning = useMemo(() => {
     // Make sure primary column is always pinned to the left
     const primaryColumns = aiColumns.filter((col) => col.primary)
-    const res = { left: [...(aiTable.columnPinning?.left ?? [])] }
+    const res = {
+      left: [...(aiTable.columnPinning?.left ?? [])].filter((id) =>
+        aiColumns.some((col) => col.id === id),
+      ),
+    }
 
     for (const column of primaryColumns) {
       if (!res.left.includes(column.id)) {
@@ -250,6 +446,51 @@ function AiTableInternal({
     })
   }
 
+  const computeActualOrderFromSavedOrder = useCallback(
+    (savedOrder: string[]) => {
+      const indexInSavedOrder: Record<string, number> = chain(savedOrder)
+        .map((columnId, index) => [columnId, index])
+        .fromPairs()
+        .value()
+      const isPinnedById = chain(columnPinning.left)
+        .map((columnId) => [columnId, true])
+        .fromPairs()
+        .value()
+      const columnsSorted = chain(aiColumns)
+        .sortBy((col) => [
+          col.primary ? 0 : 1,
+          isPinnedById[col.id] ? 0 : 1,
+          indexInSavedOrder[col.id] ?? Infinity,
+          col.createdAt,
+        ])
+        .map((col) => col.id)
+        .value()
+
+      return columnsSorted
+    },
+    [aiColumns, columnPinning],
+  )
+
+  const columnOrder = useMemo(() => {
+    const savedOrder = aiTable.columnOrder || []
+    return [...computeActualOrderFromSavedOrder(savedOrder), '__add_column__']
+  }, [aiTable.columnOrder, computeActualOrderFromSavedOrder])
+
+  const onColumnOrderChange = async (columnOrderUpdater: Updater<string[]>) => {
+    const newColumnOrder =
+      typeof columnOrderUpdater === 'function'
+        ? columnOrderUpdater(columnOrder)
+        : columnOrderUpdater
+
+    const orderToSave = newColumnOrder.filter((id) => id !== '__add_column__')
+    const actualOrder = computeActualOrderFromSavedOrder(orderToSave)
+
+    updateTableColumnOrder({
+      tableId,
+      columnOrder: actualOrder,
+    })
+  }
+
   const table = useReactTable({
     data: tableData,
     columns: tableColumns,
@@ -264,10 +505,33 @@ function AiTableInternal({
     state: {
       columnSizing,
       columnPinning,
+      columnOrder,
     },
     onColumnSizingChange,
     onColumnPinningChange,
+    onColumnOrderChange,
+    debugTable: true,
+    debugRows: true,
+    debugColumns: true,
+    debugCells: true,
   })
+
+  const sensors = useSensors(
+    useSensor(MouseSensor, {}),
+    useSensor(TouchSensor, {}),
+    useSensor(KeyboardSensor, {}),
+  )
+  // reorder columns after drag & drop
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (active && over && active.id !== over.id) {
+      onColumnOrderChange((columnOrder) => {
+        const oldIndex = columnOrder.indexOf(active.id as string)
+        const newIndex = columnOrder.indexOf(over.id as string)
+        return arrayMove(columnOrder, oldIndex, newIndex) //this is just a splice util
+      })
+    }
+  }
 
   /**
    * Instead of calling `column.getSize()` on every render for every header
@@ -299,89 +563,68 @@ function AiTableInternal({
 
   return (
     <div className="flex flex-col min-w-0 max-h-full">
-      <div className="flex gap-2 flex-1 min-w-0 overflow-auto !scrollbar scrollbar-track-amber-300 scrollbar-thumb-transparent">
-        <Table
-          className="min-w-full"
-          style={{
-            ...columnSizeVars,
-            ...(aiColumns.length > 1 ? { width: table.getTotalSize() } : {}),
-          }}
-        >
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  const isPinned = header.column.getIsPinned()
-                  return (
-                    <TableHead
-                      key={header.id}
-                      className={cn(getCommonPinningClasses(!!isPinned))}
-                      style={{
-                        width: `calc(var(--header-${header.id}-size) * 1px)`,
-                        ...getCommonPinningStyles(header.column),
-                      }}
-                    >
-                      {/* <PinnableContent isPinned={!!isPinned}> */}
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
-                      {header.column.getCanResize() && (
-                        <div
-                          onDoubleClick={() => header.column.resetSize()}
-                          onMouseDown={header.getResizeHandler()}
-                          onTouchStart={header.getResizeHandler()}
-                          className={
-                            'absolute top-0 right-0 h-full w-1 cursor-col-resize select-none touch-none bg-transparent ' +
-                            (header.column.getIsResizing()
-                              ? 'border-r-primary border-r-2'
-                              : '')
-                          }
-                        />
-                      )}
-                      {/* </PinnableContent> */}
-                    </TableHead>
-                  )
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getState().columnSizingInfo.isResizingColumn ? (
-              <MemoizedRows table={table} />
-            ) : (
-              <Rows table={table} />
-            )}
-            {/* Add Record Row */}
-            <TableRow className="hover:bg-transparent">
-              <TableCell
-                colSpan={
-                  hasPinnedColumns ? aiTable.columnPinning?.left?.length : 1
-                }
-                className={cn(
-                  'p-0 !border-r-0 !border-b-0',
-                  getCommonPinningClasses(true),
-                )}
-                style={{
-                  left: 0,
-                }}
-              >
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-10 w-full justify-start hover:bg-muted/70 text-muted-foreground hover:text-foreground border-0 rounded-none font-normal px-2 cursor-pointer "
-                  onClick={handleAddRow}
+      <DndContext
+        collisionDetection={closestCorners}
+        modifiers={[restrictToParentElement]}
+        onDragEnd={handleDragEnd}
+        sensors={sensors}
+      >
+        <div className="flex gap-2 flex-1 min-w-0 overflow-auto scrollbar-thumb-transparent">
+          <Table
+            // className="min-w-full"
+            style={{
+              ...columnSizeVars,
+              ...(aiColumns.length > 1 ? { width: table.getTotalSize() } : {}),
+            }}
+          >
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  <SortableContext
+                    items={columnOrder}
+                    strategy={horizontalListSortingStrategy}
+                    // strategy={rectSortingStrategy}
+                  >
+                    {headerGroup.headers.map((header) => (
+                      <DraggableTableHeader key={header.id} header={header} />
+                    ))}
+                  </SortableContext>
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getState().columnSizingInfo.isResizingColumn ? (
+                <MemoizedRows table={table} columnOrder={columnOrder} />
+              ) : (
+                <Rows table={table} columnOrder={columnOrder} />
+              )}
+              {/* Add Record Row */}
+              <TableRow className="hover:bg-transparent">
+                <TableCell
+                  colSpan={hasPinnedColumns ? columnPinning.left.length : 1}
+                  className={cn(
+                    'p-0 !border-r-0 !border-b-0',
+                    getCommonPinningClasses(true),
+                  )}
+                  style={{
+                    left: 0,
+                  }}
                 >
-                  <Plus className="size-4 mr-2" />
-                  Add row
-                </Button>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-10 w-full justify-start hover:bg-muted/70 text-muted-foreground hover:text-foreground border-0 rounded-none font-normal px-2 cursor-pointer "
+                    onClick={handleAddRow}
+                  >
+                    <Plus className="size-4 mr-2" />
+                    Add row
+                  </Button>
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </DndContext>
       {/* Run AI Cells Button - Below table, aligned right */}
       <div className="flex justify-end mt-4">
         <Button
@@ -420,7 +663,7 @@ export function AiTable({ tableId }: TableBlockWrapperProps) {
   const { data: aiRecords = [], isReady: isReadyRecords } = useLiveQuery((q) =>
     q
       .from({ rec: recordsCollection })
-      .orderBy(({ rec }) => rec.position, 'asc'),
+      .orderBy(({ rec }) => rec.createdAt, 'asc'),
   )
 
   if (!isReadyColumns || !isReadyRecords || !aiTable) {
@@ -439,8 +682,8 @@ export function AiTable({ tableId }: TableBlockWrapperProps) {
     <AiTableInternal
       tableId={tableId}
       aiTable={aiTable}
-      aiColumns={aiColumns}
-      aiRecords={aiRecords}
+      aiColumns={aiColumns as unknown as AiTableColumn[]}
+      aiRecords={aiRecords as unknown as AiTableRecord[]}
       columnsCollection={columnsCollection}
       recordsCollection={recordsCollection}
       cellsCollection={cellsCollection}
@@ -448,41 +691,26 @@ export function AiTable({ tableId }: TableBlockWrapperProps) {
   )
 }
 
-function Rows({ table }: { table: TanTable<GridRow> }) {
+function Rows({
+  table,
+  columnOrder,
+}: {
+  table: TanTable<GridRow>
+  columnOrder: string[]
+}) {
   return (
     <>
       {table.getRowModel().rows?.length ? (
         table.getRowModel().rows.map((row) => (
           <TableRow key={row.id}>
-            {row.getVisibleCells().map((cell) => {
-              //simulate expensive render
-              // for (let i = 0; i < 10000; i++) {
-              //   Math.random()
-              // }
-              const isPinned = cell.column.getIsPinned()
-              return (
-                <TableCell
-                  key={cell.id}
-                  className={cn(
-                    'hover:bg-muted',
-                    getCommonPinningClasses(!!isPinned),
-                    '!px-0 !py-0',
-                  )}
-                  style={{
-                    width: `calc(var(--col-${cell.column.id}-size) * 1px)`,
-                    ...(getCommonPinningStyles(
-                      cell.column,
-                    ) as React.CSSProperties),
-                  }}
-                >
-                  {/* <PinnableContent isPinned={!!isPinned}> */}
-                  {cell.column.id === '__add_column__'
-                    ? null
-                    : flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  {/* </PinnableContent> */}
-                </TableCell>
-              )
-            })}
+            <SortableContext
+              items={columnOrder}
+              strategy={horizontalListSortingStrategy}
+            >
+              {row.getVisibleCells().map((cell) => (
+                <DragAlongCell key={cell.id} cell={cell} />
+              ))}
+            </SortableContext>
           </TableRow>
         ))
       ) : (

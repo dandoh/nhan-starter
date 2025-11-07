@@ -3,7 +3,6 @@ import * as z from 'zod'
 import { oc } from '@orpc/contract'
 import { authMiddleware } from '../middleware/auth'
 import { db } from '@/db'
-import { createTool } from '@orpc/ai-sdk'
 import {
   aiTableCells,
   aiTableColumns,
@@ -30,15 +29,15 @@ export const listTables = os
     const tables = await db.query.aiTables.findMany({
       where: eq(aiTables.userId, context.user.id),
       orderBy: (t, { desc }) => [desc(t.createdAt)],
-      with: {
-        user: {
-          columns: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
+      // with: {
+      //   user: {
+      //     columns: {
+      //       id: true,
+      //       name: true,
+      //       email: true,
+      //     },
+      //   },
+      // },
     })
 
     return tables
@@ -163,6 +162,7 @@ export const updateTable = os
       name: z.string().min(1).max(255).optional(),
       description: z.string().optional().nullable(),
       columnSizing: z.record(z.string(), z.number()).optional().nullable(),
+      columnOrder: z.array(z.string()).optional().nullable(),
       columnPinning: z
         .object({
           left: z.array(z.string()).optional(),
@@ -186,15 +186,18 @@ export const updateTable = os
     }
 
     const updatedFields = {
-      ...(input.name !== undefined && { name: input.name }),
-      ...(input.description !== undefined && {
+      ...(input.name && { name: input.name }),
+      ...(input.description && {
         description: input.description,
       }),
-      ...(input.columnSizing !== undefined && {
+      ...(input.columnSizing && {
         columnSizing: input.columnSizing,
       }),
-      ...(input.columnPinning !== undefined && {
+      ...(input.columnPinning && {
         columnPinning: input.columnPinning,
+      }),
+      ...(input.columnOrder && {
+        columnOrder: input.columnOrder,
       }),
     }
 
@@ -505,7 +508,7 @@ export const getRecords = os
 
     const records = await db.query.aiTableRecords.findMany({
       where: eq(aiTableRecords.tableId, input.tableId),
-      orderBy: (r, { asc }) => [asc(r.position)],
+      orderBy: (r, { asc }) => [asc(r.createdAt)],
     })
 
     return records
@@ -536,20 +539,12 @@ export const createRecord = os
     }
 
     const result = await db.transaction(async (tx) => {
-      // Get current max position
-      const maxPosition = await tx
-        .select({ max: sql<number>`COALESCE(MAX(position), -1)::int` })
-        .from(aiTableRecords)
-        .where(eq(aiTableRecords.tableId, input.tableId))
-        .then((res) => res[0]?.max ?? -1)
-
       // Create record
       const [newRecord] = await tx
         .insert(aiTableRecords)
         .values({
           ...(input.id && { id: input.id }),
           tableId: input.tableId,
-          position: maxPosition + 1,
         })
         .returning()
 
@@ -577,6 +572,84 @@ export const createRecord = os
     })
 
     // TODO: Trigger Inngest for AI columns (Phase 3)
+
+    return result
+  })
+
+/**
+ * Add multiple rows to a table, setting the primary column value for each row
+ */
+export const addRowsWithValues = os
+  .use(authMiddleware)
+  .input(
+    z.object({
+      tableId: z.string().uuid(),
+      values: z.array(z.string()).min(1),
+    }),
+  )
+  .handler(async ({ input, context }) => {
+    // Verify table ownership
+    const table = await db.query.aiTables.findFirst({
+      where: and(
+        eq(aiTables.id, input.tableId),
+        eq(aiTables.userId, context.user.id),
+      ),
+    })
+
+    if (!table) {
+      throw new Error('Table not found')
+    }
+
+    const result = await db.transaction(async (tx) => {
+      // Get primary column
+      const primaryColumn = await tx.query.aiTableColumns.findFirst({
+        where: and(
+          eq(aiTableColumns.tableId, input.tableId),
+          eq(aiTableColumns.primary, true),
+        ),
+      })
+
+      if (!primaryColumn) {
+        throw new Error('Primary column not found')
+      }
+
+      // Get all columns
+      const columns = await tx.query.aiTableColumns.findMany({
+        where: eq(aiTableColumns.tableId, input.tableId),
+      })
+
+      const createdRecords: (typeof aiTableRecords.$inferSelect)[] = []
+      const createdCells: (typeof aiTableCells.$inferSelect)[] = []
+
+      // Create a record for each value
+      for (const value of input.values) {
+        // Create record
+        const [newRecord] = await tx
+          .insert(aiTableRecords)
+          .values({
+            tableId: input.tableId,
+          })
+          .returning()
+
+        createdRecords.push(newRecord)
+
+        // Create cells for all columns
+        const cellsToInsert = columns.map((column) => ({
+          recordId: newRecord.id,
+          columnId: column.id,
+          value: column.id === primaryColumn.id ? value : null,
+        }))
+
+        const insertedCells = await tx
+          .insert(aiTableCells)
+          .values(cellsToInsert)
+          .returning()
+
+        createdCells.push(...insertedCells)
+      }
+
+      return { records: createdRecords, cells: createdCells }
+    })
 
     return result
   })

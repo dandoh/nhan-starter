@@ -1,6 +1,5 @@
 import { os, ORPCError } from '@orpc/server'
 import { auth } from '@/auth/auth-config'
-import { User } from '@/db/schema'
 
 /**
  * Authentication middleware for oRPC routes.
@@ -14,6 +13,7 @@ export const authMiddleware = os
       return next({
         context: {
           user: context.user,
+          headers: context.headers,
         },
       })
     }
@@ -38,6 +38,7 @@ export const authMiddleware = os
     return next({
       context: {
         user: sessionData.user,
+        headers: context.headers,
         // session: sessionData.session,
       },
     })

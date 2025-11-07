@@ -18,6 +18,7 @@ import { Route as ApiInngestRouteImport } from './routes/api/inngest'
 import { Route as AuthedTableExampleRouteImport } from './routes/_authed/table-example'
 import { Route as AuthedProfileRouteImport } from './routes/_authed/profile'
 import { Route as AuthedNewChatRouteImport } from './routes/_authed/new-chat'
+import { Route as AuthedConnectorsRouteImport } from './routes/_authed/connectors'
 import { Route as AuthedAppRouteImport } from './routes/_authed/app'
 import { Route as AuthedTablesIndexRouteImport } from './routes/_authed/tables/index'
 import { Route as DemoFormAddressRouteImport } from './routes/demo/form.address'
@@ -72,6 +73,11 @@ const AuthedNewChatRoute = AuthedNewChatRouteImport.update({
   path: '/new-chat',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedConnectorsRoute = AuthedConnectorsRouteImport.update({
+  id: '/connectors',
+  path: '/connectors',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedAppRoute = AuthedAppRouteImport.update({
   id: '/app',
   path: '/app',
@@ -124,6 +130,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/app': typeof AuthedAppRoute
+  '/connectors': typeof AuthedConnectorsRoute
   '/new-chat': typeof AuthedNewChatRoute
   '/profile': typeof AuthedProfileRoute
   '/table-example': typeof AuthedTableExampleRoute
@@ -143,6 +150,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/app': typeof AuthedAppRoute
+  '/connectors': typeof AuthedConnectorsRoute
   '/new-chat': typeof AuthedNewChatRoute
   '/profile': typeof AuthedProfileRoute
   '/table-example': typeof AuthedTableExampleRoute
@@ -164,6 +172,7 @@ export interface FileRoutesById {
   '/_authed': typeof AuthedRouteWithChildren
   '/login': typeof LoginRoute
   '/_authed/app': typeof AuthedAppRoute
+  '/_authed/connectors': typeof AuthedConnectorsRoute
   '/_authed/new-chat': typeof AuthedNewChatRoute
   '/_authed/profile': typeof AuthedProfileRoute
   '/_authed/table-example': typeof AuthedTableExampleRoute
@@ -185,6 +194,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/app'
+    | '/connectors'
     | '/new-chat'
     | '/profile'
     | '/table-example'
@@ -204,6 +214,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/app'
+    | '/connectors'
     | '/new-chat'
     | '/profile'
     | '/table-example'
@@ -224,6 +235,7 @@ export interface FileRouteTypes {
     | '/_authed'
     | '/login'
     | '/_authed/app'
+    | '/_authed/connectors'
     | '/_authed/new-chat'
     | '/_authed/profile'
     | '/_authed/table-example'
@@ -319,6 +331,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedNewChatRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/connectors': {
+      id: '/_authed/connectors'
+      path: '/connectors'
+      fullPath: '/connectors'
+      preLoaderRoute: typeof AuthedConnectorsRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/app': {
       id: '/_authed/app'
       path: '/app'
@@ -387,6 +406,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthedRouteChildren {
   AuthedAppRoute: typeof AuthedAppRoute
+  AuthedConnectorsRoute: typeof AuthedConnectorsRoute
   AuthedNewChatRoute: typeof AuthedNewChatRoute
   AuthedProfileRoute: typeof AuthedProfileRoute
   AuthedTableExampleRoute: typeof AuthedTableExampleRoute
@@ -397,6 +417,7 @@ interface AuthedRouteChildren {
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedAppRoute: AuthedAppRoute,
+  AuthedConnectorsRoute: AuthedConnectorsRoute,
   AuthedNewChatRoute: AuthedNewChatRoute,
   AuthedProfileRoute: AuthedProfileRoute,
   AuthedTableExampleRoute: AuthedTableExampleRoute,

@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Table,
   UserCircle,
+  Plug,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -34,6 +35,11 @@ const navigation = [
     title: 'Tables',
     icon: Table,
     url: '/tables',
+  },
+  {
+    title: 'Connectors',
+    icon: Plug,
+    url: '/connectors',
   },
   {
     title: 'Profile',
