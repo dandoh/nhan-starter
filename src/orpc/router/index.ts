@@ -42,6 +42,7 @@ export default {
     // Record operations
     getRecords: aiTables.getRecords,
     createRecord: aiTables.createRecord,
+    addRowsWithValues: aiTables.addRowsWithValues,
     deleteRecord: aiTables.deleteRecord,
     
     // Cell operations

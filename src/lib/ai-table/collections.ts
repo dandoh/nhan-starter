@@ -14,6 +14,7 @@ import {
   createPacedMutations,
   debounceStrategy,
   createCollection,
+  CollectionConfig,
 } from '@tanstack/db'
 
 // ============================================================================
@@ -52,7 +53,7 @@ export const tablesCollection = createCollection(
         })
       }
     },
-  }),
+  }) as CollectionConfig<AiTable>,
 )
 
 // Helper function to create table update mutations
@@ -95,9 +96,12 @@ export const updateTableColumnSizing =
   })
 
 export const updateTableColumnPinning =
-  createTableUpdateMutation<'columnPinning'>('columnPinning', (draft, value) => {
-    draft.columnPinning = value
-  })
+  createTableUpdateMutation<'columnPinning'>(
+    'columnPinning',
+    (draft, value) => {
+      draft.columnPinning = value
+    },
+  )
 
 export const updateTableName = createTableUpdateMutation<'name'>(
   'name',

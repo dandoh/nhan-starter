@@ -151,7 +151,6 @@ async function seed() {
       .insert(aiTableRecords)
       .values({
         tableId: table.id,
-        position: tickers.indexOf(ticker),
       })
       .returning()
 

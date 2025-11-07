@@ -6,7 +6,6 @@ import {
   timestamp,
   boolean,
   jsonb,
-  integer,
   uniqueIndex,
   index,
 } from 'drizzle-orm/pg-core'
@@ -229,7 +228,6 @@ export const aiTableRecords = pgTable(
     tableId: uuid('table_id')
       .notNull()
       .references(() => aiTables.id, { onDelete: 'cascade' }),
-    position: integer('position').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

@@ -20,7 +20,7 @@ import {
 import { anthropic } from '@ai-sdk/anthropic'
 import { z } from 'zod'
 import { getTracer } from '@lmnr-ai/lmnr'
-import { createColumn, updateColumn } from '@/orpc/router/ai-tables'
+import { createColumn, updateColumn, addRowsWithValues } from '@/orpc/router/ai-tables'
 import { createTool } from '@orpc/ai-sdk'
 import { Composio } from '@composio/core'
 import { VercelProvider } from '@composio/vercel'
@@ -170,6 +170,12 @@ ${JSON.stringify(table, null, 2)}
             user,
           },
         })
+        const addRowsWithValuesTool = createTool(addRowsWithValues, {
+          description: 'Add multiple rows to the table, setting the primary column value for each row',
+          context: {
+            user,
+          },
+        })
         const composio = new Composio({
           provider: new VercelProvider(),
         })
@@ -194,6 +200,7 @@ You have access to tools to collaborate with the user on modifying the table.
             ...(tableId && {
               createColumn: createColumnTool,
               updateColumn: updateColumnTool,
+              addRowsWithValues: addRowsWithValuesTool,
             }),
             ...composioTools,
           },
