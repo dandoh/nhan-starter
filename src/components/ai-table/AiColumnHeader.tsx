@@ -39,9 +39,8 @@ import { useAIChat } from '@/components/ai-chat/ai-chat-context'
 
 type ColumnHeaderProps = {
   column: DbAiTableColumn
-  tanstackColumn?: TSColumn<any>;
-  collections: TableCollections
-}
+  tanstackColumn?: TSColumn<any>
+} & TableCollections
 
 type ViewMode = 'menu' | 'edit'
 
@@ -56,14 +55,20 @@ const stopDragPropagation = {
   onTouchStart: (e: React.TouchEvent) => e.stopPropagation(),
 }
 
-export function AiColumnHeader({ column, tanstackColumn, collections }: ColumnHeaderProps) {
+export function AiColumnHeader({
+  column,
+  tanstackColumn,
+  columnsCollection,
+  recordsCollection,
+  cellsCollection,
+}: ColumnHeaderProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('menu')
   const { setInput } = useAIChat()
 
   // Get all columns to check if this is the last one
   const { data: allColumns = [] } = useLiveQuery((q) =>
-    q.from({ col: collections.columnsCollection }),
+    q.from({ col: columnsCollection }),
   )
 
   const isLastColumn = allColumns.length <= 1
@@ -162,7 +167,7 @@ export function AiColumnHeader({ column, tanstackColumn, collections }: ColumnHe
         }
       }
 
-      collections.columnsCollection.update(column.id, (draft) => {
+      columnsCollection.update(column.id, (draft) => {
         draft.name = value.name
         draft.description = value.description
         draft.outputType = value.outputType
@@ -190,7 +195,7 @@ export function AiColumnHeader({ column, tanstackColumn, collections }: ColumnHe
       return
     }
 
-    collections.columnsCollection.delete(column.id)
+    columnsCollection.delete(column.id)
     setIsOpen(false)
     toast.success('Column deleted')
   }
@@ -241,7 +246,7 @@ export function AiColumnHeader({ column, tanstackColumn, collections }: ColumnHe
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-muted-foreground transition-colors hover:bg-primary/20 hover:text-foreground focus:outline-none"
+                className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus-visible:outline-none focus-visible:ring-0 data-[state=open]:outline-none data-[state=open]:ring-0"
                 aria-label="Column options"
                 {...stopDragPropagation}
               >

@@ -71,6 +71,9 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
       className={cn(
         "text-foreground h-10 px-2 text-left align-middle font-medium whitespace-nowrap hover:bg-muted/50 transition-colors [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] ",
         "border-r border-b border-border",
+        "focus:outline-none focus-visible:outline-none focus-visible:ring-0",
+        "[&:has(:focus)]:outline-none [&:has(:focus)]:ring-0",
+        "[&:has(:focus-visible)]:outline-none [&:has(:focus-visible)]:ring-0",
         // "[&:last-child]:border-r-0",
         className
       )}

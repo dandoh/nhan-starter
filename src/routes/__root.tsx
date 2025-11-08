@@ -5,6 +5,8 @@ import {
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
+import { useEffect } from 'react'
+import { scan } from 'react-scan'
 
 import { AppLayout } from '../components/AppLayout'
 
@@ -46,10 +48,31 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      scan()
+    }
+  }, [])
+
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <head>
         <HeadContent />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                const theme = localStorage.getItem('theme') || 'dark';
+                const html = document.documentElement;
+                if (theme === 'dark') {
+                  html.classList.add('dark');
+                } else {
+                  html.classList.remove('dark');
+                }
+              })();
+            `,
+          }}
+        />
       </head>
       <body>
         <AppLayout>

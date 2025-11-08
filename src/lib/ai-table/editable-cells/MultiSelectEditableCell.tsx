@@ -71,7 +71,7 @@ export function MultiSelectEditableCell({
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
           <div
-            className="h-full w-full cursor-pointer py-1 px-2 text-sm flex items-center gap-1 flex-wrap min-h-[28px]"
+            className="h-full w-full cursor-pointer py-1 px-2 text-sm flex items-center gap-1 flex-wrap min-h-[28px] flex-1"
             onFocus={onFocus}
             onClick={() => setIsOpen(true)}
           >
@@ -87,7 +87,7 @@ export function MultiSelectEditableCell({
                     <button
                       type="button"
                       onClick={(e) => handleRemove(val, e)}
-                      className="ml-1 rounded-full hover:bg-black/20 p-0.5"
+                      className="ml-1 rounded-full hover:bg-muted p-0.5"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           handleRemove(val, e as any)
@@ -178,7 +178,7 @@ export function MultiSelectEditableCell({
         }}
         onBlur={onBlur}
         onFocus={onFocus}
-        className="h-full w-full border-none bg-transparent focus-visible:border-none focus-visible:ring-0 shadow-none px-2 py-1 text-sm"
+        className="h-full w-full border-none !bg-transparent dark:!bg-transparent hover:!bg-transparent dark:hover:!bg-transparent focus-visible:border-none focus-visible:ring-0 shadow-none px-2 py-1 text-sm flex-1"
         placeholder="Comma-separated values"
       />
     )

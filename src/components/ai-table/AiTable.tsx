@@ -48,6 +48,7 @@ import {
   DragEndEvent,
   KeyboardSensor,
   MouseSensor,
+  MeasuringStrategy,
   TouchSensor,
   closestCorners,
   useSensor,
@@ -65,6 +66,9 @@ import { chain } from 'lodash-es'
 interface TableBlockWrapperProps {
   tableId: string
 }
+
+const dndModifiers = [restrictToParentElement]
+const dndCollisionDetection = closestCorners
 
 type GridRow = AiTableRecord & { id: string }
 
@@ -99,18 +103,18 @@ function DraggableTableHeader({
 }) {
   const isAddColumn = header.column.id === '__add_column__'
   const isPinned = header.column.getIsPinned()
-  const enableDragging = !isPinned && !isAddColumn
+  const isResizing = header.getContext().table.getState()
+    .columnSizingInfo.isResizingColumn
+  const enableDragging = !isPinned && !isAddColumn && !isResizing
 
   const {
     attributes,
     isDragging,
     listeners,
     setNodeRef,
-    items,
     transform,
     index,
     overIndex,
-    isOver,
     activeIndex,
   } = useSortable({
     id: header.column.id,
@@ -134,11 +138,7 @@ function DraggableTableHeader({
 
   const classNamesForPinning = cn(getCommonPinningClasses(!!isPinned))
   const classNamesForDraggingAndDropping = enableDragging
-    ? cn(
-        // overIndex
-        isDragging && 'bg-primary/20!',
-        isDragging && 'active:cursor-grabbing',
-      )
+    ? cn(isDragging && 'bg-primary/20!', isDragging && 'active:cursor-grabbing')
     : ''
 
   const classNamesForPositionHint = isPinned
@@ -184,6 +184,7 @@ function DraggableTableHeader({
         classNamesForPinning,
         classNamesForDraggingAndDropping,
         classNamesForPositionHint,
+        isAddColumn && 'p-0',
       )}
       style={{ ...styleForDraggingAndDropping, ...styleForPinningAndResizing }}
       {...(!isAddColumn ? { ...attributes, ...listeners } : {})}
@@ -206,56 +207,20 @@ function DraggableTableHeader({
   )
 }
 
-function DragAlongCell({ cell }: { cell: Cell<GridRow, unknown> }) {
+function TableDataCell({ cell }: { cell: Cell<GridRow, unknown> }) {
   const isAddColumn = cell.column.id === '__add_column__'
   const isPinned = cell.column.getIsPinned()
-  const enableDragging = !isPinned && !isAddColumn
 
-  const { isDragging, setNodeRef, transform, index, overIndex, activeIndex } =
-    useSortable({
-      id: cell.column.id,
-      disabled: !enableDragging,
-    })
-
-  const styleForDraggingAndDropping: React.CSSProperties = enableDragging
-    ? {
-        opacity: isDragging ? 0.8 : 1,
-        position: 'relative',
-        transform: isDragging ? CSS.Translate.toString(transform) : undefined,
-        transition: 'width transform 0.2s ease-in-out',
-        zIndex: isDragging ? 1 : 0,
-      }
-    : {}
   const styleForPinningAndResizing = {
     width: `calc(var(--col-${cell.column.id}-size) * 1px)`,
     ...getCommonPinningStyles(cell.column),
   }
   const classNamesForPinning = cn(getCommonPinningClasses(!!isPinned))
-  const classNamesForDraggingAndDropping = enableDragging
-    ? cn(isDragging && 'bg-primary/20!', isDragging && 'active:cursor-grabbing')
-    : ''
-
-  const classNamesForPositionHint = isPinned
-    ? ''
-    : cn(
-        index === overIndex &&
-          index <= activeIndex &&
-          'border-l-primary border-l-2',
-        index === overIndex + 1 &&
-          index > activeIndex + 1 &&
-          'border-l-primary border-l-2',
-      )
 
   return (
     <TableCell
-      ref={setNodeRef as unknown as React.Ref<HTMLTableCellElement>}
-      className={cn(
-        'hover:bg-muted',
-        classNamesForPinning,
-        classNamesForDraggingAndDropping,
-        classNamesForPositionHint,
-      )}
-      style={{ ...styleForDraggingAndDropping, ...styleForPinningAndResizing }}
+      className={cn('hover:bg-muted h-full p-0', classNamesForPinning)}
+      style={styleForPinningAndResizing}
     >
       {isAddColumn
         ? null
@@ -281,7 +246,7 @@ function AiTableInternal({
   recordsCollection: ReturnType<typeof useTableSync>['recordsCollection']
   cellsCollection: ReturnType<typeof useTableSync>['cellsCollection']
 }) {
-  const [isComputing, setIsComputing] = React.useState(false)
+  const tableContainerRef = React.useRef<HTMLDivElement>(null)
   // Handle adding a new column
   const handleAddColumn = useCallback(() => {
     columnsCollection.insert({
@@ -307,20 +272,6 @@ function AiTableInternal({
     })
   }, [recordsCollection, tableId])
 
-  // Handle compute AI
-  const handleComputeAI = useCallback(async () => {
-    setIsComputing(true)
-    try {
-      await orpcClient.aiTables.triggerComputeAllCells({
-        tableId,
-      })
-    } catch (error) {
-      console.error('Failed to trigger AI computation:', error)
-    } finally {
-      setIsComputing(false)
-    }
-  }, [tableId])
-
   // Map DB columns to TanStack Table columns + Add Column button
   const tableColumns = useMemo<ColumnDef<GridRow>[]>(() => {
     const dataColumns = aiColumns.map((col) =>
@@ -332,22 +283,18 @@ function AiTableInternal({
           <AiColumnHeader
             column={col}
             tanstackColumn={ctx.header.column as TSColumn<GridRow>}
-            collections={{
-              columnsCollection,
-              recordsCollection,
-              cellsCollection,
-            }}
+            columnsCollection={columnsCollection}
+            recordsCollection={recordsCollection}
+            cellsCollection={cellsCollection}
           />
         ),
         cell: ({ row }) => (
           <AiTableCell
             recordId={row.original.id}
             columnId={col.id}
-            collections={{
-              columnsCollection,
-              recordsCollection,
-              cellsCollection,
-            }}
+            cellsCollection={cellsCollection}
+            columnsCollection={columnsCollection}
+            recordsCollection={recordsCollection}
           />
         ),
       }),
@@ -397,6 +344,7 @@ function AiTableInternal({
         res[columnId] = 200
       }
     }
+
     return res
   }, [aiTable?.columnSizing, aiColumns])
 
@@ -415,22 +363,27 @@ function AiTableInternal({
   }
 
   const columnPinning = useMemo(() => {
+    // When there's only 1 column, nothing should be pinned
+    if (aiColumns.length <= 1) {
+      return { left: [] }
+    }
+
     // Make sure primary column is always pinned to the left
-    const primaryColumns = aiColumns.filter((col) => col.primary)
-    const res = {
-      left: [...(aiTable.columnPinning?.left ?? [])].filter((id) =>
-        aiColumns.some((col) => col.id === id),
-      ),
-    }
+    const columnIds = new Set(aiColumns.map((col) => col.id))
+    const primaryColumnIds = chain(aiColumns)
+      .filter((col) => col.primary)
+      .map((col) => col.id)
+      .value()
 
-    for (const column of primaryColumns) {
-      if (!res.left.includes(column.id)) {
-        res.left.push(column.id)
-      }
-    }
+    const left = chain(aiTable.columnPinning?.left ?? [])
+      .filter((id) => columnIds.has(id))
+      .concat(primaryColumnIds)
+      .uniq()
+      .value()
 
-    return res
+    return { left }
   }, [aiTable.columnPinning, aiColumns])
+  console.log('columnPinning', columnPinning)
 
   const onColumnPinningChange = async (
     columnPinningUpdater: Updater<ColumnPinningState>,
@@ -510,10 +463,10 @@ function AiTableInternal({
     onColumnSizingChange,
     onColumnPinningChange,
     onColumnOrderChange,
-    debugTable: true,
-    debugRows: true,
-    debugColumns: true,
-    debugCells: true,
+    // debugTable: true,
+    // debugRows: true,
+    // debugColumns: true,
+    // debugCells: true,
   })
 
   const sensors = useSensors(
@@ -522,16 +475,19 @@ function AiTableInternal({
     useSensor(KeyboardSensor, {}),
   )
   // reorder columns after drag & drop
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event
-    if (active && over && active.id !== over.id) {
-      onColumnOrderChange((columnOrder) => {
-        const oldIndex = columnOrder.indexOf(active.id as string)
-        const newIndex = columnOrder.indexOf(over.id as string)
-        return arrayMove(columnOrder, oldIndex, newIndex) //this is just a splice util
-      })
-    }
-  }
+  const handleDragEnd = React.useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event
+      if (active && over && active.id !== over.id) {
+        onColumnOrderChange((columnOrder) => {
+          const oldIndex = columnOrder.indexOf(active.id as string)
+          const newIndex = columnOrder.indexOf(over.id as string)
+          return arrayMove(columnOrder, oldIndex, newIndex) //this is just a splice util
+        })
+      }
+    },
+    [onColumnOrderChange],
+  )
 
   /**
    * Instead of calling `column.getSize()` on every render for every header
@@ -548,24 +504,14 @@ function AiTableInternal({
       colSizes[`--col-${header.column.id}-size`] = header.column.getSize()
     }
     return colSizes
-  }, [
-    table.getState().columnSizingInfo,
-    table.getState().columnSizing,
-    table.getState().columnPinning,
-  ])
-
-  const hasPinnedColumns = useMemo(() => {
-    return (
-      (aiTable.columnPinning?.left?.length ?? 0) > 0 ||
-      (aiTable.columnPinning?.right?.length ?? 0) > 0
-    )
-  }, [aiTable.columnPinning])
+  }, [table.getState().columnSizingInfo, table.getState().columnSizing])
+  console.log('columnSizeVars', columnSizeVars)
 
   return (
-    <div className="flex flex-col min-w-0 max-h-full">
+    <div ref={tableContainerRef} className="flex flex-col min-w-0">
       <DndContext
-        collisionDetection={closestCorners}
-        modifiers={[restrictToParentElement]}
+        collisionDetection={dndCollisionDetection}
+        modifiers={dndModifiers}
         onDragEnd={handleDragEnd}
         sensors={sensors}
       >
@@ -574,7 +520,7 @@ function AiTableInternal({
             // className="min-w-full"
             style={{
               ...columnSizeVars,
-              ...(aiColumns.length > 1 ? { width: table.getTotalSize() } : {}),
+              width: table.getTotalSize(),
             }}
           >
             <TableHeader>
@@ -583,7 +529,6 @@ function AiTableInternal({
                   <SortableContext
                     items={columnOrder}
                     strategy={horizontalListSortingStrategy}
-                    // strategy={rectSortingStrategy}
                   >
                     {headerGroup.headers.map((header) => (
                       <DraggableTableHeader key={header.id} header={header} />
@@ -594,21 +539,15 @@ function AiTableInternal({
             </TableHeader>
             <TableBody>
               {table.getState().columnSizingInfo.isResizingColumn ? (
-                <MemoizedRows table={table} columnOrder={columnOrder} />
+                <MemoizedRows table={table} />
               ) : (
-                <Rows table={table} columnOrder={columnOrder} />
+                <Rows table={table} />
               )}
               {/* Add Record Row */}
-              <TableRow className="hover:bg-transparent">
+              <TableRow className="hover:bg-transparen">
                 <TableCell
-                  colSpan={hasPinnedColumns ? columnPinning.left.length : 1}
-                  className={cn(
-                    'p-0 !border-r-0 !border-b-0',
-                    getCommonPinningClasses(true),
-                  )}
-                  style={{
-                    left: 0,
-                  }}
+                  colSpan={aiColumns.length + 1}
+                  className={cn('p-0')}
                 >
                   <Button
                     variant="ghost"
@@ -626,7 +565,7 @@ function AiTableInternal({
         </div>
       </DndContext>
       {/* Run AI Cells Button - Below table, aligned right */}
-      <div className="flex justify-end mt-4">
+      {/* <div className="flex justify-end mt-4">
         <Button
           onClick={handleComputeAI}
           disabled={isComputing}
@@ -636,7 +575,7 @@ function AiTableInternal({
           <Sparkles className="size-4 mr-2" />
           {isComputing ? 'Running...' : 'Run AI cells'}
         </Button>
-      </div>
+      </div> */}
     </div>
   )
 }
@@ -691,26 +630,15 @@ export function AiTable({ tableId }: TableBlockWrapperProps) {
   )
 }
 
-function Rows({
-  table,
-  columnOrder,
-}: {
-  table: TanTable<GridRow>
-  columnOrder: string[]
-}) {
+function Rows({ table }: { table: TanTable<GridRow> }) {
   return (
     <>
       {table.getRowModel().rows?.length ? (
         table.getRowModel().rows.map((row) => (
           <TableRow key={row.id}>
-            <SortableContext
-              items={columnOrder}
-              strategy={horizontalListSortingStrategy}
-            >
-              {row.getVisibleCells().map((cell) => (
-                <DragAlongCell key={cell.id} cell={cell} />
-              ))}
-            </SortableContext>
+            {row.getVisibleCells().map((cell) => (
+              <TableDataCell key={cell.id} cell={cell} />
+            ))}
           </TableRow>
         ))
       ) : (
