@@ -18,9 +18,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Table, FileText, BarChart3, FileCode } from 'lucide-react'
-import {
-  createWorkbookDetailStore,
-} from './workbook-detail-store'
+import { createWorkbookDetailStore } from './workbook-detail-store'
 import { useStore } from 'zustand'
 
 function ResizableBlock({ children }: { children: React.ReactNode }) {
@@ -377,4 +375,8 @@ function CreateBlockDialog({
 export const Route = createFileRoute('/_authed/workbooks/$workbookId')({
   ssr: false,
   component: WorkbookDetailPage,
+  loader: async ({ params }) => {
+    const workbook = await workbooksCollection.utils.(params.workbookId)
+    return { workbook }
+  },
 })

@@ -20,7 +20,6 @@ export const workbooksCollection = createCollection(
       const workbooks = await orpcClient.workbooks.list({})
       return workbooks
     },
-    getKey: (workbook) => workbook.id,
     onInsert: async ({ transaction }) => {
       const { modified: newWorkbook } = transaction.mutations[0]
       await orpcClient.workbooks.create({
@@ -46,5 +45,5 @@ export const workbooksCollection = createCollection(
         })
       }
     },
-  }) as CollectionConfig<Workbook>,
+  })
 )
