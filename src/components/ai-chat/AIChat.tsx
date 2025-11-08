@@ -356,7 +356,7 @@ export function AiChatFloatingButton({ onClick }: { onClick: () => void }) {
       onClick={handleClick}
       size="icon-lg"
       variant="outline"
-      className="rounded-full w-14 h-14 shadow-lg hover:shadow-xl transition-all hover:scale-110 active:scale-95 border-primary bg-card hover:bg-card"
+      className="rounded-full w-14 h-14 shadow-lg hover:shadow-xl transition-all hover:scale-110 active:scale-95 border-primary/20 bg-card hover:bg-card"
       aria-label="Open AI chat"
     >
       <Sparkles className="h-6 w-6 text-primary" />

@@ -12,6 +12,7 @@ import {
   updateTableDescription,
 } from '@/lib/ai-table/collections'
 import { eq, useLiveQuery } from '@tanstack/react-db'
+import { cn } from '@/lib/utils'
 
 export const Route = createFileRoute('/_authed/tables/$tableId')({
   ssr: false,
@@ -64,8 +65,7 @@ function TableEditorPage() {
       <div className="flex flex-1 overflow-hidden">
         {/* Table content */}
         <div className="flex flex-col flex-1 min-w-0">
-          <div className="flex-1 overflow-hidden p-1">
-
+          <div className="flex-1 overflow-hidden p-2">
             <div className="h-full flex flex-col space-y-2">
               {/* Name and Description Section */}
               {/* <div className="shrink-0 space-y-2 ">
@@ -98,29 +98,36 @@ function TableEditorPage() {
             </div>
           </div>
         </div>
-
-        {/* AI Chat Panel */}
         <div
-          className={`flex flex-col shrink-0 bg-card border-l border-border transition-all duration-300 ease-in-out overflow-hidden ${
+          className={cn(
+            'flex flex-col shrink-0 p-2 pl-0 transition-all duration-300 ease-in-out ',
             isChatMinimized
               ? 'w-0 opacity-0 pointer-events-none'
-              : 'w-96 opacity-100'
-          }`}
+              : 'w-96 opacity-100',
+          )}
         >
-          <AiChat
-            context={{ type: 'table', tableId }}
-            title="Table AI Assistant"
-            description="Ask me to help with your table. I can add columns, analyze data, or perform calculations."
-            quickActions={[
-              'Add a new column',
-              'Analyze sentiment trends',
-              'Calculate statistics',
-              'Export to CSV',
-            ]}
-            onMinimize={() => setIsChatMinimized(true)}
-            minimized={isChatMinimized}
-          />
+          <div
+            className={cn(
+              'bg-card border border-border overflow-hidden h-full rounded-sm',
+            )}
+          >
+            <AiChat
+              context={{ type: 'table', tableId }}
+              title="Table AI Assistant"
+              description="Ask me to help with your table. I can add columns, analyze data, or perform calculations."
+              quickActions={[
+                'Add a new column',
+                'Analyze sentiment trends',
+                'Calculate statistics',
+                'Export to CSV',
+              ]}
+              onMinimize={() => setIsChatMinimized(true)}
+              minimized={isChatMinimized}
+            />
+          </div>
         </div>
+
+        {/* AI Chat Panel */}
 
         {/* Floating button when minimized */}
         <div

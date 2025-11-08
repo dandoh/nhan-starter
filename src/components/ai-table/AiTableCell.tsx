@@ -7,8 +7,7 @@ import { getOutputTypeDefinition } from '@/lib/ai-table/output-type-registry'
 type TableCellProps = {
   recordId: string
   columnId: string
-  collections: TableCollections
-}
+} & TableCollections
 
 /**
  * Memoized table cell component that queries its own data
@@ -17,12 +16,14 @@ type TableCellProps = {
 export const AiTableCell = memo(function TableCell({
   recordId,
   columnId,
-  collections,
+  cellsCollection,
+  columnsCollection,
+  recordsCollection,
 }: TableCellProps) {
   // Live query for this specific cell only
   const { data: cell } = useLiveQuery((q) =>
     q
-      .from({ cell: collections.cellsCollection })
+      .from({ cell: cellsCollection })
       .where(({ cell }) =>
         and(eq(cell.recordId, recordId), eq(cell.columnId, columnId)),
       )
@@ -32,7 +33,7 @@ export const AiTableCell = memo(function TableCell({
   // Query the column for output type configuration
   const { data: column } = useLiveQuery((q) =>
     q
-      .from({ column: collections.columnsCollection })
+      .from({ column: columnsCollection })
       .where(({ column }) => eq(column.id, columnId))
       .findOne(),
   )
@@ -51,7 +52,7 @@ export const AiTableCell = memo(function TableCell({
   const updateCell = useCallback(
     (newValue: string) => {
       if (cell?.id) {
-        collections.cellsCollection.update(cell.id, (draft) => {
+        cellsCollection.update(cell.id, (draft) => {
           draft.value = newValue
         })
       } else {
@@ -59,15 +60,12 @@ export const AiTableCell = memo(function TableCell({
         console.warn('Cell not found for update:', { recordId, columnId })
       }
     },
-    [cell?.id, collections.cellsCollection, recordId, columnId],
+    [cell?.id, cellsCollection, recordId, columnId],
   )
 
-  const handleChange = useCallback(
-    (newValue: string) => {
-      setLocalValue(newValue)
-    },
-    [],
-  )
+  const handleChange = useCallback((newValue: string) => {
+    setLocalValue(newValue)
+  }, [])
 
   const handleBlur = useCallback(() => {
     setIsEditing(false)
