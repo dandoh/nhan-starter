@@ -6,6 +6,7 @@ import {
   aiConversations,
   aiMessages,
   aiTables,
+  workbooks,
   conversationContextToFields,
   conversationContextSchema,
 } from '@/db/schema'
@@ -14,7 +15,7 @@ import { eq, and, isNull } from 'drizzle-orm'
 /**
  * Create a new conversation
  * - Requires authentication
- * - Optionally accepts context (table, project, document) to scope the conversation
+ * - Optionally accepts context (table, workbook) to scope the conversation
  * - Optionally accepts an initial prompt which will be saved as the first user message
  * - Returns new conversation object
  */
@@ -42,7 +43,18 @@ export const createConversation = os
           throw new Error('Table not found or access denied')
         }
       }
-      // Add validation for other context types (project, document) when implemented
+      if (input.context.type === 'workbook') {
+        // Verify workbook exists and user has access
+        const workbook = await db.query.workbooks.findFirst({
+          where: and(
+            eq(workbooks.id, input.context.workbookId),
+            eq(workbooks.userId, context.user.id),
+          ),
+        })
+        if (!workbook) {
+          throw new Error('Workbook not found or access denied')
+        }
+      }
     }
 
     // Convert context to database fields
@@ -113,7 +125,7 @@ export const getConversation = os
 
 /**
  * Find or create a conversation for a specific context
- * - Useful for table/project/document chat where we want one conversation per context
+ * - Useful for table/workbook chat where we want one conversation per context
  * - Returns existing conversation if found, creates new one if not
  */
 export const findOrCreateConversationForContext = os
@@ -135,6 +147,17 @@ export const findOrCreateConversationForContext = os
       })
       if (!table) {
         throw new Error('Table not found or access denied')
+      }
+    }
+    if (input.context.type === 'workbook') {
+      const workbook = await db.query.workbooks.findFirst({
+        where: and(
+          eq(workbooks.id, input.context.workbookId),
+          eq(workbooks.userId, context.user.id),
+        ),
+      })
+      if (!workbook) {
+        throw new Error('Workbook not found or access denied')
       }
     }
 
@@ -204,6 +227,17 @@ export const getConversationsForContext = os
       })
       if (!table) {
         throw new Error('Table not found or access denied')
+      }
+    }
+    if (input.context.type === 'workbook') {
+      const workbook = await db.query.workbooks.findFirst({
+        where: and(
+          eq(workbooks.id, input.context.workbookId),
+          eq(workbooks.userId, context.user.id),
+        ),
+      })
+      if (!workbook) {
+        throw new Error('Workbook not found or access denied')
       }
     }
 

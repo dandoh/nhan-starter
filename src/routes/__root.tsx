@@ -50,7 +50,11 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 function RootDocument({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (import.meta.env.DEV) {
-      scan()
+      // Always initialize scan, but check localStorage for toolbar visibility
+      const reactScanShowToolbar = localStorage.getItem('react-scan-show-toolbar')
+      // Default to showing toolbar if not set (backward compatibility)
+      const showToolbar = reactScanShowToolbar !== 'false'
+      scan({ showToolbar })
     }
   }, [])
 
