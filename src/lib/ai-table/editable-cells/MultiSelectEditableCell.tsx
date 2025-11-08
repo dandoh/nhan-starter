@@ -87,7 +87,7 @@ export function MultiSelectEditableCell({
                     <button
                       type="button"
                       onClick={(e) => handleRemove(val, e)}
-                      className="ml-1 rounded-full hover:bg-black/20 p-0.5"
+                      className="ml-1 rounded-full hover:bg-muted p-0.5"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           handleRemove(val, e as any)
@@ -178,7 +178,7 @@ export function MultiSelectEditableCell({
         }}
         onBlur={onBlur}
         onFocus={onFocus}
-        className="h-full w-full border-none bg-transparent focus-visible:border-none focus-visible:ring-0 shadow-none px-2 py-1 text-sm"
+        className="h-full w-full border-none !bg-transparent dark:!bg-transparent hover:!bg-transparent dark:hover:!bg-transparent focus-visible:border-none focus-visible:ring-0 shadow-none px-2 py-1 text-sm"
         placeholder="Comma-separated values"
       />
     )

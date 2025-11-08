@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/breadcrumb'
 import { SidebarTrigger } from './ui/sidebar'
 import { Separator } from './ui/separator'
+import { ThemeToggle } from './ThemeToggle'
 
 interface BreadcrumbItem {
   label: string
@@ -57,7 +58,10 @@ export function TopNav({ breadcrumbs, children }: TopNavProps) {
           </BreadcrumbList>
         </Breadcrumb>
       </div>
-      {children && <div className="flex items-center gap-2">{children}</div>}
+      <div className="flex items-center gap-2">
+        {children && <div className="flex items-center gap-2">{children}</div>}
+        <ThemeToggle />
+      </div>
     </header>
   )
 }

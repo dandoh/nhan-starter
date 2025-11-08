@@ -21,8 +21,8 @@ function hashString(str: string): number {
 }
 
 /**
- * Generate a consistent HSL color based on string value
- * Returns an object with background and text colors
+ * Generate a consistent color based on string value using theme-aware oklch colors
+ * Returns an object with background and text colors that work with both light and dark themes
  */
 export function getBadgeColors(value: string): {
   backgroundColor: string
@@ -34,17 +34,17 @@ export function getBadgeColors(value: string): {
   // Generate hue from hash (0-360)
   const hue = hash % 360
   
-  // Use theme-aware saturation and lightness for better integration
-  // Light mode: slightly desaturated, medium lightness
-  // These values work well with both light and dark themes
-  const saturation = 65 // Moderate saturation
-  const lightness = 92 // Light background
-  const textLightness = 35 // Dark text for contrast
+  // Use oklch color format to match theme system
+  // Values optimized for both light and dark themes
+  const chroma = 0.15 // Moderate chroma (saturation)
+  const lightness = 0.92 // Light background for badges
+  const textLightness = 0.35 // Dark text for contrast
+  const borderLightness = 0.82 // Slightly darker border
   
   return {
-    backgroundColor: `hsl(${hue}, ${saturation}%, ${lightness}%)`,
-    textColor: `hsl(${hue}, ${saturation}%, ${textLightness}%)`,
-    borderColor: `hsl(${hue}, ${saturation}%, ${lightness - 10}%)`,
+    backgroundColor: `oklch(${lightness} ${chroma} ${hue})`,
+    textColor: `oklch(${textLightness} ${chroma} ${hue})`,
+    borderColor: `oklch(${borderLightness} ${chroma} ${hue})`,
   }
 }
 
