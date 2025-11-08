@@ -560,7 +560,6 @@ function AiTableInternal({
   }, [
     table.getState().columnSizingInfo,
     table.getState().columnSizing,
-    table.getState().columnPinning,
   ])
 
   const hasPinnedColumns = useMemo(() => {
@@ -592,7 +591,6 @@ function AiTableInternal({
                   <SortableContext
                     items={columnOrder}
                     strategy={horizontalListSortingStrategy}
-                    // strategy={rectSortingStrategy}
                   >
                     {headerGroup.headers.map((header) => (
                       <DraggableTableHeader key={header.id} header={header} />

@@ -150,6 +150,7 @@
     "drizzle-kit": "^0.31.6",
     "jsdom": "^27.1.0",
     "prettier": "^3.6.2",
+    "react-scan": "^0.4.3",
     "shadcn": "^3.5.0",
     "tailwind-scrollbar": "^4.0.2",
     "tsx": "^4.20.6",

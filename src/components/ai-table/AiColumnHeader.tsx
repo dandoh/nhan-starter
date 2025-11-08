@@ -241,7 +241,7 @@ export function AiColumnHeader({ column, tanstackColumn, collections }: ColumnHe
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none"
+                className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus-visible:outline-none focus-visible:ring-0 data-[state=open]:outline-none data-[state=open]:ring-0"
                 aria-label="Column options"
                 {...stopDragPropagation}
               >
