@@ -15,7 +15,7 @@ export function LongTextEditableCell({
       onChange={(e) => onChange(e.target.value)}
       onBlur={onBlur}
       onFocus={onFocus}
-      className="max-h-[100px] w-full min-h-[60px] border-none !bg-transparent dark:!bg-transparent hover:!bg-transparent dark:hover:!bg-transparent focus-visible:border-none focus-visible:ring-0 shadow-none px-2 py-1 text-sm resize-none"
+      className="h-full w-full border-none !bg-transparent dark:!bg-transparent hover:!bg-transparent dark:hover:!bg-transparent focus-visible:border-none focus-visible:ring-0 shadow-none px-2 py-1 text-sm resize-none flex-1"
       placeholder=""
       rows={3}
     />

@@ -64,7 +64,8 @@ function TableEditorPage() {
       <div className="flex flex-1 overflow-hidden">
         {/* Table content */}
         <div className="flex flex-col flex-1 min-w-0">
-          <div className="flex-1 overflow-hidden p-2">
+          <div className="flex-1 overflow-hidden p-1">
+
             <div className="h-full flex flex-col space-y-2">
               {/* Name and Description Section */}
               {/* <div className="shrink-0 space-y-2 ">

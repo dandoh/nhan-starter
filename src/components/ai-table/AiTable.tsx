@@ -184,6 +184,7 @@ function DraggableTableHeader({
         classNamesForPinning,
         classNamesForDraggingAndDropping,
         classNamesForPositionHint,
+        isAddColumn && 'p-0',
       )}
       style={{ ...styleForDraggingAndDropping, ...styleForPinningAndResizing }}
       {...(!isAddColumn ? { ...attributes, ...listeners } : {})}
@@ -250,7 +251,7 @@ function DragAlongCell({ cell }: { cell: Cell<GridRow, unknown> }) {
     <TableCell
       ref={setNodeRef as unknown as React.Ref<HTMLTableCellElement>}
       className={cn(
-        'hover:bg-muted',
+        'hover:bg-muted h-full p-0',
         classNamesForPinning,
         classNamesForDraggingAndDropping,
         classNamesForPositionHint,
@@ -281,6 +282,7 @@ function AiTableInternal({
   recordsCollection: ReturnType<typeof useTableSync>['recordsCollection']
   cellsCollection: ReturnType<typeof useTableSync>['cellsCollection']
 }) {
+  const tableContainerRef = React.useRef<HTMLDivElement>(null)
   const [isComputing, setIsComputing] = React.useState(false)
   // Handle adding a new column
   const handleAddColumn = useCallback(() => {
@@ -397,6 +399,13 @@ function AiTableInternal({
         res[columnId] = 200
       }
     }
+
+    // const totalWidth = chain(res).values().sum().value()
+    // const availableWidthForAddColumn = tableContainerRef.current
+    //   ? tableContainerRef.current.clientWidth - totalWidth
+    //   : 200
+
+    // res['__add_column__'] = availableWidthForAddColumn
     return res
   }, [aiTable?.columnSizing, aiColumns])
 
@@ -562,7 +571,7 @@ function AiTableInternal({
   }, [aiTable.columnPinning])
 
   return (
-    <div className="flex flex-col min-w-0 max-h-full">
+    <div ref={tableContainerRef} className="flex flex-col min-w-0 h-full">
       <DndContext
         collisionDetection={closestCorners}
         modifiers={[restrictToParentElement]}
@@ -601,7 +610,7 @@ function AiTableInternal({
               {/* Add Record Row */}
               <TableRow className="hover:bg-transparent">
                 <TableCell
-                  colSpan={hasPinnedColumns ? columnPinning.left.length : 1}
+                  colSpan={aiColumns.length + 1}
                   className={cn(
                     'p-0 !border-r-0 !border-b-0',
                     getCommonPinningClasses(true),
@@ -626,7 +635,7 @@ function AiTableInternal({
         </div>
       </DndContext>
       {/* Run AI Cells Button - Below table, aligned right */}
-      <div className="flex justify-end mt-4">
+      {/* <div className="flex justify-end mt-4">
         <Button
           onClick={handleComputeAI}
           disabled={isComputing}
@@ -636,7 +645,7 @@ function AiTableInternal({
           <Sparkles className="size-4 mr-2" />
           {isComputing ? 'Running...' : 'Run AI cells'}
         </Button>
-      </div>
+      </div> */}
     </div>
   )
 }

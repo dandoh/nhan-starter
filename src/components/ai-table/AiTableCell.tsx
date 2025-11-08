@@ -112,7 +112,7 @@ export const AiTableCell = memo(function TableCell({
 
   // Pass raw value - deserialization is handled inside EditableCell
   return (
-    <div className="h-full w-full">
+    <div className="h-full w-full flex items-stretch">
       <EditableCell
         value={localValue}
         config={outputTypeConfig}

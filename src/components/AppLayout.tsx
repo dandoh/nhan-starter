@@ -22,10 +22,13 @@ import {
   SidebarProvider,
   SidebarInset,
   SidebarFooter,
+  useSidebar,
 } from '@/components/ui/sidebar'
 import { AIChatProvider } from '@/components/ai-chat/ai-chat-context'
+import { useSession } from '@/auth/auth-client'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 
-const navigation = [
+const mainNavigation = [
   {
     title: 'Home',
     icon: Home,
@@ -36,6 +39,9 @@ const navigation = [
     icon: Table,
     url: '/tables',
   },
+]
+
+const connectorsNavigation = [
   {
     title: 'Connectors',
     icon: Plug,
@@ -66,6 +72,38 @@ const bottomNavigation = [
   },
 ]
 
+function SidebarHeaderContent() {
+  const { data: session } = useSession()
+  const { state } = useSidebar()
+  const isExpanded = state === 'expanded'
+
+  return (
+    <SidebarHeader className="h-14 justify-center items-center">
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton size="lg" asChild tooltip={session?.user?.name || session?.user?.email || 'User'}>
+            <Link to="/profile">
+              <Avatar className="size-6">
+                <AvatarImage src={session?.user?.image} alt={session?.user?.name || session?.user?.email || 'User'} />
+                <AvatarFallback>
+                  {session?.user?.name?.slice(0, 2).toUpperCase() || 
+                   session?.user?.email?.slice(0, 2).toUpperCase() || 
+                   'U'}
+                </AvatarFallback>
+              </Avatar>
+              {isExpanded && (
+                <span className="truncate font-semibold">
+                  {session?.user?.name || session?.user?.email || 'User'}
+                </span>
+              )}
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    </SidebarHeader>
+  )
+}
+
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation()
 
@@ -73,29 +111,33 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <AIChatProvider>
       <SidebarProvider>
         <Sidebar collapsible="icon">
-          <SidebarHeader className="h-14 justify-center">
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton size="lg" asChild tooltip="Workspace">
-                  <Link to="/">
-                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                      <LayoutDashboard className="size-4" />
-                    </div>
-                    <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-semibold">Workspace</span>
-                      <span className="truncate text-xs">Company Inc.</span>
-                    </div>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarHeader>
+          <SidebarHeaderContent />
           <SidebarContent>
             <SidebarGroup>
-              <SidebarGroupLabel>Navigation</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {navigation.map((item) => (
+                  {mainNavigation.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location.pathname === item.url}
+                        tooltip={item.title}
+                      >
+                        <Link to={item.url}>
+                          <item.icon />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+            <SidebarGroup>
+              <SidebarGroupLabel>Connectors</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {connectorsNavigation.map((item) => (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton
                         asChild
