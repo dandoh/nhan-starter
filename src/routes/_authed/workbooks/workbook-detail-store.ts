@@ -1,23 +1,20 @@
-import { create, useStore } from 'zustand'
-import { useMemo } from 'react'
+import { create } from 'zustand'
 
 type BlockType = 'table' | 'chart' | 'document'
 
 interface WorkbookDetailState {
   isChatMinimized: boolean
-  createBlockDialogType: BlockType | null
+  createBlockPopoverType: BlockType | null
   setChatMinimized: (minimized: boolean) => void
-  setCreateBlockDialogType: (blockType: BlockType | null) => void
+  setCreateBlockPopoverType: (blockType: BlockType | null) => void
 }
-
-type WorkbookDetailStore = ReturnType<typeof createWorkbookDetailStore>
 
 export function createWorkbookDetailStore() {
   return create<WorkbookDetailState>((set) => ({
     isChatMinimized: false,
-    createBlockDialogType: null,
+    createBlockPopoverType: null,
     setChatMinimized: (minimized) => set({ isChatMinimized: minimized }),
-    setCreateBlockDialogType: (blockType) =>
-      set({ createBlockDialogType: blockType }),
+    setCreateBlockPopoverType: (blockType) =>
+      set({ createBlockPopoverType: blockType }),
   }))
 }

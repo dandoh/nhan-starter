@@ -4,16 +4,15 @@ import {
   type WorkbookCollections,
 } from '@/lib/workbooks/collections'
 
-
-export function useWorkbookSync(workbookId: string): WorkbookCollections {
+export function useWorkbookSync(workbookId: string) {
   // Create collections once and store in ref for stable reference
-  const collectionsRef = useRef<WorkbookCollections | null>(null)
+  const collectionsRef = useRef<ReturnType<
+    typeof createWorkbookCollections
+  > | null>(null)
   if (!collectionsRef.current) {
     collectionsRef.current = createWorkbookCollections(workbookId)
   }
   const collections = collectionsRef.current
 
-
   return collections
 }
-

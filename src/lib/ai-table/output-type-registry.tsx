@@ -6,6 +6,7 @@ import {
   Tag,
   Tags,
   Calendar as CalendarIcon,
+  Paperclip,
 } from 'lucide-react'
 import type {
   OutputType,
@@ -17,12 +18,14 @@ import {
   singleSelectConfigSchema,
   multiSelectConfigSchema,
   dateConfigSchema,
+  fileConfigSchema,
 } from './output-types'
 import { TextEditableCell } from './editable-cells/TextEditableCell'
 import { LongTextEditableCell } from './editable-cells/LongTextEditableCell'
 import { SingleSelectEditableCell } from './editable-cells/SingleSelectEditableCell'
 import { MultiSelectEditableCell } from './editable-cells/MultiSelectEditableCell'
 import { DateEditableCell } from './editable-cells/DateEditableCell'
+import { FileEditableCell } from './editable-cells/FileEditableCell'
 
 // ============================================================================
 // Type Definitions
@@ -32,7 +35,7 @@ export interface EditableCellProps<
   T extends OutputTypeConfig,
   ValueType = string,
 > {
-  value: ValueType
+  value: ValueType | null,
   config?: T | null
   onChange: (value: ValueType) => void
   onBlur?: () => void
@@ -246,6 +249,45 @@ const DATE_TYPE: OutputTypeDefinition<
   EditableCell: DateEditableCell,
 }
 
+const FILE_TYPE: OutputTypeDefinition<
+  typeof fileConfigSchema,
+  z.ZodObject<{
+    bucket: z.ZodString
+    key: z.ZodString
+    filename: z.ZodString
+    extension: z.ZodString
+    fileSize: z.ZodNumber
+    mimeType: z.ZodString
+    md5Hash: z.ZodOptional<z.ZodString>
+  }>
+> = {
+  id: 'file',
+  label: '📎 File - File attachments',
+  icon: Paperclip,
+  tooltip: 'File attachment',
+  description: 'File stored in S3 with metadata. Cannot be AI-generated.',
+
+  configSchema: fileConfigSchema,
+
+  createAISchema: () => {
+    // File type should not be AI-generatable
+    // Return a schema that will always fail validation
+    return z.object({
+      bucket: z.string().refine(() => false, {
+        message: 'File columns cannot be AI-generated',
+      }),
+      key: z.string(),
+      filename: z.string(),
+      extension: z.string(),
+      fileSize: z.number(),
+      mimeType: z.string(),
+      md5Hash: z.string().optional(),
+    })
+  },
+
+  EditableCell: FileEditableCell,
+}
+
 // ============================================================================
 // Registry
 // ============================================================================
@@ -257,6 +299,7 @@ export const OUTPUT_TYPE_REGISTRY = {
   single_select: SINGLE_SELECT_TYPE,
   multi_select: MULTI_SELECT_TYPE,
   date: DATE_TYPE,
+  file: FILE_TYPE,
 } as const
 // ============================================================================
 // Helper Functions

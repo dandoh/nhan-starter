@@ -9,7 +9,7 @@ export function TextEditableCell({
   onBlur,
   onFocus,
 }: EditableCellProps<TextConfig, { value: string }>) {
-  const displayValue = value.value || ''
+  const displayValue = value?.value || ''
   
   const handleChange = (newValue: string) => {
     onChange({ value: newValue })

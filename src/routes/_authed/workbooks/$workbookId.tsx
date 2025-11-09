@@ -9,12 +9,10 @@ import { eq, useLiveQuery } from '@tanstack/react-db'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -119,7 +117,9 @@ function TableBlock({
             <span>Table settings</span>
           </DropdownMenuItem>
           {leftSidebarActions && (
-            <DropdownMenuItem onSelect={() => setShowLeftSidebar(!showLeftSidebar)}>
+            <DropdownMenuItem
+              onSelect={() => setShowLeftSidebar(!showLeftSidebar)}
+            >
               {showLeftSidebar ? (
                 <>
                   <PanelLeft className="h-4 w-4" />
@@ -144,7 +144,10 @@ function TableBlock({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
@@ -157,7 +160,7 @@ function TableBlock({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteBlock}
-              className="bg-destructive !text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground! hover:bg-destructive/90"
             >
               Delete
             </AlertDialogAction>
@@ -250,17 +253,17 @@ function WorkbookDetailPage() {
     workbookDetailStore,
     (state) => state.isChatMinimized,
   )
-  const createBlockDialogType = useStore(
+  const createBlockPopoverType = useStore(
     workbookDetailStore,
-    (state) => state.createBlockDialogType,
+    (state) => state.createBlockPopoverType,
   )
   const setChatMinimized = useStore(
     workbookDetailStore,
     (state) => state.setChatMinimized,
   )
-  const setCreateBlockDialogType = useStore(
+  const setCreateBlockPopoverType = useStore(
     workbookDetailStore,
-    (state) => state.setCreateBlockDialogType,
+    (state) => state.setCreateBlockPopoverType,
   )
   const { workbook: preloadedWorkbook } = Route.useLoaderData()
 
@@ -287,8 +290,19 @@ function WorkbookDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const handleBlockTypeSelect = (blockType: 'table' | 'chart' | 'document') => {
-    setCreateBlockDialogType(blockType)
+  const handleCreateTableBlock = () => {
+    const tempId = crypto.randomUUID()
+    const newBlock = {
+      id: tempId,
+      workbookId,
+      blockType: 'table' as const,
+      tableId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    blocksCollection.insert(newBlock)
+    setCreateBlockPopoverType(null)
   }
 
   return (
@@ -320,49 +334,25 @@ function WorkbookDetailPage() {
                 </ResizableBlock>
               ))}
               {blocks.length === 0 ? (
-                <div className="w-full border-2 border-dashed border-border bg-card rounded-lg p-8 min-h-[300px] flex flex-col items-center justify-center gap-6">
+                <div className="w-full border-2 border-dashed border-border rounded-lg p-8 min-h-[300px] flex flex-col items-center justify-center gap-6">
                   <div className="flex flex-col items-center gap-2 text-center max-w-md">
                     <h3 className="text-lg font-semibold text-foreground">
                       Get started with your workbook
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      Create your first block by loading data from a file, connecting to a data source, or starting with an empty table. Choose a block type below to begin.
+                      Create your first block by loading data from a file,
+                      connecting to a data source, or starting with an empty
+                      table. Choose a block type below to begin.
                     </p>
                   </div>
-                  <div className="flex justify-center items-center gap-4">
-                    <div
-                      onClick={() => handleBlockTypeSelect('table')}
-                      className="flex flex-col items-center justify-center gap-2 w-24 h-24 border-2 border-dashed border-border rounded-lg hover:border-muted-foreground/40 hover:bg-accent/30 transition-all group cursor-pointer"
-                    >
-                      <Table className="w-6 h-6 text-muted-foreground group-hover:text-foreground/70" />
-                      <span className="text-xs text-muted-foreground group-hover:text-foreground/70">
-                        Table
-                      </span>
-                    </div>
-
-                    <div
-                      onClick={() => handleBlockTypeSelect('document')}
-                      className="flex flex-col items-center justify-center gap-2 w-24 h-24 border-2 border-dashed border-border rounded-lg hover:border-muted-foreground/40 hover:bg-accent/30 transition-all group cursor-pointer"
-                    >
-                      <FileCode className="w-6 h-6 text-muted-foreground group-hover:text-foreground/70" />
-                      <span className="text-xs text-muted-foreground group-hover:text-foreground/70">
-                        Document
-                      </span>
-                    </div>
-
-                    <div
-                      onClick={() => handleBlockTypeSelect('chart')}
-                      className="flex flex-col items-center justify-center gap-2 w-24 h-24 border-2 border-dashed border-border rounded-lg hover:border-muted-foreground/40 hover:bg-accent/30 transition-all group cursor-pointer"
-                    >
-                      <BarChart3 className="w-6 h-6 text-muted-foreground group-hover:text-foreground/70" />
-                      <span className="text-xs text-muted-foreground group-hover:text-foreground/70">
-                        Chart
-                      </span>
-                    </div>
-                  </div>
+                  <CreateBlockOptions
+                    openType={createBlockPopoverType}
+                    onOpenTypeChange={setCreateBlockPopoverType}
+                    onCreateTable={handleCreateTableBlock}
+                  />
                 </div>
               ) : (
-                <div className="w-full border-2 border-dashed border-border bg-card rounded-lg p-8 min-h-[200px] flex flex-col items-center justify-center gap-6">
+                <div className="w-full border-2 border-dashed border-border rounded-lg p-8 min-h-[200px] flex flex-col items-center justify-center gap-6">
                   <div className="flex flex-col items-center gap-2 text-center max-w-md">
                     <p className="text-lg text-muted-foreground">
                       Add another block
@@ -373,37 +363,11 @@ function WorkbookDetailPage() {
                       sources.
                     </p>
                   </div>
-                  <div className="flex justify-center items-center gap-4">
-                    <div
-                      onClick={() => handleBlockTypeSelect('table')}
-                      className="flex flex-col items-center justify-center gap-2 w-24 h-24 border-2 border-dashed border-border rounded-lg hover:border-muted-foreground/40 hover:bg-accent/30 transition-all group cursor-pointer"
-                    >
-                      <Table className="w-6 h-6 text-muted-foreground group-hover:text-foreground/70" />
-                      <span className="text-xs text-muted-foreground group-hover:text-foreground/70">
-                        Table
-                      </span>
-                    </div>
-
-                    <div
-                      onClick={() => handleBlockTypeSelect('document')}
-                      className="flex flex-col items-center justify-center gap-2 w-24 h-24 border-2 border-dashed border-border rounded-lg hover:border-muted-foreground/40 hover:bg-accent/30 transition-all group cursor-pointer"
-                    >
-                      <FileCode className="w-6 h-6 text-muted-foreground group-hover:text-foreground/70" />
-                      <span className="text-xs text-muted-foreground group-hover:text-foreground/70">
-                        Document
-                      </span>
-                    </div>
-
-                    <div
-                      onClick={() => handleBlockTypeSelect('chart')}
-                      className="flex flex-col items-center justify-center gap-2 w-24 h-24 border-2 border-dashed border-border rounded-lg hover:border-muted-foreground/40 hover:bg-accent/30 transition-all group cursor-pointer"
-                    >
-                      <BarChart3 className="w-6 h-6 text-muted-foreground group-hover:text-foreground/70" />
-                      <span className="text-xs text-muted-foreground group-hover:text-foreground/70">
-                        Chart
-                      </span>
-                    </div>
-                  </div>
+                  <CreateBlockOptions
+                    openType={createBlockPopoverType}
+                    onOpenTypeChange={setCreateBlockPopoverType}
+                    onCreateTable={handleCreateTableBlock}
+                  />
                 </div>
               )}
             </div>
@@ -451,133 +415,142 @@ function WorkbookDetailPage() {
           <AiChatFloatingButton onClick={() => setChatMinimized(false)} />
         </div>
       </div>
-
-      {/* Create Block Dialog */}
-      {createBlockDialogType && (
-        <CreateBlockDialog
-          open={true}
-          onOpenChange={(open) =>
-            setCreateBlockDialogType(open ? createBlockDialogType : null)
-          }
-          workbookId={workbookId}
-          blockType={createBlockDialogType}
-          blocksCollection={blocksCollection}
-        />
-      )}
     </AppPageWrapper>
   )
 }
 
-function CreateBlockDialog({
-  open,
-  onOpenChange,
-  workbookId,
-  blockType,
-  blocksCollection,
+type BlockOptionType = 'table' | 'document' | 'chart'
+
+function CreateBlockOptions({
+  openType,
+  onOpenTypeChange,
+  onCreateTable,
 }: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  workbookId: string
-  blockType: 'table' | 'chart' | 'document'
-  blocksCollection: BlocksCollection
+  openType: BlockOptionType | null
+  onOpenTypeChange: (type: BlockOptionType | null) => void
+  onCreateTable: () => void
 }) {
-  const handleCreateBlock = () => {
-    // Currently only 'table' is supported by the API
-    if (blockType !== 'table') {
-      console.warn(`Block type ${blockType} is not yet supported`)
-      onOpenChange(false)
-      return
-    }
+  const blockTypes: BlockOptionType[] = ['table', 'document', 'chart']
 
-    // Insert block into collection - onInsert handler will sync with server
-    const tempId = crypto.randomUUID()
-    const newBlock = {
-      id: tempId,
-      workbookId,
-      blockType: 'table' as const,
-      tableId: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }
-
-    blocksCollection.insert(newBlock)
-
-    // Close dialog - collection will update automatically
-    onOpenChange(false)
-  }
-
-  // Render different content based on blockType
-  if (blockType === 'table') {
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Create Table</DialogTitle>
-            <DialogDescription>
-              Choose how to create your table
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex flex-col gap-3 py-4">
-            <Button
-              onClick={handleCreateBlock}
-              variant="outline"
-              className="h-auto py-4 px-6 justify-start gap-4 hover:bg-accent"
-            >
-              <Table className="w-5 h-5" />
-              <div className="flex flex-col items-start gap-1">
-                <span className="font-medium">Create new empty table</span>
-                <span className="text-xs text-muted-foreground">
-                  Start with a blank table
-                </span>
-              </div>
-            </Button>
-
-            <Button
-              disabled
-              variant="outline"
-              className="h-auto py-4 px-6 justify-start gap-4 opacity-50 cursor-not-allowed"
-            >
-              <FileText className="w-5 h-5" />
-              <div className="flex flex-col items-start gap-1">
-                <span className="font-medium">Load from CSV</span>
-                <span className="text-xs text-muted-foreground">
-                  Coming soon
-                </span>
-              </div>
-            </Button>
-
-            <Button
-              disabled
-              variant="outline"
-              className="h-auto py-4 px-6 justify-start gap-4 opacity-50 cursor-not-allowed"
-            >
-              <BarChart3 className="w-5 h-5" />
-              <div className="flex flex-col items-start gap-1">
-                <span className="font-medium">Load from data sources</span>
-                <span className="text-xs text-muted-foreground">
-                  Coming soon
-                </span>
-              </div>
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    )
-  }
-
-  // Placeholder for other block types
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            Create {blockType === 'chart' ? 'Chart' : 'Document'} Block
-          </DialogTitle>
-          <DialogDescription>Coming soon</DialogDescription>
-        </DialogHeader>
-      </DialogContent>
-    </Dialog>
+    <div className="flex justify-center items-center gap-4">
+      {blockTypes.map((type) => {
+        const Icon =
+          type === 'table' ? Table : type === 'document' ? FileCode : BarChart3
+        const label =
+          type === 'table'
+            ? 'Table'
+            : type === 'document'
+              ? 'Document'
+              : 'Chart'
+
+        return (
+          <Popover
+            key={type}
+            open={openType === type}
+            onOpenChange={(open) => onOpenTypeChange(open ? type : null)}
+          >
+            <PopoverTrigger asChild>
+              <div
+                role="button"
+                tabIndex={0}
+                className="flex  flex-col items-center justify-center gap-2 w-24 h-24 border-1 border-dashed border-border rounded-lg transition-all group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:border-muted-foreground/40 hover:bg-accent/30 cursor-pointer"
+              >
+                <Icon className="w-6 h-6 text-muted-foreground group-hover:text-foreground/70" />
+                <span className="text-xs text-muted-foreground group-hover:text-foreground/70">
+                  {label}
+                </span>
+              </div>
+            </PopoverTrigger>
+            <PopoverContent
+              side="bottom"
+              align="center"
+              sideOffset={12}
+              className="w-80 border border-border bg-card p-0 shadow-lg"
+            >
+              {type === 'table' ? (
+                <TableCreationPopoverContent
+                  onCreateEmptyTable={onCreateTable}
+                />
+              ) : (
+                <BlockComingSoonContent blockType={type} />
+              )}
+            </PopoverContent>
+          </Popover>
+        )
+      })}
+    </div>
+  )
+}
+
+function TableCreationPopoverContent({
+  onCreateEmptyTable,
+}: {
+  onCreateEmptyTable: () => void
+}) {
+  return (
+    <div className="flex flex-col gap-4 p-4">
+      <div className="flex flex-col gap-3">
+        <Button
+          onClick={onCreateEmptyTable}
+          variant="outline"
+          className="h-auto p-2 justify-start gap-4 hover:bg-accent"
+        >
+          <Table className="w-5 h-5" />
+          <div className="flex flex-col items-start">
+            <span className="font-medium">Create new empty table</span>
+            <span className="text-xs text-muted-foreground">
+              Start with a blank table
+            </span>
+          </div>
+        </Button>
+
+        <Button
+          disabled
+          variant="outline"
+          className="h-auto p-2 justify-start gap-4 opacity-50 cursor-not-allowed"
+        >
+          <FileText className="w-5 h-5" />
+          <div className="flex flex-col items-start">
+            <span className="font-medium">Load from CSV</span>
+            <span className="text-xs text-muted-foreground">Coming soon</span>
+          </div>
+        </Button>
+
+        <Button
+          disabled
+          variant="outline"
+          className="h-auto p-2 justify-start gap-4 opacity-50 cursor-not-allowed"
+        >
+          <BarChart3 className="w-5 h-5" />
+          <div className="flex flex-col items-start">
+            <span className="font-medium">Load from data sources</span>
+            <span className="text-xs text-muted-foreground">Coming soon</span>
+          </div>
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function BlockComingSoonContent({
+  blockType,
+}: {
+  blockType: Extract<BlockOptionType, 'document' | 'chart'>
+}) {
+  const heading = blockType === 'chart' ? 'Chart blocks' : 'Document blocks'
+
+  return (
+    <div className="flex flex-col gap-3 p-4">
+      <div className="flex flex-col gap-1">
+        <h4 className="text-sm font-semibold text-foreground">{heading}</h4>
+        <p className="text-xs text-muted-foreground">Coming soon</p>
+      </div>
+      <p className="text-sm text-muted-foreground">
+        We&apos;re working on bringing {blockType} creation flows to life.
+        You&apos;ll soon be able to connect files and data sources here.
+      </p>
+    </div>
   )
 }
 

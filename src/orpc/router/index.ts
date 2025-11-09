@@ -43,7 +43,7 @@ export default {
     // Record operations
     getRecords: aiTables.getRecords,
     createRecord: aiTables.createRecord,
-    addRowsWithValues: aiTables.addRowsWithValues,
+    // addRowsWithValues: aiTables.addRowsWithValues,
     deleteRecord: aiTables.deleteRecord,
     
     // Cell operations

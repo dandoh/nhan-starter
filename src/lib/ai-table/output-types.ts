@@ -38,6 +38,34 @@ export const dateConfigSchema = z.object({
   dateFormat: z.string().optional(),
 })
 
+/**
+ * File column configuration schema.
+ * File value structure:
+ * {
+ *   bucket: string      // S3 bucket name
+ *   key: string         // S3 object key
+ *   filename: string    // Original filename
+ *   extension: string   // File extension
+ *   fileSize: number    // Size in bytes
+ *   mimeType: string    // MIME type (e.g., 'image/png')
+ *   md5Hash?: string    // Optional MD5 hash for deduplication
+ * }
+ */
+export const fileConfigSchema = z.object({})
+
+/**
+ * File value schema for validation
+ */
+export const fileValueSchema = z.object({
+  bucket: z.string(),
+  key: z.string(),
+  filename: z.string(),
+  extension: z.string(),
+  fileSize: z.number(),
+  mimeType: z.string(),
+  md5Hash: z.string().optional(),
+})
+
 // ============================================================================
 // Inferred TypeScript Types from Zod Schemas
 // ============================================================================
@@ -48,6 +76,7 @@ export type LongTextConfig = z.infer<typeof longTextConfigSchema>
 export type SingleSelectConfig = z.infer<typeof singleSelectConfigSchema>
 export type MultiSelectConfig = z.infer<typeof multiSelectConfigSchema>
 export type DateConfig = z.infer<typeof dateConfigSchema>
+export type FileConfig = z.infer<typeof fileConfigSchema>
 
 export type OutputTypeConfig =
   | TextConfig
@@ -55,6 +84,7 @@ export type OutputTypeConfig =
   | SingleSelectConfig
   | MultiSelectConfig
   | DateConfig
+  | FileConfig
 
 // ============================================================================
 // Utility Functions
@@ -75,6 +105,8 @@ export function getConfigSchema(outputType: OutputType): z.ZodSchema {
       return multiSelectConfigSchema
     case 'date':
       return dateConfigSchema
+    case 'file':
+      return fileConfigSchema
     default:
       return textConfigSchema
   }

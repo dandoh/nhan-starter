@@ -17,7 +17,7 @@ export function SingleSelectEditableCell({
   onBlur,
   onFocus,
 }: EditableCellProps<SingleSelectConfig, { value: string }>) {
-  const displayValue = value.value || ''
+  const displayValue = value?.value || ''
   const options = config?.options || []
 
   const handleChange = (newValue: string) => {

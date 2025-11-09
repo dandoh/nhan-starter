@@ -1,16 +1,14 @@
 import { Link, useLocation } from '@tanstack/react-router'
 import {
   Home,
-  Users,
-  TrendingUp,
   Settings,
   Table,
-  UserCircle,
   Plug,
   BookOpen,
   Moon,
   Sun,
   Scan,
+  Sparkles,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -58,6 +56,11 @@ const mainNavigation = [
     icon: BookOpen,
     url: '/workbooks',
   },
+  {
+    title: 'Prototype',
+    icon: Sparkles,
+    url: '/prototype',
+  },
 ]
 
 const connectorsNavigation = [
@@ -65,21 +68,6 @@ const connectorsNavigation = [
     title: 'Connectors',
     icon: Plug,
     url: '/connectors',
-  },
-  {
-    title: 'Profile',
-    icon: UserCircle,
-    url: '/profile',
-  },
-  {
-    title: 'Team',
-    icon: Users,
-    url: '/demo/team',
-  },
-  {
-    title: 'Career',
-    icon: TrendingUp,
-    url: '/demo/career',
   },
 ]
 
@@ -209,13 +197,9 @@ function SidebarHeaderContent() {
         <SidebarMenuItem>
           <SidebarMenuButton
             size="lg"
-            asChild
             tooltip={session?.user?.name || session?.user?.email || 'User'}
           >
-            <Link
-              to="/profile"
-              className={cn(!isExpanded && 'flex items-center justify-center')}
-            >
+            <div className={cn(!isExpanded && 'flex items-center justify-center')}>
               <Avatar className="size-6">
                 <AvatarImage
                   src={session?.user?.image || undefined}
@@ -232,7 +216,7 @@ function SidebarHeaderContent() {
                   {session?.user?.name || session?.user?.email || 'User'}
                 </span>
               )}
-            </Link>
+            </div>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>

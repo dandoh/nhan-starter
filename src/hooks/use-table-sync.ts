@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  Column,
   createTableCollections,
   type BelongToTableEntitiesCollections,
 } from '@/lib/ai-table/collections'

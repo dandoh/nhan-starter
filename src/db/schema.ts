@@ -147,6 +147,7 @@ export const AI_TABLE_OUTPUT_TYPES = [
   'single_select',
   'multi_select',
   'date',
+  'file',
 ] as const
 
 export type AiTableOutputType = (typeof AI_TABLE_OUTPUT_TYPES)[number]
@@ -159,6 +160,7 @@ export const aiTableOutputTypeSchema = z.union([
   z.literal(AI_TABLE_OUTPUT_TYPES[2]),
   z.literal(AI_TABLE_OUTPUT_TYPES[3]),
   z.literal(AI_TABLE_OUTPUT_TYPES[4]),
+  z.literal(AI_TABLE_OUTPUT_TYPES[5]),
 ])
 
 export const aiTableColumns = pgTable('ai_table_columns', {
@@ -226,7 +228,7 @@ export const aiTableCells = pgTable(
     columnId: uuid('column_id')
       .notNull()
       .references(() => aiTableColumns.id, { onDelete: 'cascade' }),
-    value: jsonb('value').$type<Record<string, unknown>>(),
+    value: jsonb('value').$type<Record<string, unknown> | null>(),
     computeStatus: text('compute_status', {
       enum: ['idle', 'pending', 'computing', 'completed', 'error'],
     })

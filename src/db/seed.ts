@@ -7,6 +7,7 @@ import {
   aiTableRecords,
   aiTableCells,
   aiConversations,
+  type NewAiTableColumn,
 } from './schema'
 import { eq } from 'drizzle-orm'
 
@@ -56,7 +57,7 @@ async function seed() {
   console.log('✅ Created table:', table.name)
 
   // 4. Create columns - one example of each output type (insert one by one to maintain createdAt order)
-  const columnDefinitions = [
+  const columnDefinitions: NewAiTableColumn[] = [
     // Column: Ticker (text)
     {
       tableId: table.id,
@@ -66,6 +67,15 @@ async function seed() {
       aiPrompt: '',
       outputTypeConfig: null,
       primary: true,
+    },
+    // Column: Research Document (file)
+    {
+      tableId: table.id,
+      name: 'Research Document',
+      description: 'PDF or document file attachment',
+      outputType: 'file' as const,
+      aiPrompt: '', // File columns cannot be AI-generated
+      outputTypeConfig: null,
     },
     // Column: Sentiment (single_select)
     {
@@ -206,8 +216,12 @@ async function seed() {
 
   // 5. Create sample records with tickers
   const tickers = ['AAPL', 'GOOGL', 'TSLA', 'MSFT', 'AMZN']
+  
+  // Find the file column (Research Document)
+  const fileColumn = columns.find((col) => col.outputType === 'file')
 
-  for (const ticker of tickers) {
+  for (let i = 0; i < tickers.length; i++) {
+    const ticker = tickers[i]
     const [record] = await db
       .insert(aiTableRecords)
       .values({
@@ -216,12 +230,42 @@ async function seed() {
       .returning()
 
     // Create cells for each column
-    const cells = columns.map((column, index) => ({
-      recordId: record.id,
-      columnId: column.id,
-      value: index === 0 ? { value: ticker } : {},
-      computeStatus: 'idle' as const,
-    }))
+    const cells = columns.map((column, index) => {
+      // First column is ticker
+      if (index === 0) {
+        return {
+          recordId: record.id,
+          columnId: column.id,
+          value: { value: ticker },
+          computeStatus: 'idle' as const,
+        }
+      }
+      
+      // Add sample file data for the first record (AAPL) in the file column
+      if (column.id === fileColumn?.id && i === 0) {
+        return {
+          recordId: record.id,
+          columnId: column.id,
+          value: {
+            bucket: 'nhan-starter-files',
+            key: `sample-research-${ticker.toLowerCase()}-2024.pdf`,
+            filename: `Research_Report_${ticker}_2024.pdf`,
+            extension: 'pdf',
+            fileSize: 2457600, // 2.4 MB
+            mimeType: 'application/pdf',
+            md5Hash: 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6',
+          },
+          computeStatus: 'idle' as const,
+        }
+      }
+      
+      return {
+        recordId: record.id,
+        columnId: column.id,
+        value: {},
+        computeStatus: 'idle' as const,
+      }
+    })
 
     await db.insert(aiTableCells).values(cells)
 

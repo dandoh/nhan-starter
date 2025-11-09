@@ -9,7 +9,7 @@ export function LongTextEditableCell({
   onBlur,
   onFocus,
 }: EditableCellProps<LongTextConfig, { value: string }>) {
-  const displayValue = value.value || ''
+  const displayValue = value?.value || ''
   
   const handleChange = (newValue: string) => {
     onChange({ value: newValue })

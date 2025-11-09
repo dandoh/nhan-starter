@@ -577,83 +577,83 @@ export const createRecord = os
     return result
   })
 
-/**
- * Add multiple rows to a table, setting the primary column value for each row
- */
-export const addRowsWithValues = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      tableId: z.string().uuid(),
-      values: z.array(z.string()).min(1),
-    }),
-  )
-  .handler(async ({ input, context }) => {
-    // Verify table ownership
-    const table = await db.query.aiTables.findFirst({
-      where: and(
-        eq(aiTables.id, input.tableId),
-        eq(aiTables.userId, context.user.id),
-      ),
-    })
+// /**
+//  * Add multiple rows to a table, setting the primary column value for each row
+//  */
+// export const addRowsWithValues = os
+//   .use(authMiddleware)
+//   .input(
+//     z.object({
+//       tableId: z.string().uuid(),
+//       values: z.array(z.string()).min(1),
+//     }),
+//   )
+//   .handler(async ({ input, context }) => {
+//     // Verify table ownership
+//     const table = await db.query.aiTables.findFirst({
+//       where: and(
+//         eq(aiTables.id, input.tableId),
+//         eq(aiTables.userId, context.user.id),
+//       ),
+//     })
 
-    if (!table) {
-      throw new Error('Table not found')
-    }
+//     if (!table) {
+//       throw new Error('Table not found')
+//     }
 
-    const result = await db.transaction(async (tx) => {
-      // Get primary column
-      const primaryColumn = await tx.query.aiTableColumns.findFirst({
-        where: and(
-          eq(aiTableColumns.tableId, input.tableId),
-          eq(aiTableColumns.primary, true),
-        ),
-      })
+//     const result = await db.transaction(async (tx) => {
+//       // Get primary column
+//       const primaryColumn = await tx.query.aiTableColumns.findFirst({
+//         where: and(
+//           eq(aiTableColumns.tableId, input.tableId),
+//           eq(aiTableColumns.primary, true),
+//         ),
+//       })
 
-      if (!primaryColumn) {
-        throw new Error('Primary column not found')
-      }
+//       if (!primaryColumn) {
+//         throw new Error('Primary column not found')
+//       }
 
-      // Get all columns
-      const columns = await tx.query.aiTableColumns.findMany({
-        where: eq(aiTableColumns.tableId, input.tableId),
-      })
+//       // Get all columns
+//       const columns = await tx.query.aiTableColumns.findMany({
+//         where: eq(aiTableColumns.tableId, input.tableId),
+//       })
 
-      const createdRecords: (typeof aiTableRecords.$inferSelect)[] = []
-      const createdCells: (typeof aiTableCells.$inferSelect)[] = []
+//       const createdRecords: (typeof aiTableRecords.$inferSelect)[] = []
+//       const createdCells: (typeof aiTableCells.$inferSelect)[] = []
 
-      // Create a record for each value
-      for (const value of input.values) {
-        // Create record
-        const [newRecord] = await tx
-          .insert(aiTableRecords)
-          .values({
-            tableId: input.tableId,
-          })
-          .returning()
+//       // Create a record for each value
+//       for (const value of input.values) {
+//         // Create record
+//         const [newRecord] = await tx
+//           .insert(aiTableRecords)
+//           .values({
+//             tableId: input.tableId,
+//           })
+//           .returning()
 
-        createdRecords.push(newRecord)
+//         createdRecords.push(newRecord)
 
-        // Create cells for all columns
-        const cellsToInsert = columns.map((column) => ({
-          recordId: newRecord.id,
-          columnId: column.id,
-          value: column.id === primaryColumn.id ? value : null,
-        }))
+//         // Create cells for all columns
+//         const cellsToInsert = columns.map((column) => ({
+//           recordId: newRecord.id,
+//           columnId: column.id,
+//           value: column.id === primaryColumn.id ? value : null,
+//         }))
 
-        const insertedCells = await tx
-          .insert(aiTableCells)
-          .values(cellsToInsert)
-          .returning()
+//         const insertedCells = await tx
+//           .insert(aiTableCells)
+//           .values(cellsToInsert)
+//           .returning()
 
-        createdCells.push(...insertedCells)
-      }
+//         createdCells.push(...insertedCells)
+//       }
 
-      return { records: createdRecords, cells: createdCells }
-    })
+//       return { records: createdRecords, cells: createdCells }
+//     })
 
-    return result
-  })
+//     return result
+//   })
 
 /**
  * Delete a record and its cells

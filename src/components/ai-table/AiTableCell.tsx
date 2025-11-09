@@ -41,7 +41,6 @@ function AiTableCellInternal({
 
   const onChange = useCallback(
     (newValue: Record<string, unknown>) => {
-      console.log('onChange', newValue)
       updateCellValue({ cellId: cell.id, value: newValue })
     },
     [cell.id, updateCellValue],
@@ -72,9 +71,9 @@ function AiTableCellInternal({
 
   // Pass value in object format (already converted above)
   return (
-    <div className="h-full w-full flex items-stretch">
+    <div className="h-full w-full px-2 py-1">
       <EditableCell
-        value={cell.value || { value: '', values: [] }}
+        value={cell.value}
         config={outputTypeConfig}
         onChange={onChange}
         onBlur={onBlur}

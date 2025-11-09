@@ -26,7 +26,7 @@ export function MultiSelectEditableCell({
   onBlur,
   onFocus,
 }: EditableCellProps<MultiSelectConfig, { values: string[] }>) {
-  const values = value.values || []
+  const values = value?.values || []
   const options = config?.options || []
   const maxSelections = config?.maxSelections
   const [isOpen, setIsOpen] = useState(false)

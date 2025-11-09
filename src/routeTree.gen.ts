@@ -12,11 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as DemoTeamRouteImport } from './routes/demo/team'
-import { Route as DemoCareerRouteImport } from './routes/demo/career'
 import { Route as ApiInngestRouteImport } from './routes/api/inngest'
 import { Route as AuthedTableExampleRouteImport } from './routes/_authed/table-example'
-import { Route as AuthedProfileRouteImport } from './routes/_authed/profile'
+import { Route as AuthedPrototypeRouteImport } from './routes/_authed/prototype'
 import { Route as AuthedNewChatRouteImport } from './routes/_authed/new-chat'
 import { Route as AuthedConnectorsRouteImport } from './routes/_authed/connectors'
 import { Route as AuthedAppRouteImport } from './routes/_authed/app'
@@ -45,16 +43,6 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DemoTeamRoute = DemoTeamRouteImport.update({
-  id: '/demo/team',
-  path: '/demo/team',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DemoCareerRoute = DemoCareerRouteImport.update({
-  id: '/demo/career',
-  path: '/demo/career',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiInngestRoute = ApiInngestRouteImport.update({
   id: '/api/inngest',
   path: '/api/inngest',
@@ -65,9 +53,9 @@ const AuthedTableExampleRoute = AuthedTableExampleRouteImport.update({
   path: '/table-example',
   getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedProfileRoute = AuthedProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
+const AuthedPrototypeRoute = AuthedPrototypeRouteImport.update({
+  id: '/prototype',
+  path: '/prototype',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedNewChatRoute = AuthedNewChatRouteImport.update({
@@ -145,11 +133,9 @@ export interface FileRoutesByFullPath {
   '/app': typeof AuthedAppRoute
   '/connectors': typeof AuthedConnectorsRoute
   '/new-chat': typeof AuthedNewChatRoute
-  '/profile': typeof AuthedProfileRoute
+  '/prototype': typeof AuthedPrototypeRoute
   '/table-example': typeof AuthedTableExampleRoute
   '/api/inngest': typeof ApiInngestRoute
-  '/demo/career': typeof DemoCareerRoute
-  '/demo/team': typeof DemoTeamRoute
   '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/tables/$tableId': typeof AuthedTablesTableIdRoute
   '/workbooks/$workbookId': typeof AuthedWorkbooksWorkbookIdRoute
@@ -167,11 +153,9 @@ export interface FileRoutesByTo {
   '/app': typeof AuthedAppRoute
   '/connectors': typeof AuthedConnectorsRoute
   '/new-chat': typeof AuthedNewChatRoute
-  '/profile': typeof AuthedProfileRoute
+  '/prototype': typeof AuthedPrototypeRoute
   '/table-example': typeof AuthedTableExampleRoute
   '/api/inngest': typeof ApiInngestRoute
-  '/demo/career': typeof DemoCareerRoute
-  '/demo/team': typeof DemoTeamRoute
   '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/tables/$tableId': typeof AuthedTablesTableIdRoute
   '/workbooks/$workbookId': typeof AuthedWorkbooksWorkbookIdRoute
@@ -191,11 +175,9 @@ export interface FileRoutesById {
   '/_authed/app': typeof AuthedAppRoute
   '/_authed/connectors': typeof AuthedConnectorsRoute
   '/_authed/new-chat': typeof AuthedNewChatRoute
-  '/_authed/profile': typeof AuthedProfileRoute
+  '/_authed/prototype': typeof AuthedPrototypeRoute
   '/_authed/table-example': typeof AuthedTableExampleRoute
   '/api/inngest': typeof ApiInngestRoute
-  '/demo/career': typeof DemoCareerRoute
-  '/demo/team': typeof DemoTeamRoute
   '/_authed/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/_authed/tables/$tableId': typeof AuthedTablesTableIdRoute
   '/_authed/workbooks/$workbookId': typeof AuthedWorkbooksWorkbookIdRoute
@@ -215,11 +197,9 @@ export interface FileRouteTypes {
     | '/app'
     | '/connectors'
     | '/new-chat'
-    | '/profile'
+    | '/prototype'
     | '/table-example'
     | '/api/inngest'
-    | '/demo/career'
-    | '/demo/team'
     | '/conversations/$conversationId'
     | '/tables/$tableId'
     | '/workbooks/$workbookId'
@@ -237,11 +217,9 @@ export interface FileRouteTypes {
     | '/app'
     | '/connectors'
     | '/new-chat'
-    | '/profile'
+    | '/prototype'
     | '/table-example'
     | '/api/inngest'
-    | '/demo/career'
-    | '/demo/team'
     | '/conversations/$conversationId'
     | '/tables/$tableId'
     | '/workbooks/$workbookId'
@@ -260,11 +238,9 @@ export interface FileRouteTypes {
     | '/_authed/app'
     | '/_authed/connectors'
     | '/_authed/new-chat'
-    | '/_authed/profile'
+    | '/_authed/prototype'
     | '/_authed/table-example'
     | '/api/inngest'
-    | '/demo/career'
-    | '/demo/team'
     | '/_authed/conversations/$conversationId'
     | '/_authed/tables/$tableId'
     | '/_authed/workbooks/$workbookId'
@@ -282,8 +258,6 @@ export interface RootRouteChildren {
   AuthedRoute: typeof AuthedRouteWithChildren
   LoginRoute: typeof LoginRoute
   ApiInngestRoute: typeof ApiInngestRoute
-  DemoCareerRoute: typeof DemoCareerRoute
-  DemoTeamRoute: typeof DemoTeamRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiRpcSplatRoute: typeof ApiRpcSplatRoute
   DemoApiTqTodosRoute: typeof DemoApiTqTodosRoute
@@ -314,20 +288,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/demo/team': {
-      id: '/demo/team'
-      path: '/demo/team'
-      fullPath: '/demo/team'
-      preLoaderRoute: typeof DemoTeamRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/demo/career': {
-      id: '/demo/career'
-      path: '/demo/career'
-      fullPath: '/demo/career'
-      preLoaderRoute: typeof DemoCareerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/inngest': {
       id: '/api/inngest'
       path: '/api/inngest'
@@ -342,11 +302,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedTableExampleRouteImport
       parentRoute: typeof AuthedRoute
     }
-    '/_authed/profile': {
-      id: '/_authed/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof AuthedProfileRouteImport
+    '/_authed/prototype': {
+      id: '/_authed/prototype'
+      path: '/prototype'
+      fullPath: '/prototype'
+      preLoaderRoute: typeof AuthedPrototypeRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/new-chat': {
@@ -447,7 +407,7 @@ interface AuthedRouteChildren {
   AuthedAppRoute: typeof AuthedAppRoute
   AuthedConnectorsRoute: typeof AuthedConnectorsRoute
   AuthedNewChatRoute: typeof AuthedNewChatRoute
-  AuthedProfileRoute: typeof AuthedProfileRoute
+  AuthedPrototypeRoute: typeof AuthedPrototypeRoute
   AuthedTableExampleRoute: typeof AuthedTableExampleRoute
   AuthedConversationsConversationIdRoute: typeof AuthedConversationsConversationIdRoute
   AuthedTablesTableIdRoute: typeof AuthedTablesTableIdRoute
@@ -460,7 +420,7 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedAppRoute: AuthedAppRoute,
   AuthedConnectorsRoute: AuthedConnectorsRoute,
   AuthedNewChatRoute: AuthedNewChatRoute,
-  AuthedProfileRoute: AuthedProfileRoute,
+  AuthedPrototypeRoute: AuthedPrototypeRoute,
   AuthedTableExampleRoute: AuthedTableExampleRoute,
   AuthedConversationsConversationIdRoute:
     AuthedConversationsConversationIdRoute,
@@ -478,8 +438,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthedRoute: AuthedRouteWithChildren,
   LoginRoute: LoginRoute,
   ApiInngestRoute: ApiInngestRoute,
-  DemoCareerRoute: DemoCareerRoute,
-  DemoTeamRoute: DemoTeamRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiRpcSplatRoute: ApiRpcSplatRoute,
   DemoApiTqTodosRoute: DemoApiTqTodosRoute,

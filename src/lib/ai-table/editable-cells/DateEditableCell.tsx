@@ -74,7 +74,7 @@ export function DateEditableCell({
   onBlur,
   onFocus,
 }: EditableCellProps<DateConfig, { value: string }>) {
-  const displayValue = value.value || ''
+  const displayValue = value?.value || ''
   const dateFormat = config?.dateFormat || 'YYYY-MM-DD'
   const [isOpen, setIsOpen] = useState(false)
   const [date, setDate] = useState<Date | undefined>(
