@@ -19,31 +19,22 @@ import { X } from 'lucide-react'
 import type { EditableCellProps } from '../output-type-registry'
 import type { MultiSelectConfig } from '../output-types'
 
-function parseMultiSelectValue(value: string | null): string[] {
-  if (!value) return []
-  try {
-    const parsed = JSON.parse(value)
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
-}
-
 export function MultiSelectEditableCell({
   value,
   config,
   onChange,
   onBlur,
   onFocus,
-}: EditableCellProps) {
-  // Deserialize: parse JSON string to array
-  const displayValue = parseMultiSelectValue(value)
-  const selectConfig = config as MultiSelectConfig | null
-  const options = selectConfig?.options || []
-  const maxSelections = selectConfig?.maxSelections
-  const values = Array.isArray(displayValue) ? displayValue : []
+}: EditableCellProps<MultiSelectConfig, { values: string[] }>) {
+  const values = value.values || []
+  const options = config?.options || []
+  const maxSelections = config?.maxSelections
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+
+  const handleChange = (newValues: string[]) => {
+    onChange({ values: newValues })
+  }
 
   const handleToggle = (optionValue: string) => {
     const newValues = values.includes(optionValue)
@@ -51,13 +42,13 @@ export function MultiSelectEditableCell({
       : maxSelections && values.length >= maxSelections
         ? values
         : [...values, optionValue]
-    onChange(JSON.stringify(newValues))
+    handleChange(newValues)
   }
 
   const handleRemove = (optionValue: string, e: React.MouseEvent) => {
     e.stopPropagation()
     const newValues = values.filter((v) => v !== optionValue)
-    onChange(JSON.stringify(newValues))
+    handleChange(newValues)
   }
 
   // Filter options based on search query
@@ -163,9 +154,7 @@ export function MultiSelectEditableCell({
     )
   } else {
     // Use comma-separated input for free-form
-    const commaSeparatedValue = Array.isArray(displayValue)
-      ? displayValue.join(', ')
-      : ''
+    const commaSeparatedValue = values.join(', ')
     return (
       <Input
         value={commaSeparatedValue}
@@ -174,7 +163,7 @@ export function MultiSelectEditableCell({
             .split(',')
             .map((v) => v.trim())
             .filter((v) => v.length > 0)
-          onChange(JSON.stringify(newValues))
+          handleChange(newValues)
         }}
         onBlur={onBlur}
         onFocus={onFocus}

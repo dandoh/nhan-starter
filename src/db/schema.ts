@@ -29,27 +29,6 @@ export type NewAccount = typeof accounts.$inferInsert
 export type Verification = typeof verifications.$inferSelect
 export type NewVerification = typeof verifications.$inferInsert
 
-// Posts table
-export const posts = pgTable('posts', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  title: varchar('title', { length: 255 }).notNull(),
-  content: text('content'),
-  published: boolean('published').notNull().default(false),
-  authorId: text('author_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true })
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
-})
-
-export type Post = typeof posts.$inferSelect
-export type NewPost = typeof posts.$inferInsert
-
 // AI Conversations table
 export const aiConversations = pgTable('ai_conversations', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -247,7 +226,7 @@ export const aiTableCells = pgTable(
     columnId: uuid('column_id')
       .notNull()
       .references(() => aiTableColumns.id, { onDelete: 'cascade' }),
-    value: text('value').default(''),
+    value: jsonb('value').$type<Record<string, unknown>>(),
     computeStatus: text('compute_status', {
       enum: ['idle', 'pending', 'computing', 'completed', 'error'],
     })
@@ -340,21 +319,6 @@ export const workbookBlocks = pgTable(
 
 export type WorkbookBlock = typeof workbookBlocks.$inferSelect
 export type NewWorkbookBlock = typeof workbookBlocks.$inferInsert
-
-// Relations
-export const postsRelations = relations(posts, ({ one }) => ({
-  author: one(users, {
-    fields: [posts.authorId],
-    references: [users.id],
-  }),
-}))
-
-export const usersRelations = relations(users, ({ many }) => ({
-  posts: many(posts),
-  aiConversations: many(aiConversations),
-  aiTables: many(aiTables),
-  workbooks: many(workbooks),
-}))
 
 export const aiConversationsRelations = relations(
   aiConversations,

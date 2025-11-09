@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils'
 import type { EditableCellProps } from '../output-type-registry'
 import type { DateConfig } from '../output-types'
 
-function parseDateValue(value: string | null): Date | null {
+function parseDateValue(value: string | null | undefined): Date | null {
   if (!value) return null
 
   // Try common date formats
@@ -73,11 +73,9 @@ export function DateEditableCell({
   onChange,
   onBlur,
   onFocus,
-}: EditableCellProps) {
-  // Deserialize: simple string passthrough
-  const displayValue = value || ''
-  const dateConfig = config as DateConfig | null
-  const dateFormat = dateConfig?.dateFormat || 'YYYY-MM-DD'
+}: EditableCellProps<DateConfig, { value: string }>) {
+  const displayValue = value.value || ''
+  const dateFormat = config?.dateFormat || 'YYYY-MM-DD'
   const [isOpen, setIsOpen] = useState(false)
   const [date, setDate] = useState<Date | undefined>(
     displayValue ? parseDateValue(displayValue) || undefined : undefined,
@@ -96,6 +94,10 @@ export function DateEditableCell({
   // Map date format to input type
   const inputType = dateFormat.includes('YYYY') ? 'date' : 'text'
 
+  const handleChange = (newValue: string) => {
+    onChange({ value: newValue })
+  }
+
   const handleDateSelect = (selectedDate: Date | undefined) => {
     if (selectedDate) {
       setDate(selectedDate)
@@ -109,7 +111,7 @@ export function DateEditableCell({
       }
       const dateFnsFormat = formatMap[dateFormat] || formatMap['YYYY-MM-DD']
       const formatted = format(selectedDate, dateFnsFormat)
-      onChange(formatted)
+      handleChange(formatted)
       setIsOpen(false)
       if (onBlur) onBlur()
     }
@@ -121,7 +123,7 @@ export function DateEditableCell({
       <Input
         type="date"
         value={displayValue || ''}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => handleChange(e.target.value)}
         onBlur={onBlur}
         onFocus={onFocus}
         className="h-full w-full border-none !bg-transparent dark:!bg-transparent hover:!bg-transparent dark:hover:!bg-transparent focus-visible:border-none focus-visible:ring-0 shadow-none px-2 py-1 text-sm flex-1"

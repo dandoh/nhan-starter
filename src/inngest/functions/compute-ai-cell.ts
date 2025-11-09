@@ -1,7 +1,7 @@
 import { inngest } from '../client'
 import { db } from '@/db'
 import { aiTableCells, aiTableColumns } from '@/db/schema'
-import { eq, and, ne, isNull, or } from 'drizzle-orm'
+import { eq, and, isNull, or } from 'drizzle-orm'
 import { anthropic } from '@ai-sdk/anthropic'
 import { generateObject } from 'ai'
 import { getOutputTypeDefinition } from '@/lib/ai-table/output-type-registry'
@@ -84,7 +84,18 @@ export const computeAiCell = inngest.createFunction(
       if (contextColumnIds.has(cellItem.columnId)) {
         const column = contextColumns.find((col) => col.id === cellItem.columnId)
         if (column && cellItem.value) {
-          rowContext[column.name] = cellItem.value
+          // Convert JSON value to string for context
+          const cellValue = cellItem.value
+          if (typeof cellValue === 'object' && cellValue !== null) {
+            // Handle object format { value: string } or { values: string[] }
+            if ('value' in cellValue && typeof cellValue.value === 'string') {
+              rowContext[column.name] = cellValue.value
+            } else if ('values' in cellValue && Array.isArray(cellValue.values)) {
+              rowContext[column.name] = cellValue.values.join(', ')
+            } else {
+              rowContext[column.name] = JSON.stringify(cellValue)
+            }
+          }
         }
       }
     }
@@ -135,9 +146,8 @@ export const computeAiCell = inngest.createFunction(
           },
         })
 
-        // Serialize the response for storage using registry
-        const formattedValue = outputTypeDef.serializeAiResponse(response.object)
-        return formattedValue
+        // Store the AI response object directly as JSON
+        return response.object
       } catch (error: any) {
         // If AI fails to follow schema, throw descriptive error
         throw new Error(

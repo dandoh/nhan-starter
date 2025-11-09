@@ -181,7 +181,11 @@ export function createTableCollections(tableId: string) {
         }
       },
     }),
-  ) as unknown as Collection<AiTableCell, string, QueryCollectionUtils<AiTableCell>>
+  ) as unknown as Collection<
+    AiTableCell,
+    string,
+    QueryCollectionUtils<AiTableCell>
+  >
 
   // Columns collection
   const columnsCollection = createCollection(
@@ -251,7 +255,11 @@ export function createTableCollections(tableId: string) {
         }
       },
     }) as unknown as CollectionConfig<AiTableColumn, string>,
-  ) as unknown as Collection<AiTableColumn, string, QueryCollectionUtils<AiTableColumn>>
+  ) as unknown as Collection<
+    AiTableColumn,
+    string,
+    QueryCollectionUtils<AiTableColumn>
+  >
 
   // Records collection
   const recordsCollection = createCollection(
@@ -298,14 +306,47 @@ export function createTableCollections(tableId: string) {
         }
       },
     }),
-  ) as unknown as Collection<AiTableRecord, string, QueryCollectionUtils<AiTableRecord>>
+  ) as unknown as Collection<
+    AiTableRecord,
+    string,
+    QueryCollectionUtils<AiTableRecord>
+  >
+
+  const updateCellValue = createPacedMutations<
+    {
+      cellId: string
+      value: Record<string, unknown>
+    },
+    AiTableCell
+  >({
+    onMutate: ({ cellId, value }) => {
+      cellsCollection.update(cellId, (draft) => {
+        draft.value = value
+      })
+    },
+
+    mutationFn: async ({ transaction }) => {
+      for (const mutation of transaction.mutations) {
+        const { modified } = mutation
+        await orpcClient.aiTables.updateCell({
+          cellId: modified.id,
+          value: modified.value || { value: '', values: [] },
+        })
+        cellsCollection.utils.writeUpdate(modified)
+      }
+    },
+    strategy: debounceStrategy({ wait: 200 }),
+  })
 
   return {
     columnsCollection: columnsCollection,
     recordsCollection: recordsCollection,
     cellsCollection: cellsCollection,
+    updateCellValue: updateCellValue,
   }
 }
 
-export type BelongToTableEntitiesCollections = ReturnType<typeof createTableCollections>
+export type BelongToTableEntitiesCollections = ReturnType<
+  typeof createTableCollections
+>
 export type TableCollections = typeof tablesCollection

@@ -39,8 +39,11 @@ import { useAIChat } from '@/components/ai-chat/ai-chat-context'
 
 type ColumnHeaderProps = {
   column: DbAiTableColumn
-  tanstackColumn?: TSColumn<any>
-} & BelongToTableEntitiesCollections
+  tanstackColumn?: TSColumn<any>,
+  columnsCollection: BelongToTableEntitiesCollections['columnsCollection']
+  recordsCollection: BelongToTableEntitiesCollections['recordsCollection']
+  cellsCollection: BelongToTableEntitiesCollections['cellsCollection']
+} 
 
 type ViewMode = 'menu' | 'edit'
 

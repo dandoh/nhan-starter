@@ -1,6 +1,12 @@
 import React from 'react'
 import { z } from 'zod'
-import { Type, FileText, Tag, Tags, Calendar as CalendarIcon } from 'lucide-react'
+import {
+  Type,
+  FileText,
+  Tag,
+  Tags,
+  Calendar as CalendarIcon,
+} from 'lucide-react'
 import type {
   OutputType,
   OutputTypeConfig,
@@ -22,16 +28,22 @@ import { DateEditableCell } from './editable-cells/DateEditableCell'
 // Type Definitions
 // ============================================================================
 
-export interface EditableCellProps {
-  value: string
-  config?: OutputTypeConfig | null
-  onChange: (value: string) => void
+export interface EditableCellProps<
+  T extends OutputTypeConfig,
+  ValueType = string,
+> {
+  value: ValueType
+  config?: T | null
+  onChange: (value: ValueType) => void
   onBlur?: () => void
   onFocus?: () => void
   isEditing?: boolean
 }
 
-export interface OutputTypeDefinition {
+export interface OutputTypeDefinition<
+  ConfigSchema extends z.ZodObject<any>,
+  ValueSchema extends (z.ZodObject<any>),
+> {
   id: OutputType
   label: string
   icon: React.ComponentType<{ className?: string }>
@@ -39,30 +51,29 @@ export interface OutputTypeDefinition {
   description: string
 
   // Config validation schema
-  configSchema: z.ZodObject<any>
+  configSchema: ConfigSchema
 
   // Schema generation for AI
-  createAISchema: (config: OutputTypeConfig | null) => z.ZodObject<any>
-
-  // Value conversion
-  serializeAiResponse: (aiResponse: any) => string // AI response → storage
-
-  deserialize: (stored: string | null) => any // storage → display value
+  createAISchema: (config: z.infer<ConfigSchema> | null) => ValueSchema
 
   // React rendering - editable version for table cells
-  EditableCell: React.ComponentType<EditableCellProps>
+  EditableCell: React.ComponentType<
+    EditableCellProps<z.infer<ConfigSchema>, z.infer<ValueSchema>>
+  >
 }
 
 // ============================================================================
 // Helper Functions
 // ============================================================================
 
-
 // ============================================================================
 // Output Type Definitions
 // ============================================================================
 
-const TEXT_TYPE: OutputTypeDefinition = {
+const TEXT_TYPE: OutputTypeDefinition<
+  typeof textConfigSchema,
+  z.ZodObject<{ value: z.ZodString }>
+> = {
   id: 'text',
   label: '📝 Text - Brief single-line text',
   icon: Type,
@@ -76,14 +87,13 @@ const TEXT_TYPE: OutputTypeDefinition = {
       value: z.string().describe('A brief single-line text response'),
     }),
 
-  serializeAiResponse: (response) => response.value || '',
-
-  deserialize: (value) => value || '',
-
   EditableCell: TextEditableCell,
 }
 
-const LONG_TEXT_TYPE: OutputTypeDefinition = {
+const LONG_TEXT_TYPE: OutputTypeDefinition<
+  typeof longTextConfigSchema,
+  z.ZodObject<{ value: z.ZodString }>
+> = {
   id: 'long_text',
   label: '📄 Long Text - Multi-paragraph text',
   icon: FileText,
@@ -97,14 +107,13 @@ const LONG_TEXT_TYPE: OutputTypeDefinition = {
       value: z.string().describe('A detailed multi-paragraph text response'),
     }),
 
-  serializeAiResponse: (response) => response.value || '',
-
-  deserialize: (value) => value || '',
-
   EditableCell: LongTextEditableCell,
 }
 
-const SINGLE_SELECT_TYPE: OutputTypeDefinition = {
+const SINGLE_SELECT_TYPE: OutputTypeDefinition<
+  typeof singleSelectConfigSchema,
+  z.ZodObject<{ value: z.ZodString | z.ZodEnum<any> }>
+> = {
   id: 'single_select',
   label: '🏷️ Single Select - One choice from options',
   icon: Tag,
@@ -114,7 +123,7 @@ const SINGLE_SELECT_TYPE: OutputTypeDefinition = {
   configSchema: singleSelectConfigSchema,
 
   createAISchema: (config) => {
-    const selectConfig = config as import('./output-types').SingleSelectConfig | null
+    const selectConfig = config
     const options = selectConfig?.options
 
     if (options && options.length > 0) {
@@ -140,14 +149,13 @@ const SINGLE_SELECT_TYPE: OutputTypeDefinition = {
     }
   },
 
-  serializeAiResponse: (response) => response.value || '',
-
-  deserialize: (value) => value || '',
-
   EditableCell: SingleSelectEditableCell,
 }
 
-const MULTI_SELECT_TYPE: OutputTypeDefinition = {
+const MULTI_SELECT_TYPE: OutputTypeDefinition<
+  typeof multiSelectConfigSchema,
+  z.ZodObject<{ values: z.ZodArray<z.ZodString | z.ZodEnum<any>> }>
+> = {
   id: 'multi_select',
   label: '🏷️ Multi Select - Multiple choices',
   icon: Tags,
@@ -157,7 +165,9 @@ const MULTI_SELECT_TYPE: OutputTypeDefinition = {
   configSchema: multiSelectConfigSchema,
 
   createAISchema: (config) => {
-    const selectConfig = config as import('./output-types').MultiSelectConfig | null
+    const selectConfig = config as
+      | import('./output-types').MultiSelectConfig
+      | null
     const options = selectConfig?.options
     const maxSelections = selectConfig?.maxSelections
 
@@ -206,25 +216,13 @@ const MULTI_SELECT_TYPE: OutputTypeDefinition = {
     }
   },
 
-  serializeAiResponse: (response) => {
-    const values = response.values || []
-    return JSON.stringify(values)
-  },
-
-  deserialize: (value) => {
-    if (!value) return []
-    try {
-      const parsed = JSON.parse(value)
-      return Array.isArray(parsed) ? parsed : []
-    } catch {
-      return []
-    }
-  },
-
   EditableCell: MultiSelectEditableCell,
 }
 
-const DATE_TYPE: OutputTypeDefinition = {
+const DATE_TYPE: OutputTypeDefinition<
+  typeof dateConfigSchema,
+  z.ZodObject<{ value: z.ZodString }>
+> = {
   id: 'date',
   label: '📅 Date - Date values',
   icon: CalendarIcon,
@@ -245,10 +243,6 @@ const DATE_TYPE: OutputTypeDefinition = {
     })
   },
 
-  serializeAiResponse: (response) => response.value || '',
-
-  deserialize: (value) => value || '',
-
   EditableCell: DateEditableCell,
 }
 
@@ -263,8 +257,7 @@ export const OUTPUT_TYPE_REGISTRY = {
   single_select: SINGLE_SELECT_TYPE,
   multi_select: MULTI_SELECT_TYPE,
   date: DATE_TYPE,
-} satisfies Record<OutputType, OutputTypeDefinition>
-
+} as const
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -274,7 +267,7 @@ export const OUTPUT_TYPE_REGISTRY = {
  */
 export function getOutputTypeDefinition(
   type: OutputType,
-): OutputTypeDefinition {
+): OutputTypeDefinition<z.ZodObject<any>, z.ZodObject<any>> {
   return OUTPUT_TYPE_REGISTRY[type]
 }
 

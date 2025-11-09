@@ -16,17 +16,20 @@ export function SingleSelectEditableCell({
   onChange,
   onBlur,
   onFocus,
-}: EditableCellProps) {
-  const displayValue = value || ''
-  const selectConfig = config as SingleSelectConfig | null
-  const options = selectConfig?.options || []
+}: EditableCellProps<SingleSelectConfig, { value: string }>) {
+  const displayValue = value.value || ''
+  const options = config?.options || []
+
+  const handleChange = (newValue: string) => {
+    onChange({ value: newValue })
+  }
 
   if (options.length > 0) {
     // Use Select dropdown for predefined options
     return (
       <Select
         value={displayValue || ''}
-        onValueChange={onChange}
+        onValueChange={handleChange}
         onOpenChange={(open) => {
           if (!open && onBlur) onBlur()
         }}
@@ -51,7 +54,7 @@ export function SingleSelectEditableCell({
     return (
       <Input
         value={displayValue || ''}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => handleChange(e.target.value)}
         onBlur={onBlur}
         onFocus={onFocus}
         className="h-full w-full border-none !bg-transparent dark:!bg-transparent hover:!bg-transparent dark:hover:!bg-transparent focus-visible:border-none focus-visible:ring-0 shadow-none px-2 py-1 text-sm flex-1"

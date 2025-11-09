@@ -738,7 +738,7 @@ export const updateCell = os
   .input(
     z.object({
       cellId: z.string().uuid(),
-      value: z.string().optional(),
+      value: z.record(z.string(), z.unknown()).optional(),
     }),
   )
   .handler(async ({ input, context }) => {

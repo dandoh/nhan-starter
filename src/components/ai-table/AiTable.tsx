@@ -235,6 +235,7 @@ function AiTableInternal({
   columnsCollection,
   recordsCollection,
   cellsCollection,
+  updateCellValue,
 }: {
   tableId: string
   aiTable: AiTableType
@@ -243,6 +244,7 @@ function AiTableInternal({
   columnsCollection: ReturnType<typeof useTableSync>['columnsCollection']
   recordsCollection: ReturnType<typeof useTableSync>['recordsCollection']
   cellsCollection: ReturnType<typeof useTableSync>['cellsCollection']
+  updateCellValue: ReturnType<typeof useTableSync>['updateCellValue']
 }) {
   const tableContainerRef = React.useRef<HTMLDivElement>(null)
   // Handle adding a new column
@@ -293,6 +295,7 @@ function AiTableInternal({
             cellsCollection={cellsCollection}
             columnsCollection={columnsCollection}
             recordsCollection={recordsCollection}
+            updateCellValue={updateCellValue}
           />
         ),
       }),
@@ -578,7 +581,7 @@ function AiTableInternal({
 }
 
 export function AiTable({ tableId }: TableBlockWrapperProps) {
-  const { columnsCollection, recordsCollection, cellsCollection } =
+  const { columnsCollection, recordsCollection, cellsCollection, updateCellValue } =
     useTableSync(tableId)
 
   const { data: aiTable } = useLiveQuery((q) =>
@@ -623,6 +626,7 @@ export function AiTable({ tableId }: TableBlockWrapperProps) {
       columnsCollection={columnsCollection}
       recordsCollection={recordsCollection}
       cellsCollection={cellsCollection}
+      updateCellValue={updateCellValue}
     />
   )
 }

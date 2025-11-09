@@ -219,7 +219,7 @@ async function seed() {
     const cells = columns.map((column, index) => ({
       recordId: record.id,
       columnId: column.id,
-      value: index === 0 ? ticker : null, // Only set value for Ticker column
+      value: index === 0 ? { value: ticker } : {},
       computeStatus: 'idle' as const,
     }))
 
