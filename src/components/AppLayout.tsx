@@ -40,6 +40,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { setOptions } from 'react-scan'
+import { cn } from '@/lib/utils'
 
 const mainNavigation = [
   {
@@ -94,27 +95,26 @@ function SettingsMenu() {
     // Check initial theme from localStorage or HTML class
     const theme = localStorage.getItem('theme')
     const html = document.documentElement
-    const hasDark = theme 
-      ? theme === 'dark'
-      : html.classList.contains('dark')
+    const hasDark = theme ? theme === 'dark' : html.classList.contains('dark')
     setIsDark(hasDark)
 
     // Check react-scan toolbar visibility preference
     // Default to showing toolbar if not set (backward compatibility with root component)
-    const showToolbar = localStorage.getItem('react-scan-show-toolbar') !== 'false'
+    const showToolbar =
+      localStorage.getItem('react-scan-show-toolbar') !== 'false'
     setReactScanShowToolbar(showToolbar)
   }, [])
 
   const toggleTheme = () => {
     const html = document.documentElement
     const newIsDark = !isDark
-    
+
     if (newIsDark) {
       html.classList.add('dark')
     } else {
       html.classList.remove('dark')
     }
-    
+
     setIsDark(newIsDark)
     localStorage.setItem('theme', newIsDark ? 'dark' : 'light')
   }
@@ -123,13 +123,11 @@ function SettingsMenu() {
     const newShowToolbar = !reactScanShowToolbar
     setReactScanShowToolbar(newShowToolbar)
     localStorage.setItem('react-scan-show-toolbar', newShowToolbar.toString())
-    
+
     // Dynamically toggle react-scan toolbar visibility without page reload
     if (import.meta.env.DEV) {
       setOptions({ showToolbar: newShowToolbar })
-      toast.success(
-        `React Scan toolbar ${newShowToolbar ? 'shown' : 'hidden'}`
-      )
+      toast.success(`React Scan toolbar ${newShowToolbar ? 'shown' : 'hidden'}`)
     }
   }
 
@@ -154,7 +152,7 @@ function SettingsMenu() {
           </SidebarMenuButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent side="right" align="end" className="w-56">
-          <DropdownMenuItem 
+          <DropdownMenuItem
             onSelect={(e) => {
               e.preventDefault()
               toggleTheme()
@@ -172,7 +170,7 @@ function SettingsMenu() {
               </>
             )}
           </DropdownMenuItem>
-          <DropdownMenuItem 
+          <DropdownMenuItem
             onSelect={(e) => {
               e.preventDefault()
               toggleReactScan()
@@ -209,14 +207,24 @@ function SidebarHeaderContent() {
     <SidebarHeader className="h-14 justify-center items-center">
       <SidebarMenu>
         <SidebarMenuItem>
-          <SidebarMenuButton size="lg" asChild tooltip={session?.user?.name || session?.user?.email || 'User'}>
-            <Link to="/profile">
+          <SidebarMenuButton
+            size="lg"
+            asChild
+            tooltip={session?.user?.name || session?.user?.email || 'User'}
+          >
+            <Link
+              to="/profile"
+              className={cn(!isExpanded && 'flex items-center justify-center')}
+            >
               <Avatar className="size-6">
-                <AvatarImage src={session?.user?.image || undefined} alt={session?.user?.name || session?.user?.email || 'User'} />
+                <AvatarImage
+                  src={session?.user?.image || undefined}
+                  alt={session?.user?.name || session?.user?.email || 'User'}
+                />
                 <AvatarFallback>
-                  {session?.user?.name?.slice(0, 2).toUpperCase() || 
-                   session?.user?.email?.slice(0, 2).toUpperCase() || 
-                   'U'}
+                  {session?.user?.name?.slice(0, 2).toUpperCase() ||
+                    session?.user?.email?.slice(0, 2).toUpperCase() ||
+                    'U'}
                 </AvatarFallback>
               </Avatar>
               {isExpanded && (
@@ -289,7 +297,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </SidebarMenu>
           </SidebarFooter>
         </Sidebar>
-        <SidebarInset className="flex flex-col overflow-hidden">{children}</SidebarInset>
+        <SidebarInset className="flex flex-col overflow-hidden">
+          {children}
+        </SidebarInset>
       </SidebarProvider>
     </AIChatProvider>
   )

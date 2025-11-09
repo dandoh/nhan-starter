@@ -128,6 +128,7 @@ export const computeAiCell = inngest.createFunction(
           model: anthropic('claude-sonnet-4-0'),
           schema: responseSchema,
           prompt: contextString,
+          system: 'You are a helpful assistant that generates values for AI table cells.',
           experimental_telemetry: {
             isEnabled: true,
             tracer: getTracer(),
