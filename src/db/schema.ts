@@ -286,6 +286,9 @@ export const workbooks = pgTable('workbooks', {
     .references(() => users.id, { onDelete: 'cascade' }),
   name: varchar('name', { length: 255 }).notNull(),
   description: text('description').default(''),
+  status: text('status', { enum: ['exploratory', 'in_progress', 'ready'] })
+    .notNull()
+    .default('exploratory'),
   blockOrder: jsonb('block_order').$type<string[]>(), // Array of block IDs
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()

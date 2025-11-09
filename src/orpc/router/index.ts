@@ -70,6 +70,7 @@ export default {
     delete: workbooks.deleteWorkbook,
     
     // Block operations
+    getBlocks: workbooks.getBlocks,
     createBlock: workbooks.createBlock,
     updateBlock: workbooks.updateBlock,
     deleteBlock: workbooks.deleteBlock,

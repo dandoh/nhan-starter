@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   Column,
   createTableCollections,
-  type TableCollections,
+  type BelongToTableEntitiesCollections,
 } from '@/lib/ai-table/collections'
 import { orpcClient } from '@/orpc/client'
 
@@ -10,12 +10,12 @@ import { orpcClient } from '@/orpc/client'
  * Hook to sync a table's data with the server using delta updates
  * Polls every 3 seconds for changes and applies them to local collections
  */
-export function useTableSync(tableId: string): TableCollections {
+export function useTableSync(tableId: string): BelongToTableEntitiesCollections {
   // Use ref instead of state - no need to trigger re-renders
   const lastSyncRef = useRef<Date>(new Date())
 
   // Create collections once and store in ref for stable reference
-  const collectionsRef = useRef<TableCollections | null>(null)
+  const collectionsRef = useRef<BelongToTableEntitiesCollections | null>(null)
   if (!collectionsRef.current) {
     collectionsRef.current = createTableCollections(tableId)
   }

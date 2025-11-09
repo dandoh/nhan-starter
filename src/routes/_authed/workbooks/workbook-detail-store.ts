@@ -1,7 +1,7 @@
 import { create, useStore } from 'zustand'
 import { useMemo } from 'react'
 
-type BlockType = 'table' | 'chart' | 'markdown'
+type BlockType = 'table' | 'chart' | 'document'
 
 interface WorkbookDetailState {
   isChatMinimized: boolean

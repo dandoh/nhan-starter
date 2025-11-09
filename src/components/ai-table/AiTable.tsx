@@ -14,7 +14,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { Plus, MoreVertical, Settings, Download, Share2 } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { useTableSync } from '@/hooks/use-table-sync'
 import { Button } from '@/components/ui/button'
 import {
@@ -381,7 +381,6 @@ function AiTableInternal({
 
     return { left }
   }, [aiTable.columnPinning, aiColumns])
-  console.log('columnPinning', columnPinning)
 
   const onColumnPinningChange = async (
     columnPinningUpdater: Updater<ColumnPinningState>,
@@ -506,103 +505,62 @@ function AiTableInternal({
 
   return (
     <div ref={tableContainerRef} className="flex flex-col min-w-0 h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
-        <h2 className="text-sm font-medium text-foreground">{aiTable.name}</h2>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-            <MoreVertical className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Main content area with sidebar and table */}
-      <div className="flex flex-1 min-w-0 overflow-hidden h-full">
-        {/* Left sidebar with action buttons */}
-        <div className="flex flex-col items-center gap-2 p-2 border-r border-border bg-card w-12 shrink-0">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0"
-            title="Settings"
+      {/* Table area */}
+      <DndContext
+        collisionDetection={dndCollisionDetection}
+        modifiers={dndModifiers}
+        onDragEnd={handleDragEnd}
+        sensors={sensors}
+      >
+        <div className="flex gap-2 flex-1 min-w-0 overflow-auto scrollbar-thumb-transparent w-full h-full">
+          <Table
+            // className="min-w-full"
+            style={{
+              ...columnSizeVars,
+              width: table.getTotalSize(),
+            }}
           >
-            <Settings className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0"
-            title="Download"
-          >
-            <Download className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0"
-            title="Share"
-          >
-            <Share2 className="h-4 w-4" />
-          </Button>
-        </div>
-
-        {/* Table area */}
-        <DndContext
-          collisionDetection={dndCollisionDetection}
-          modifiers={dndModifiers}
-          onDragEnd={handleDragEnd}
-          sensors={sensors}
-        >
-          <div className="flex gap-2 flex-1 min-w-0 overflow-auto scrollbar-thumb-transparent w-full h-full">
-            <Table
-              // className="min-w-full"
-              style={{
-                ...columnSizeVars,
-                width: table.getTotalSize(),
-              }}
-            >
-              <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    <SortableContext
-                      items={columnOrder}
-                      strategy={horizontalListSortingStrategy}
-                    >
-                      {headerGroup.headers.map((header) => (
-                        <DraggableTableHeader key={header.id} header={header} />
-                      ))}
-                    </SortableContext>
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getState().columnSizingInfo.isResizingColumn ? (
-                  <MemoizedRows table={table} />
-                ) : (
-                  <Rows table={table} />
-                )}
-                {/* Add Record Row */}
-                <TableRow className="hover:bg-transparen">
-                  <TableCell
-                    colSpan={aiColumns.length + 1}
-                    className={cn('p-0')}
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  <SortableContext
+                    items={columnOrder}
+                    strategy={horizontalListSortingStrategy}
                   >
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-10 w-full justify-start hover:bg-muted/70 text-muted-foreground hover:text-foreground border-0 rounded-none font-normal px-2 cursor-pointer "
-                      onClick={handleAddRow}
-                    >
-                      <Plus className="size-4 mr-2" />
-                      Add row
-                    </Button>
-                  </TableCell>
+                    {headerGroup.headers.map((header) => (
+                      <DraggableTableHeader key={header.id} header={header} />
+                    ))}
+                  </SortableContext>
                 </TableRow>
-              </TableBody>
-            </Table>
-          </div>
-        </DndContext>
-      </div>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getState().columnSizingInfo.isResizingColumn ? (
+                <MemoizedRows table={table} />
+              ) : (
+                <Rows table={table} />
+              )}
+              {/* Add Record Row */}
+              <TableRow className="hover:bg-transparen">
+                <TableCell
+                  colSpan={aiColumns.length + 1}
+                  className={cn('p-0')}
+                >
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-10 w-full justify-start hover:bg-muted/70 text-muted-foreground hover:text-foreground border-0 rounded-none font-normal px-2 cursor-pointer "
+                    onClick={handleAddRow}
+                  >
+                    <Plus className="size-4 mr-2" />
+                    Add row
+                  </Button>
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </DndContext>
       {/* Run AI Cells Button - Below table, aligned right */}
       {/* <div className="flex justify-end mt-4">
         <Button

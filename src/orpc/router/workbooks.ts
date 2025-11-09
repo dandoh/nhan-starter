@@ -40,6 +40,7 @@ export const createWorkbook = os
       id: z.string().uuid().optional(),
       name: z.string().min(1).max(255),
       description: z.string().optional(),
+      status: z.enum(['exploratory', 'in_progress', 'ready']).optional(),
     }),
   )
   .handler(async ({ input, context }) => {
@@ -50,6 +51,7 @@ export const createWorkbook = os
         userId: context.user.id,
         name: input.name,
         description: input.description || '',
+        status: input.status || 'exploratory',
         blockOrder: [],
       })
       .returning()
@@ -91,7 +93,7 @@ export const getWorkbook = os
   })
 
 /**
- * Update workbook metadata (name, description, blockOrder)
+ * Update workbook metadata (name, description, status, blockOrder)
  */
 export const updateWorkbook = os
   .use(authMiddleware)
@@ -100,6 +102,7 @@ export const updateWorkbook = os
       workbookId: z.string().uuid(),
       name: z.string().min(1).max(255).optional(),
       description: z.string().optional().nullable(),
+      status: z.enum(['exploratory', 'in_progress', 'ready']).optional(),
       blockOrder: z.array(z.string().uuid()).optional().nullable(),
     }),
   )
@@ -118,9 +121,10 @@ export const updateWorkbook = os
 
     const updatedFields = {
       ...(input.name && { name: input.name }),
-      ...(input.description && {
+      ...(input.description !== undefined && {
         description: input.description,
       }),
+      ...(input.status && { status: input.status }),
       ...(input.blockOrder && {
         blockOrder: input.blockOrder,
       }),
@@ -186,6 +190,7 @@ export const createBlock = os
     z.object({
       workbookId: z.string().uuid(),
       blockType: z.enum(WORKBOOK_BLOCK_TYPES),
+      id: z.string().uuid().optional(), // Optional client-generated ID
       tableName: z.string().min(1).max(255).optional(), // Optional name for table blocks
     }),
   )
@@ -234,6 +239,7 @@ export const createBlock = os
       const [newBlock] = await tx
         .insert(workbookBlocks)
         .values({
+          ...(input.id && { id: input.id }),
           workbookId: input.workbookId,
           blockType: input.blockType,
           tableId: createdTable?.id || null,
@@ -357,5 +363,36 @@ export const deleteBlock = os
     })
 
     return { success: true }
+  })
+
+/**
+ * Get all blocks for a workbook
+ */
+export const getBlocks = os
+  .use(authMiddleware)
+  .input(
+    z.object({
+      workbookId: z.string().uuid(),
+    }),
+  )
+  .handler(async ({ input, context }) => {
+    // Verify workbook ownership
+    const workbook = await db.query.workbooks.findFirst({
+      where: and(
+        eq(workbooks.id, input.workbookId),
+        eq(workbooks.userId, context.user.id),
+      ),
+    })
+
+    if (!workbook) {
+      throw new Error('Workbook not found')
+    }
+
+    const blocks = await db.query.workbookBlocks.findMany({
+      where: eq(workbookBlocks.workbookId, input.workbookId),
+      orderBy: (b, { asc }) => [asc(b.createdAt)],
+    })
+
+    return blocks
   })
 

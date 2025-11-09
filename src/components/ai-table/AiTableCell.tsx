@@ -1,13 +1,13 @@
 import { memo, useCallback, useState, useEffect } from 'react'
 import { useLiveQuery, eq, and } from '@tanstack/react-db'
-import type { TableCollections } from '@/lib/ai-table/collections'
+import type { BelongToTableEntitiesCollections } from '@/lib/ai-table/collections'
 import type { OutputType } from '@/lib/ai-table/output-types'
 import { getOutputTypeDefinition } from '@/lib/ai-table/output-type-registry'
 
 type TableCellProps = {
   recordId: string
   columnId: string
-} & TableCollections
+} & BelongToTableEntitiesCollections
 
 /**
  * Memoized table cell component that queries its own data

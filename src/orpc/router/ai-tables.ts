@@ -4,7 +4,9 @@ import { oc } from '@orpc/contract'
 import { authMiddleware } from '../middleware/auth'
 import { db } from '@/db'
 import {
+  AiTableCell,
   aiTableCells,
+  AiTableColumn,
   aiTableColumns,
   aiTableOutputTypeSchema,
   aiTableRecords,
@@ -253,48 +255,47 @@ export const getColumns = os
     return columns
   })
 
-const createColumnContract = oc.input(
-  z.object({
-    tableId: z
-      .string()
-      .uuid()
-      .describe('The ID of the table to create the column in'),
-    name: z
-      .string()
-      .min(1)
-      .max(255)
-      .describe('The name of the column to create'),
-    description: z
-      .string()
-      .optional()
-      .describe('The description of the column to create'),
-    outputType: aiTableOutputTypeSchema
-      .default('text')
-      .describe('The output type of the column to create'),
-    aiPrompt: z
-      .string()
-      .default('')
-      .describe(
-        'If the column is AI-generated, the prompt that tells the AI how to generate values',
-      ),
-    outputTypeConfig: z
-      .object({
-        options: z.array(optionSchema).optional(),
-        maxSelections: z.number().int().positive().optional(),
-        dateFormat: z.string().optional(),
-      })
-      .optional()
-      .describe(
-        'The configuration for the output type of the column to create',
-      ),
-  }),
-)
-
 /**
  * Create a new column in a table
  */
-export const createColumn = implement(createColumnContract)
+export const createColumn = os
   .use(authMiddleware)
+  .input(
+    z.object({
+      tableId: z
+        .string()
+        .uuid()
+        .describe('The ID of the table to create the column in'),
+      name: z
+        .string()
+        .min(1)
+        .max(255)
+        .describe('The name of the column to create'),
+      description: z
+        .string()
+        .optional()
+        .describe('The description of the column to create'),
+      outputType: aiTableOutputTypeSchema
+        .default('text')
+        .describe('The output type of the column to create'),
+      aiPrompt: z
+        .string()
+        .default('')
+        .describe(
+          'If the column is AI-generated, the prompt that tells the AI how to generate values',
+        ),
+      outputTypeConfig: z
+        .object({
+          options: z.array(optionSchema).optional(),
+          maxSelections: z.number().int().positive().optional(),
+          dateFormat: z.string().optional(),
+        })
+        .optional()
+        .describe(
+          'The configuration for the output type of the column to create',
+        ),
+    }),
+  )
   .handler(async ({ input, context }) => {
     // Verify table ownership
     const table = await db.query.aiTables.findFirst({
@@ -321,42 +322,43 @@ export const createColumn = implement(createColumnContract)
       }
     }
 
-    const result = await db.transaction(async (tx) => {
-      // Create column
-      const [newColumn] = await tx
-        .insert(aiTableColumns)
-        .values({
-          tableId: input.tableId,
-          name: input.name,
-          description: input.description,
-          outputType: input.outputType,
-          aiPrompt: input.aiPrompt,
-          outputTypeConfig: input.outputTypeConfig ?? null,
-        })
-        .returning()
-
-      // Get all existing records
-      const records = await tx.query.aiTableRecords.findMany({
-        where: eq(aiTableRecords.tableId, input.tableId),
-      })
-
-      // Create cells for all existing records
-      let createdCells: (typeof aiTableCells.$inferSelect)[] = []
-      if (records.length > 0) {
-        const cellsToInsert = records.map((record) => ({
-          recordId: record.id,
-          columnId: newColumn.id,
-          value: null,
-        }))
-
-        createdCells = await tx
-          .insert(aiTableCells)
-          .values(cellsToInsert)
+    const result: { column: AiTableColumn; cells: AiTableCell[] } =
+      await db.transaction(async (tx) => {
+        // Create column
+        const [newColumn] = await tx
+          .insert(aiTableColumns)
+          .values({
+            tableId: input.tableId,
+            name: input.name,
+            description: input.description,
+            outputType: input.outputType,
+            aiPrompt: input.aiPrompt,
+            outputTypeConfig: input.outputTypeConfig ?? null,
+          })
           .returning()
-      }
 
-      return { column: newColumn, cells: createdCells }
-    })
+        // Get all existing records
+        const records = await tx.query.aiTableRecords.findMany({
+          where: eq(aiTableRecords.tableId, input.tableId),
+        })
+
+        // Create cells for all existing records
+        let createdCells: AiTableCell[] = []
+        if (records.length > 0) {
+          const cellsToInsert = records.map((record) => ({
+            recordId: record.id,
+            columnId: newColumn.id,
+            value: null,
+          }))
+
+          createdCells = await tx
+            .insert(aiTableCells)
+            .values(cellsToInsert)
+            .returning()
+        }
+
+        return { column: newColumn, cells: createdCells }
+      })
 
     // TODO: Trigger Inngest job for AI columns (Phase 3)
     // if (input.type === 'ai_generated' && result.cells.length > 0) {
@@ -369,25 +371,24 @@ export const createColumn = implement(createColumnContract)
     return result
   })
 
-const updateColumnContract = oc.input(
-  z.object({
-    columnId: z.string().uuid(),
-    name: z.string().min(1).max(255).optional(),
-    description: z.string().optional(),
-    outputType: aiTableOutputTypeSchema.optional(),
-    aiPrompt: z.string().optional(),
-    outputTypeConfig: z
-      .object({
-        options: z.array(optionSchema).optional(),
-        maxSelections: z.number().int().positive().optional(),
-        dateFormat: z.string().optional(),
-      })
-      .optional()
-      .nullable(),
-  }),
-)
-
-export const updateColumn = implement(updateColumnContract)
+export const updateColumn = os
+  .input(
+    z.object({
+      columnId: z.string().uuid(),
+      name: z.string().min(1).max(255).optional(),
+      description: z.string().optional(),
+      outputType: aiTableOutputTypeSchema.optional(),
+      aiPrompt: z.string().optional(),
+      outputTypeConfig: z
+        .object({
+          options: z.array(optionSchema).optional(),
+          maxSelections: z.number().int().positive().optional(),
+          dateFormat: z.string().optional(),
+        })
+        .optional()
+        .nullable(),
+    }),
+  )
   .use(authMiddleware)
   .handler(async ({ input, context }) => {
     // Verify ownership through table

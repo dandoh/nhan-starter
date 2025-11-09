@@ -8,12 +8,16 @@ import type {
 } from '@/db/schema'
 import type { OutputTypeConfig } from '@/lib/ai-table/output-types'
 import { orpcClient } from '@/orpc/client'
-import { queryCollectionOptions } from '@tanstack/query-db-collection'
+import {
+  queryCollectionOptions,
+  QueryCollectionUtils,
+} from '@tanstack/query-db-collection'
 
 import {
   createPacedMutations,
   debounceStrategy,
   createCollection,
+  Collection,
   CollectionConfig,
 } from '@tanstack/db'
 
@@ -21,6 +25,7 @@ import {
 // Tables List Collection
 // ============================================================================
 export const tablesCollection = createCollection(
+  // @ts-expect-error(2769)
   queryCollectionOptions<AiTable>({
     queryClient,
     queryKey: ['ai-tables', 'tables'],
@@ -53,8 +58,8 @@ export const tablesCollection = createCollection(
         })
       }
     },
-  }) as CollectionConfig<AiTable>,
-)
+  }),
+) as unknown as Collection<AiTable, string, QueryCollectionUtils<AiTable>>
 
 // Helper function to create table update mutations
 function createTableUpdateMutation<Key extends keyof AiTable>(
@@ -103,13 +108,12 @@ export const updateTableColumnPinning =
     },
   )
 
-export const updateTableColumnOrder =
-  createTableUpdateMutation<'columnOrder'>(
-    'columnOrder',
-    (draft, value) => {
-      draft.columnOrder = value
-    },
-  )
+export const updateTableColumnOrder = createTableUpdateMutation<'columnOrder'>(
+  'columnOrder',
+  (draft, value) => {
+    draft.columnOrder = value
+  },
+)
 
 export const updateTableName = createTableUpdateMutation<'name'>(
   'name',
@@ -132,6 +136,7 @@ export const updateTableDescription = createTableUpdateMutation<'description'>(
 export function createTableCollections(tableId: string) {
   // Cells collection (declared first so other collections can reference it)
   const cellsCollection = createCollection(
+    // @ts-expect-error(2769)
     queryCollectionOptions<AiTableCell>({
       queryClient,
       queryKey: ['ai-tables', tableId, 'cells'],
@@ -176,7 +181,7 @@ export function createTableCollections(tableId: string) {
         }
       },
     }),
-  )
+  ) as unknown as Collection<AiTableCell, string, QueryCollectionUtils<AiTableCell>>
 
   // Columns collection
   const columnsCollection = createCollection(
@@ -245,11 +250,12 @@ export function createTableCollections(tableId: string) {
           })
         }
       },
-    }),
-  )
+    }) as unknown as CollectionConfig<AiTableColumn, string>,
+  ) as unknown as Collection<AiTableColumn, string, QueryCollectionUtils<AiTableColumn>>
 
   // Records collection
   const recordsCollection = createCollection(
+    // @ts-expect-error(2769)
     queryCollectionOptions<AiTableRecord>({
       queryClient,
       queryKey: ['ai-tables', tableId, 'records'],
@@ -292,7 +298,7 @@ export function createTableCollections(tableId: string) {
         }
       },
     }),
-  )
+  ) as unknown as Collection<AiTableRecord, string, QueryCollectionUtils<AiTableRecord>>
 
   return {
     columnsCollection: columnsCollection,
@@ -301,4 +307,5 @@ export function createTableCollections(tableId: string) {
   }
 }
 
-export type TableCollections = ReturnType<typeof createTableCollections>
+export type BelongToTableEntitiesCollections = ReturnType<typeof createTableCollections>
+export type TableCollections = typeof tablesCollection
