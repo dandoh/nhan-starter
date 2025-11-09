@@ -24,7 +24,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { useLiveQuery } from '@tanstack/react-db'
-import type { TableCollections } from '@/lib/ai-table/collections'
+import type { BelongToTableEntitiesCollections } from '@/lib/ai-table/collections'
 import type { AiTableColumn as DbAiTableColumn } from '@/db/schema'
 import type { Column as TSColumn } from '@tanstack/react-table'
 import { useAppForm } from '@/hooks/use-app-form'
@@ -40,7 +40,7 @@ import { useAIChat } from '@/components/ai-chat/ai-chat-context'
 type ColumnHeaderProps = {
   column: DbAiTableColumn
   tanstackColumn?: TSColumn<any>
-} & TableCollections
+} & BelongToTableEntitiesCollections
 
 type ViewMode = 'menu' | 'edit'
 

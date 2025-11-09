@@ -60,8 +60,8 @@ export const aiConversations = pgTable('ai_conversations', {
   status: text('status', { enum: ['idle', 'generating'] })
     .notNull()
     .default('idle'),
-  // Context - allows conversation to be scoped to different entities (table, project, document, etc.)
-  contextType: text('context_type', { enum: ['general', 'table', 'project', 'document'] })
+  // Context - allows conversation to be scoped to different entities (table, workbook, etc.)
+  contextType: text('context_type', { enum: ['general', 'table', 'workbook'] })
     .default('general'),
   contextId: uuid('context_id'), // Nullable UUID - reference to the context entity
   createdAt: timestamp('created_at', { withTimezone: true })
@@ -83,8 +83,7 @@ export type NewAiConversation = typeof aiConversations.$inferInsert
 export const conversationContextSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('general') }),
   z.object({ type: z.literal('table'), tableId: z.string().uuid() }),
-  z.object({ type: z.literal('project'), projectId: z.string().uuid() }),
-  z.object({ type: z.literal('document'), documentId: z.string().uuid() }),
+  z.object({ type: z.literal('workbook'), workbookId: z.string().uuid() }),
 ])
 
 // Helper type for conversation context (inferred from schema)
@@ -92,7 +91,7 @@ export type ConversationContext = z.infer<typeof conversationContextSchema>
 
 // Helper to create context fields from ConversationContext
 export function conversationContextToFields(context: ConversationContext): {
-  contextType: 'general' | 'table' | 'project' | 'document'
+  contextType: 'general' | 'table' | 'workbook'
   contextId: string | null
 } {
   if (context.type === 'general') {
@@ -101,10 +100,7 @@ export function conversationContextToFields(context: ConversationContext): {
   if (context.type === 'table') {
     return { contextType: 'table', contextId: context.tableId }
   }
-  if (context.type === 'project') {
-    return { contextType: 'project', contextId: context.projectId }
-  }
-  return { contextType: 'document', contextId: context.documentId }
+  return { contextType: 'workbook', contextId: context.workbookId }
 }
 
 // Helper to parse context fields back to ConversationContext
@@ -115,11 +111,8 @@ export function fieldsToConversationContext(
   if (contextType === 'table' && contextId) {
     return { type: 'table', tableId: contextId }
   }
-  if (contextType === 'project' && contextId) {
-    return { type: 'project', projectId: contextId }
-  }
-  if (contextType === 'document' && contextId) {
-    return { type: 'document', documentId: contextId }
+  if (contextType === 'workbook' && contextId) {
+    return { type: 'workbook', workbookId: contextId }
   }
   return { type: 'general' }
 }
@@ -285,6 +278,69 @@ export const aiTableCells = pgTable(
 export type AiTableCell = typeof aiTableCells.$inferSelect
 export type NewAiTableCell = typeof aiTableCells.$inferInsert
 
+// Workbooks - Collection of blocks (tables, charts, docs)
+export const workbooks = pgTable('workbooks', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description').default(''),
+  status: text('status', { enum: ['exploratory', 'in_progress', 'ready'] })
+    .notNull()
+    .default('exploratory'),
+  blockOrder: jsonb('block_order').$type<string[]>(), // Array of block IDs
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+})
+
+export type Workbook = typeof workbooks.$inferSelect
+export type NewWorkbook = typeof workbooks.$inferInsert
+
+// Workbook Blocks - Individual blocks within a workbook (table/chart/doc)
+
+// Block type enum - single source of truth (only 'table' for now)
+export const WORKBOOK_BLOCK_TYPES = ['table'] as const
+export type WorkbookBlockType = (typeof WORKBOOK_BLOCK_TYPES)[number]
+
+export const workbookBlocks = pgTable(
+  'workbook_blocks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workbookId: uuid('workbook_id')
+      .notNull()
+      .references(() => workbooks.id, { onDelete: 'cascade' }),
+    blockType: text('block_type', { enum: WORKBOOK_BLOCK_TYPES })
+      .notNull()
+      .default('table'),
+    // Type-specific foreign keys (nullable for extensibility)
+    tableId: uuid('table_id').references(() => aiTables.id, {
+      onDelete: 'cascade',
+    }),
+    // Future: chartId, docId as nullable columns
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index('workbook_blocks_workbook_id_idx').on(table.workbookId),
+    index('workbook_blocks_block_type_idx').on(table.blockType),
+    index('workbook_blocks_table_id_idx').on(table.tableId),
+  ],
+)
+
+export type WorkbookBlock = typeof workbookBlocks.$inferSelect
+export type NewWorkbookBlock = typeof workbookBlocks.$inferInsert
+
 // Relations
 export const postsRelations = relations(posts, ({ one }) => ({
   author: one(users, {
@@ -297,6 +353,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   posts: many(posts),
   aiConversations: many(aiConversations),
   aiTables: many(aiTables),
+  workbooks: many(workbooks),
 }))
 
 export const aiConversationsRelations = relations(
@@ -362,3 +419,26 @@ export const aiTableCellsRelations = relations(aiTableCells, ({ one }) => ({
     references: [aiTableColumns.id],
   }),
 }))
+
+// Workbook Relations
+export const workbooksRelations = relations(workbooks, ({ one, many }) => ({
+  user: one(users, {
+    fields: [workbooks.userId],
+    references: [users.id],
+  }),
+  blocks: many(workbookBlocks),
+}))
+
+export const workbookBlocksRelations = relations(
+  workbookBlocks,
+  ({ one }) => ({
+    workbook: one(workbooks, {
+      fields: [workbookBlocks.workbookId],
+      references: [workbooks.id],
+    }),
+    table: one(aiTables, {
+      fields: [workbookBlocks.tableId],
+      references: [aiTables.id],
+    }),
+  }),
+)

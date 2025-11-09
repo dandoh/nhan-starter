@@ -14,10 +14,9 @@ import {
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { Plus, Sparkles } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { useTableSync } from '@/hooks/use-table-sync'
 import { Button } from '@/components/ui/button'
-import { orpcClient } from '@/orpc/client'
 import {
   Table,
   TableBody,
@@ -48,7 +47,6 @@ import {
   DragEndEvent,
   KeyboardSensor,
   MouseSensor,
-  MeasuringStrategy,
   TouchSensor,
   closestCorners,
   useSensor,
@@ -383,7 +381,6 @@ function AiTableInternal({
 
     return { left }
   }, [aiTable.columnPinning, aiColumns])
-  console.log('columnPinning', columnPinning)
 
   const onColumnPinningChange = async (
     columnPinningUpdater: Updater<ColumnPinningState>,
@@ -505,17 +502,17 @@ function AiTableInternal({
     }
     return colSizes
   }, [table.getState().columnSizingInfo, table.getState().columnSizing])
-  console.log('columnSizeVars', columnSizeVars)
 
   return (
-    <div ref={tableContainerRef} className="flex flex-col min-w-0">
+    <div ref={tableContainerRef} className="flex flex-col min-w-0 h-full">
+      {/* Table area */}
       <DndContext
         collisionDetection={dndCollisionDetection}
         modifiers={dndModifiers}
         onDragEnd={handleDragEnd}
         sensors={sensors}
       >
-        <div className="flex gap-2 flex-1 min-w-0 overflow-auto scrollbar-thumb-transparent">
+        <div className="flex gap-2 flex-1 min-w-0 overflow-auto scrollbar-thumb-transparent w-full h-full">
           <Table
             // className="min-w-full"
             style={{

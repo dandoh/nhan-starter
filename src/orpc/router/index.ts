@@ -7,6 +7,7 @@ import {
 } from './conversations'
 import * as aiTables from './ai-tables'
 import * as connectors from './connectors'
+import * as workbooks from './workbooks'
 
 export default {
   listTodos,
@@ -58,5 +59,20 @@ export default {
   connectors: {
     initiateConnection: connectors.initiateConnection,
     listConnections: connectors.listConnections,
+  },
+  
+  // Workbooks
+  workbooks: {
+    list: workbooks.listWorkbooks,
+    create: workbooks.createWorkbook,
+    get: workbooks.getWorkbook,
+    update: workbooks.updateWorkbook,
+    delete: workbooks.deleteWorkbook,
+    
+    // Block operations
+    getBlocks: workbooks.getBlocks,
+    createBlock: workbooks.createBlock,
+    updateBlock: workbooks.updateBlock,
+    deleteBlock: workbooks.deleteBlock,
   },
 }
