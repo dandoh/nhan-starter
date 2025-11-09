@@ -17,4 +17,4 @@ docker-data/
 # Drizzle
 drizzle/
 
-volumes/
+volume/
