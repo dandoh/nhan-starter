@@ -1,4 +1,13 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, CreateBucketCommand, HeadBucketCommand, type CreateBucketCommandInput, type CreateBucketConfiguration, type GetObjectCommandOutput } from '@aws-sdk/client-s3'
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  CreateBucketCommand,
+  HeadBucketCommand,
+  type CreateBucketCommandInput,
+  type CreateBucketConfiguration,
+  type GetObjectCommandOutput,
+} from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { createHash, randomUUID } from 'node:crypto'
 import { Readable } from 'node:stream'
@@ -10,7 +19,7 @@ import { env } from '@/env'
 function createS3Client(): S3Client {
   const endpoint = env.AWS_S3_ENDPOINT
   const region = env.AWS_S3_REGION
-  
+
   return new S3Client({
     endpoint,
     region,
@@ -34,27 +43,32 @@ function getDefaultBucket(): string {
 /**
  * Ensure S3 bucket exists, create if it doesn't
  */
-export async function ensureBucketExists(bucket: string, region?: string): Promise<void> {
+export async function ensureBucketExists(
+  bucket: string,
+  region?: string,
+): Promise<void> {
   try {
     await s3Client.send(new HeadBucketCommand({ Bucket: bucket }))
   } catch (error) {
-    const isNotFound = 
-      error instanceof Error && 
-      (error.name === 'NotFound' || 
-       (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode === 404)
-    
+    const isNotFound =
+      error instanceof Error &&
+      (error.name === 'NotFound' ||
+        (error as { $metadata?: { httpStatusCode?: number } }).$metadata
+          ?.httpStatusCode === 404)
+
     if (isNotFound) {
       const createBucketParams: CreateBucketCommandInput = {
         Bucket: bucket,
       }
-      
+
       if (region && region !== 'us-east-1') {
         const config: CreateBucketConfiguration = {
-          LocationConstraint: region as CreateBucketConfiguration['LocationConstraint'],
+          LocationConstraint:
+            region as CreateBucketConfiguration['LocationConstraint'],
         }
         createBucketParams.CreateBucketConfiguration = config
       }
-      
+
       await s3Client.send(new CreateBucketCommand(createBucketParams))
     } else {
       throw error
@@ -67,11 +81,11 @@ export async function ensureBucketExists(bucket: string, region?: string): Promi
  */
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 B'
-  
+
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  
+
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`
 }
 
@@ -108,7 +122,7 @@ export async function getFileUrl(
     Bucket: bucket,
     Key: key,
   })
-  
+
   return await getSignedUrl(s3Client, command, { expiresIn })
 }
 
@@ -126,7 +140,9 @@ async function bufferFromReadable(readable: Readable): Promise<Buffer> {
   return Buffer.concat(chunks)
 }
 
-async function bufferFromWebStream(stream: ReadableStream<Uint8Array>): Promise<Buffer> {
+async function bufferFromWebStream(
+  stream: ReadableStream<Uint8Array>,
+): Promise<Buffer> {
   const reader = stream.getReader()
   const chunks: Uint8Array[] = []
   while (true) {
@@ -139,7 +155,9 @@ async function bufferFromWebStream(stream: ReadableStream<Uint8Array>): Promise<
   return Buffer.concat(chunks.map((chunk) => Buffer.from(chunk)))
 }
 
-async function bodyToBuffer(body: GetObjectCommandOutput['Body']): Promise<Buffer> {
+async function bodyToBuffer(
+  body: GetObjectCommandOutput['Body'],
+): Promise<Buffer> {
   if (!body) {
     throw new Error('S3 object has no body')
   }
@@ -214,17 +232,17 @@ export async function uploadFile(
   md5Hash: string
 }> {
   const targetBucket = bucket || getDefaultBucket()
-  
+
   // Generate key if not provided (use UUID + original filename)
   const fileKey = key || `${randomUUID()}-${file.name}`
-  
+
   // Read file as buffer
   const arrayBuffer = await file.arrayBuffer()
   const buffer = Buffer.from(arrayBuffer)
-  
+
   // Calculate MD5 hash
   const md5Hash = createHash('md5').update(buffer).digest('hex')
-  
+
   // Upload to S3
   const command = new PutObjectCommand({
     Bucket: targetBucket,
@@ -236,9 +254,9 @@ export async function uploadFile(
       md5Hash,
     },
   })
-  
+
   await s3Client.send(command)
-  
+
   return {
     bucket: targetBucket,
     key: fileKey,
@@ -271,4 +289,3 @@ export async function fileExists(
     return false
   }
 }
-

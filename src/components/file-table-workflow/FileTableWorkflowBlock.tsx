@@ -8,7 +8,9 @@ import type { FileTableWorkflow } from '@/db/schema'
 import { Button } from '@/components/ui/button'
 import type { BlocksCollection } from '@/lib/workbooks/collections'
 import { Loader2 } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { orpcClient } from '@/orpc/client'
+import { tablesCollection } from '@/lib/ai-table/collections'
 
 interface FileTableWorkflowBlockProps {
   blockId: string
@@ -36,6 +38,8 @@ export function FileTableWorkflowBlock({
 
     return () => clearInterval(interval)
   }, [])
+
+  const [isCreating, setIsCreating] = useState(false)
 
   if (!workflow) {
     return (
@@ -74,6 +78,29 @@ export function FileTableWorkflowBlock({
     console.log('Add files clicked')
   }
 
+
+  const handleCreate = async () => {
+    if (isCreating) return
+
+    setIsCreating(true)
+    try {
+      await orpcClient.workbooks.finalizeFileTableWorkflowBlock({
+        blockId,
+      })
+
+      // Refetch collections to get the updated block and new table
+      await Promise.all([
+        blocksCollection.utils.refetch(),
+        tablesCollection.utils.refetch(),
+      ])
+    } catch (error) {
+      console.error('Failed to create table:', error)
+      // TODO: Show error toast/notification
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex-1 min-h-0">
@@ -90,15 +117,19 @@ export function FileTableWorkflowBlock({
           <Button
             variant="outline"
             onClick={() => blocksCollection.delete(blockId)}
+            disabled={isCreating}
           >
             Discard
           </Button>
-          <Button
-            onClick={() => {
-              // TODO: Implement table creation
-            }}
-          >
-            Create
+          <Button onClick={handleCreate} disabled={isCreating}>
+            {isCreating ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Creating...
+              </>
+            ) : (
+              'Create'
+            )}
           </Button>
         </div>
       </div>

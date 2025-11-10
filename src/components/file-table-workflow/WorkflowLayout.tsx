@@ -53,7 +53,7 @@ export function WorkflowLayout({
         <div className="flex items-center justify-between sticky top-0 bg-card p-4 z-10">
           <h4 className="text-sm font-medium text-foreground">Files</h4>
         </div>
-        <div className="space-y-2 p-4 overflow-y-auto flex-1 min-h-0">
+        <div className="space-y-2 p-4 pt-0 overflow-y-auto flex-1 min-h-0">
           {files.map((file) => (
             <WorkflowFileCard
               key={file.id}
@@ -70,7 +70,7 @@ export function WorkflowLayout({
         <div className="flex items-center justify-between sticky top-0 bg-card p-4 z-10">
           <h4 className="text-sm font-medium text-foreground">Columns</h4>
         </div>
-        <div className="space-y-2 p-4 overflow-y-auto flex-1 min-h-0">
+        <div className="space-y-2 p-4 pt-0 overflow-y-auto flex-1 min-h-0">
           {columns.map((column, index) => (
             <WorkflowColumnCard
               key={index}

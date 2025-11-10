@@ -75,6 +75,7 @@ export default {
     createBlock: workbooks.createBlock,
     updateBlock: workbooks.updateBlock,
     deleteBlock: workbooks.deleteBlock,
+    finalizeFileTableWorkflowBlock: workbooks.finalizeFileTableWorkflowBlock,
   },
   
   // File Table Workflows

@@ -7,6 +7,8 @@ import {
   workbookBlocks,
   aiTables,
   aiTableColumns,
+  aiTableRecords,
+  aiTableCells,
   WORKBOOK_BLOCK_TYPES,
   fileTableWorkflows,
 } from '@/db/schema'
@@ -420,5 +422,180 @@ export const getBlocks = os
     })
 
     return blocks
+  })
+
+/**
+ * Finalize a file table workflow block by creating a table from the workflow
+ * This converts the block from file_table_workflow to table type
+ */
+export const finalizeFileTableWorkflowBlock = os
+  .use(authMiddleware)
+  .input(
+    z.object({
+      blockId: z.string().uuid(),
+      tableName: z.string().min(1).max(255).optional(),
+    }),
+  )
+  .handler(async ({ input, context }) => {
+    // Verify ownership through workbook
+    const block = await db.query.workbookBlocks.findFirst({
+      where: eq(workbookBlocks.id, input.blockId),
+      with: {
+        workbook: true,
+      },
+    })
+
+    if (!block || block.workbook.userId !== context.user.id) {
+      throw new Error('Block not found')
+    }
+
+    // Verify it's a file_table_workflow block
+    if (block.blockType !== 'file_table_workflow') {
+      throw new Error('Block is not a file table workflow block')
+    }
+
+    if (!block.fileTableWorkflowId) {
+      throw new Error('Block does not have an associated workflow')
+    }
+
+    // Get the workflow
+    const workflow = await db.query.fileTableWorkflows.findFirst({
+      where: eq(fileTableWorkflows.id, block.fileTableWorkflowId),
+    })
+
+    if (!workflow) {
+      throw new Error('Workflow not found')
+    }
+
+    // Verify workflow ownership
+    if (workflow.userId !== context.user.id) {
+      throw new Error('Workflow access denied')
+    }
+
+    // Create table, columns, records, and cells in a transaction
+    const result = await db.transaction(async (tx) => {
+      // Create table
+      const tableName = input.tableName || 'New Table'
+      const [newTable] = await tx
+        .insert(aiTables)
+        .values({
+          userId: context.user.id,
+          name: tableName,
+        })
+        .returning()
+
+      // Create primary File column first
+      const [fileColumn] = await tx
+        .insert(aiTableColumns)
+        .values({
+          name: 'File',
+          tableId: newTable.id,
+          description: 'The uploaded file',
+          outputType: 'file',
+          aiPrompt: '',
+          outputTypeConfig: null,
+          primary: true,
+        })
+        .returning()
+
+      // Create columns from suggested columns (excluding file columns, and ignoring primary flag)
+      const suggestedColumnsToCreate = workflow.suggestedColumns.filter(
+        (col) => !col.primary,
+      )
+
+      const columnInserts = suggestedColumnsToCreate.map((col) => ({
+        name: col.name,
+        tableId: newTable.id,
+        description: col.whyUseful || '',
+        outputType: col.outputType,
+        aiPrompt: '',
+        outputTypeConfig: null,
+        primary: false, // Ignore primary flag from suggested columns
+      }))
+
+      const createdColumns = await tx
+        .insert(aiTableColumns)
+        .values(columnInserts)
+        .returning()
+
+      // Create a column map for quick lookup (including the file column)
+      const columnMap = new Map<string, typeof fileColumn>([
+        [fileColumn.name, fileColumn],
+        ...createdColumns.map((col) => [col.name, col] as const),
+      ])
+
+      // Create records (one per file) and cells with extracted values
+      const createdRecords = []
+      const cellsToInsert = []
+
+      for (const file of workflow.files) {
+        // Create record for this file
+        const [record] = await tx
+          .insert(aiTableRecords)
+          .values({
+            tableId: newTable.id,
+          })
+          .returning()
+
+        createdRecords.push(record)
+
+        // Create cell for File column
+        cellsToInsert.push({
+          recordId: record.id,
+          columnId: fileColumn.id,
+          value: {
+            bucket: file.s3Bucket,
+            key: file.s3Key,
+            filename: file.filename,
+            extension: file.filename.split('.').pop() || '',
+            fileSize: file.size,
+          },
+          computeStatus: 'idle' as const,
+        })
+
+        // Create cells for suggested columns (excluding file columns)
+        for (const col of suggestedColumnsToCreate) {
+          const column = columnMap.get(col.name)
+          if (!column) continue
+
+          // Use extracted value if available
+          const extractedValue = col.extractedValues?.[file.id]
+          const cellValue: Record<string, unknown> | null =
+            extractedValue !== undefined ? { value: extractedValue } : null
+
+          cellsToInsert.push({
+            recordId: record.id,
+            columnId: column.id,
+            value: cellValue,
+            computeStatus: 'idle' as const,
+          })
+        }
+      }
+
+      // Insert all cells
+      if (cellsToInsert.length > 0) {
+        await tx.insert(aiTableCells).values(cellsToInsert)
+      }
+
+      // Update block to change type to 'table' and set tableId
+      const [updatedBlock] = await tx
+        .update(workbookBlocks)
+        .set({
+          blockType: 'table',
+          tableId: newTable.id,
+          fileTableWorkflowId: null,
+        })
+        .where(eq(workbookBlocks.id, input.blockId))
+        .returning()
+
+      return {
+        block: updatedBlock,
+        table: newTable,
+        columns: [fileColumn, ...createdColumns],
+        records: createdRecords,
+      }
+    })
+
+    return result
   })
 
