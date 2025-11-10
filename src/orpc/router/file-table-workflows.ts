@@ -11,7 +11,7 @@ import {
 } from '@/db/schema'
 import { and, eq } from 'drizzle-orm'
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
-import { randomUUID } from 'node:crypto'
+import { randomUUID, createHash } from 'node:crypto'
 import { env } from '@/env'
 import { ensureBucketExists } from '@/lib/s3-client'
 import { inngest } from '@/inngest/client'
@@ -229,6 +229,9 @@ export const uploadWorkflowFiles = os
       const fileId = randomUUID()
       const key = `${randomUUID()}-${fileInput.name}`
       
+      // Calculate SHA-256 content hash
+      const contentHash = createHash('sha256').update(buffer).digest('hex')
+      
       await s3Client.send(
         new PutObjectCommand({
           Bucket: bucket,
@@ -237,6 +240,7 @@ export const uploadWorkflowFiles = os
           ContentType: fileInput.type || 'application/octet-stream',
           Metadata: {
             originalFilename: fileInput.name,
+            contentHash,
           },
         }),
       )
@@ -247,6 +251,7 @@ export const uploadWorkflowFiles = os
         s3Key: key,
         filename: fileInput.name,
         size: buffer.length,
+        contentHash,
         status: 'Uploaded',
       })
     }
@@ -267,13 +272,14 @@ export const uploadWorkflowFiles = os
     // Dispatch Inngest events for processing each uploaded file
     for (const file of uploadedFiles) {
       await inngest.send({
-        name: 'workflow/file.process',
+        name: 'workflow/file-table-workflow-file.process',
         data: {
           workflowId: input.fileTableWorkflowId,
           fileId: file.id,
           filename: file.filename,
           s3Bucket: file.s3Bucket,
           s3Key: file.s3Key,
+          contentHash: file.contentHash,
         },
       })
     }

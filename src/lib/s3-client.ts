@@ -1,6 +1,7 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, CreateBucketCommand, HeadBucketCommand, type CreateBucketCommandInput, type CreateBucketConfiguration } from '@aws-sdk/client-s3'
+import { S3Client, PutObjectCommand, GetObjectCommand, CreateBucketCommand, HeadBucketCommand, type CreateBucketCommandInput, type CreateBucketConfiguration, type GetObjectCommandOutput } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { createHash, randomUUID } from 'node:crypto'
+import { Readable } from 'node:stream'
 import { env } from '@/env'
 
 /**
@@ -21,7 +22,7 @@ function createS3Client(): S3Client {
   })
 }
 
-const s3Client = createS3Client()
+export const s3Client = createS3Client()
 
 /**
  * Get default bucket name from environment
@@ -109,6 +110,87 @@ export async function getFileUrl(
   })
   
   return await getSignedUrl(s3Client, command, { expiresIn })
+}
+
+async function bufferFromReadable(readable: Readable): Promise<Buffer> {
+  const chunks: Buffer[] = []
+  for await (const chunk of readable) {
+    chunks.push(
+      typeof chunk === 'string'
+        ? Buffer.from(chunk)
+        : Buffer.isBuffer(chunk)
+          ? chunk
+          : Buffer.from(chunk),
+    )
+  }
+  return Buffer.concat(chunks)
+}
+
+async function bufferFromWebStream(stream: ReadableStream<Uint8Array>): Promise<Buffer> {
+  const reader = stream.getReader()
+  const chunks: Uint8Array[] = []
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    if (value) {
+      chunks.push(value)
+    }
+  }
+  return Buffer.concat(chunks.map((chunk) => Buffer.from(chunk)))
+}
+
+async function bodyToBuffer(body: GetObjectCommandOutput['Body']): Promise<Buffer> {
+  if (!body) {
+    throw new Error('S3 object has no body')
+  }
+
+  if (body instanceof Readable) {
+    return bufferFromReadable(body)
+  }
+
+  if (typeof (body as ReadableStream<Uint8Array>)?.getReader === 'function') {
+    return bufferFromWebStream(body as ReadableStream<Uint8Array>)
+  }
+
+  if (typeof (body as Blob)?.arrayBuffer === 'function') {
+    const arrayBuffer = await (body as Blob).arrayBuffer()
+    return Buffer.from(arrayBuffer)
+  }
+
+  if (typeof body === 'string') {
+    return Buffer.from(body)
+  }
+
+  if (body instanceof Uint8Array) {
+    return Buffer.from(body)
+  }
+
+  throw new Error('Unsupported S3 body type')
+}
+
+export async function downloadS3Object(params: {
+  bucket: string
+  key: string
+}): Promise<{
+  buffer: Buffer
+  contentLength: number
+  contentType: string | undefined
+  lastModified: Date | undefined
+}> {
+  const command = new GetObjectCommand({
+    Bucket: params.bucket,
+    Key: params.key,
+  })
+
+  const response = await s3Client.send(command)
+  const buffer = await bodyToBuffer(response.Body)
+
+  return {
+    buffer,
+    contentLength: response.ContentLength ?? buffer.byteLength,
+    contentType: response.ContentType,
+    lastModified: response.LastModified,
+  }
 }
 
 /**

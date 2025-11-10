@@ -8,6 +8,8 @@ import {
   jsonb,
   uniqueIndex,
   index,
+  vector,
+  integer,
 } from 'drizzle-orm/pg-core'
 import { relations, sql } from 'drizzle-orm'
 import { z } from 'zod'
@@ -30,30 +32,38 @@ export type Verification = typeof verifications.$inferSelect
 export type NewVerification = typeof verifications.$inferInsert
 
 // AI Conversations table
-export const aiConversations = pgTable('ai_conversations', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  userId: text('user_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  title: varchar('title', { length: 255 }),
-  status: text('status', { enum: ['idle', 'generating'] })
-    .notNull()
-    .default('idle'),
-  // Context - allows conversation to be scoped to different entities (table, workbook, etc.)
-  contextType: text('context_type', { enum: ['general', 'table', 'workbook'] })
-    .default('general'),
-  contextId: uuid('context_id'), // Nullable UUID - reference to the context entity
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true })
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
-}, (table) => [
-  index('ai_conversations_user_id_idx').on(table.userId),
-  index('ai_conversations_context_idx').on(table.contextType, table.contextId),
-])
+export const aiConversations = pgTable(
+  'ai_conversations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    title: varchar('title', { length: 255 }),
+    status: text('status', { enum: ['idle', 'generating'] })
+      .notNull()
+      .default('idle'),
+    // Context - allows conversation to be scoped to different entities (table, workbook, etc.)
+    contextType: text('context_type', {
+      enum: ['general', 'table', 'workbook'],
+    }).default('general'),
+    contextId: uuid('context_id'), // Nullable UUID - reference to the context entity
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index('ai_conversations_user_id_idx').on(table.userId),
+    index('ai_conversations_context_idx').on(
+      table.contextType,
+      table.contextId,
+    ),
+  ],
+)
 
 export type AiConversation = typeof aiConversations.$inferSelect
 export type NewAiConversation = typeof aiConversations.$inferInsert
@@ -104,7 +114,9 @@ export const aiMessages = pgTable('ai_messages', {
   conversationId: uuid('conversation_id')
     .notNull()
     .references(() => aiConversations.id, { onDelete: 'cascade' }),
-  role: varchar('role', { length: 20 }).$type<('system' | 'user' | 'assistant')>().notNull(), // 'system' | 'user' | 'assistant'
+  role: varchar('role', { length: 20 })
+    .$type<'system' | 'user' | 'assistant'>()
+    .notNull(), // 'system' | 'user' | 'assistant'
   parts: jsonb('parts').notNull().$type<any>(), // Array of UIMessagePart (text, tool calls, reasoning, files, etc.)
   metadata: jsonb('metadata').$type<any>(), // Optional custom metadata
   createdAt: timestamp('created_at', { withTimezone: true })
@@ -124,7 +136,10 @@ export const aiTables = pgTable('ai_tables', {
   name: varchar('name', { length: 255 }).notNull(),
   description: text('description').default(''),
   columnSizing: jsonb('column_sizing').$type<Record<string, number>>(),
-  columnPinning: jsonb('column_pinning').$type<{ left?: string[]; right?: string[] }>(),
+  columnPinning: jsonb('column_pinning').$type<{
+    left?: string[]
+    right?: string[]
+  }>(),
   columnOrder: jsonb('column_order').$type<string[]>(),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
@@ -163,34 +178,40 @@ export const aiTableOutputTypeSchema = z.union([
   z.literal(AI_TABLE_OUTPUT_TYPES[5]),
 ])
 
-export const aiTableColumns = pgTable('ai_table_columns', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tableId: uuid('table_id')
-    .notNull()
-    .references(() => aiTables.id, { onDelete: 'cascade' }),
-  name: varchar('name', { length: 255 }).notNull(),
-  description: text('description').default(''),
-  outputType: text('output_type', { 
-    enum: AI_TABLE_OUTPUT_TYPES 
-  }).notNull().default('text'),
-  aiPrompt: text('ai_prompt').notNull().default(''),
-  outputTypeConfig: jsonb('output_type_config').$type<{
-    options?: Array<{ value: string; color?: string }>
-    maxSelections?: number
-    dateFormat?: string
-  }>(),
-  primary: boolean('primary').notNull().default(false),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true })
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
-}, (table) => [
-  index('ai_table_columns_table_id_idx').on(table.tableId),
-  index('ai_table_columns_primary_idx').on(table.primary),
-])
+export const aiTableColumns = pgTable(
+  'ai_table_columns',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tableId: uuid('table_id')
+      .notNull()
+      .references(() => aiTables.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 255 }).notNull(),
+    description: text('description').default(''),
+    outputType: text('output_type', {
+      enum: AI_TABLE_OUTPUT_TYPES,
+    })
+      .notNull()
+      .default('text'),
+    aiPrompt: text('ai_prompt').notNull().default(''),
+    outputTypeConfig: jsonb('output_type_config').$type<{
+      options?: Array<{ value: string; color?: string }>
+      maxSelections?: number
+      dateFormat?: string
+    }>(),
+    primary: boolean('primary').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index('ai_table_columns_table_id_idx').on(table.tableId),
+    index('ai_table_columns_primary_idx').on(table.primary),
+  ],
+)
 
 export type AiTableColumn = typeof aiTableColumns.$inferSelect
 export type NewAiTableColumn = typeof aiTableColumns.$inferInsert
@@ -340,6 +361,7 @@ export type FileTableWorkflowFile = {
   s3Key: string
   filename: string
   size: number
+  contentHash?: string // SHA-256 hash of file content for cache lookups
   status: string
 }
 
@@ -348,6 +370,11 @@ export type FileTableWorkflowColumn = {
   outputType: AiTableOutputType
   autoPopulate: boolean
   primary: boolean
+  provenance?: 'heuristic' | 'llm-global' | 'llm-chunk' // How this column was suggested
+  confidence?: 'high' | 'medium' | 'low' // LLM confidence level
+  rationale?: string // Why the document was classified as this type
+  whyUseful?: string // Why this column is useful
+  extractedValues?: Record<string, string> // Map of fileId -> extracted value for this column
 }
 
 export const fileTableWorkflows = pgTable(
@@ -373,15 +400,98 @@ export const fileTableWorkflows = pgTable(
       .defaultNow()
       .$onUpdate(() => new Date()),
   },
+  (table) => [index('file_table_workflows_user_id_idx').on(table.userId)],
+)
+
+export type FileTableWorkflow = typeof fileTableWorkflows.$inferSelect
+export type NewFileTableWorkflow = typeof fileTableWorkflows.$inferInsert
+
+// File Artifacts - Cache layer for parsed file content and embeddings
+export const fileArtifacts = pgTable(
+  'file_artifacts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    contentHash: varchar('content_hash', { length: 64 }).notNull(), // SHA-256 hash
+    analyzerVersion: varchar('analyzer_version', { length: 50 })
+      .notNull()
+      .default('1.0.0'), // Version of analyzer that produced this artifact
+    artifactPointer: text('artifact_pointer').notNull(), // S3 key for combined text + chunk payload
+    // Analyzer metadata (stored as JSON for flexibility)
+    analyzerMetadata: jsonb('analyzer_metadata').$type<{
+      pageCount?: number
+      title?: string
+      author?: string
+      createdAt?: string
+      modifiedAt?: string
+      [key: string]: unknown
+    }>(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
   (table) => [
-    index('file_table_workflows_user_id_idx').on(table.userId),
+    index('file_artifacts_user_id_idx').on(table.userId),
+    index('file_artifacts_content_hash_idx').on(table.contentHash),
+    // Unique constraint: one artifact per user+content_hash+analyzer_version
+    uniqueIndex('file_artifacts_unique_idx').on(
+      table.userId,
+      table.contentHash,
+      table.analyzerVersion,
+    ),
   ],
 )
 
-export type FileTableWorkflow =
-  typeof fileTableWorkflows.$inferSelect
-export type NewFileTableWorkflow =
-  typeof fileTableWorkflows.$inferInsert
+export type FileArtifact = typeof fileArtifacts.$inferSelect
+export type NewFileArtifact = typeof fileArtifacts.$inferInsert
+
+// File Artifact Embeddings - Vector embeddings for each chunk
+export const fileArtifactEmbeddings = pgTable(
+  'file_artifact_embeddings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    artifactId: uuid('artifact_id')
+      .notNull()
+      .references(() => fileArtifacts.id, { onDelete: 'cascade' }),
+    chunkIndex: integer('chunk_index').notNull(), // 0-based index of chunk within file
+    // Vector embedding (dimensions depend on model, typically 1536 for text-embedding-3-small)
+    // Using 1536 as default, can be adjusted per model
+    embedding: vector('embedding', { dimensions: 1536 }).notNull(),
+    // Chunk metadata (lightweight hints kept in Postgres; full payload lives in object storage)
+    byteStart: integer('byte_start'), // Byte offset start in original file
+    byteEnd: integer('byte_end'), // Byte offset end in original file
+    tokenCount: integer('token_count'), // Approximate token count for the chunk
+    // Embedding provider info for re-embedding capability
+    provider: varchar('provider', { length: 50 }).notNull(), // e.g., 'openai', 'anthropic'
+    model: varchar('model', { length: 100 }).notNull(), // e.g., 'text-embedding-3-small'
+    modelVersion: varchar('model_version', { length: 50 }), // Optional version string
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('file_artifact_embeddings_artifact_id_idx').on(table.artifactId),
+    index('file_artifact_embeddings_chunk_index_idx').on(table.chunkIndex),
+    // Unique constraint: one embedding per artifact+chunk_index
+    uniqueIndex('file_artifact_embeddings_unique_idx').on(
+      table.artifactId,
+      table.chunkIndex,
+    ),
+    // Vector similarity search index (using HNSW for performance)
+    // Note: This requires pgvector extension and may need manual migration
+    // The index will be created via SQL migration: CREATE INDEX ON file_artifact_embeddings USING hnsw (embedding vector_cosine_ops);
+  ],
+)
+
+export type FileArtifactEmbedding = typeof fileArtifactEmbeddings.$inferSelect
+export type NewFileArtifactEmbedding =
+  typeof fileArtifactEmbeddings.$inferInsert
 
 export const aiConversationsRelations = relations(
   aiConversations,
@@ -456,23 +566,20 @@ export const workbooksRelations = relations(workbooks, ({ one, many }) => ({
   blocks: many(workbookBlocks),
 }))
 
-export const workbookBlocksRelations = relations(
-  workbookBlocks,
-  ({ one }) => ({
-    workbook: one(workbooks, {
-      fields: [workbookBlocks.workbookId],
-      references: [workbooks.id],
-    }),
-    table: one(aiTables, {
-      fields: [workbookBlocks.tableId],
-      references: [aiTables.id],
-    }),
-    fileTableWorkflow: one(fileTableWorkflows, {
-      fields: [workbookBlocks.fileTableWorkflowId],
-      references: [fileTableWorkflows.id],
-    }),
+export const workbookBlocksRelations = relations(workbookBlocks, ({ one }) => ({
+  workbook: one(workbooks, {
+    fields: [workbookBlocks.workbookId],
+    references: [workbooks.id],
   }),
-)
+  table: one(aiTables, {
+    fields: [workbookBlocks.tableId],
+    references: [aiTables.id],
+  }),
+  fileTableWorkflow: one(fileTableWorkflows, {
+    fields: [workbookBlocks.fileTableWorkflowId],
+    references: [fileTableWorkflows.id],
+  }),
+}))
 
 // File Table Workflow Relations
 export const fileTableWorkflowsRelations = relations(
@@ -481,6 +588,22 @@ export const fileTableWorkflowsRelations = relations(
     user: one(users, {
       fields: [fileTableWorkflows.userId],
       references: [users.id],
+    }),
+  }),
+)
+
+// File Artifacts Relations
+export const fileArtifactsRelations = relations(fileArtifacts, ({ many }) => ({
+  embeddings: many(fileArtifactEmbeddings),
+}))
+
+// File Artifact Embeddings Relations
+export const fileArtifactEmbeddingsRelations = relations(
+  fileArtifactEmbeddings,
+  ({ one }) => ({
+    artifact: one(fileArtifacts, {
+      fields: [fileArtifactEmbeddings.artifactId],
+      references: [fileArtifacts.id],
     }),
   }),
 )

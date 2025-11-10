@@ -84,6 +84,6 @@ export const updateFileTableWorkflow = createOptimisticAction<{
       files,
       suggestedColumns,
     })
-    fileTableWorkflowsCollection.utils.refetch()
+    await fileTableWorkflowsCollection.utils.refetch()
   },
 })
