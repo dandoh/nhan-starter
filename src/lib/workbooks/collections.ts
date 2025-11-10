@@ -9,6 +9,7 @@ import {
 
 import { Collection, createCollection } from '@tanstack/db'
 import { tablesCollection } from '../ai-table/collections'
+import { fileTableWorkflowsCollection } from '../file-table-workflows/collection'
 
 // ============================================================================
 // Workbooks List Collection
@@ -79,7 +80,10 @@ export function createWorkbookCollections(workbookId: string) {
             blockType: newBlock.blockType,
           })
 
-          tablesCollection.utils.refetch()
+          await Promise.all([
+            tablesCollection.utils.refetch(),
+            fileTableWorkflowsCollection.utils.refetch(),
+          ])
         }
       },
 
@@ -113,5 +117,7 @@ export function createWorkbookCollections(workbookId: string) {
   }
 }
 
-export type BlocksCollection = ReturnType<typeof createWorkbookCollections>['blocksCollection']
+export type BlocksCollection = ReturnType<
+  typeof createWorkbookCollections
+>['blocksCollection']
 export type WorkbookCollections = typeof workbooksCollection

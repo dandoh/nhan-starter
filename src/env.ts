@@ -9,11 +9,11 @@ export const env = createEnv({
     INNGEST_SIGNING_KEY: z.string().optional(),
     COMPOSIO_API_KEY: z.string().min(1),
     // S3 Configuration (for localstack or AWS)
-    AWS_S3_ENDPOINT: z.string().url().optional(),
-    AWS_S3_REGION: z.string().optional(),
-    AWS_S3_BUCKET: z.string().optional(),
-    AWS_ACCESS_KEY_ID: z.string().optional(),
-    AWS_SECRET_ACCESS_KEY: z.string().optional(),
+    AWS_S3_ENDPOINT: z.string().url(),
+    AWS_S3_REGION: z.string(),
+    AWS_S3_BUCKET: z.string(),
+    AWS_ACCESS_KEY_ID: z.string(),
+    AWS_SECRET_ACCESS_KEY: z.string(),
   },
 
   /**

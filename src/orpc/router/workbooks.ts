@@ -8,6 +8,7 @@ import {
   aiTables,
   aiTableColumns,
   WORKBOOK_BLOCK_TYPES,
+  fileTableWorkflows,
 } from '@/db/schema'
 import { and, eq } from 'drizzle-orm'
 
@@ -209,6 +210,8 @@ export const createBlock = os
 
     const result = await db.transaction(async (tx) => {
       let createdTable: (typeof aiTables.$inferSelect) | null = null
+      let createdWorkflow: (typeof fileTableWorkflows.$inferSelect) | null =
+        null
 
       // For table blocks, create a new table
       if (input.blockType === 'table') {
@@ -235,6 +238,27 @@ export const createBlock = os
         createdTable = newTable
       }
 
+      // For file_table_workflow blocks, create a new workflow
+      if (input.blockType === 'file_table_workflow') {
+        const [newWorkflow] = await tx
+          .insert(fileTableWorkflows)
+          .values({
+            userId: context.user.id,
+            files: [],
+            suggestedColumns: [
+              {
+                name: 'File',
+                outputType: 'file',
+                autoPopulate: false,
+                primary: true,
+              },
+            ],
+          })
+          .returning()
+
+        createdWorkflow = newWorkflow
+      }
+
       // Create block
       const [newBlock] = await tx
         .insert(workbookBlocks)
@@ -243,6 +267,7 @@ export const createBlock = os
           workbookId: input.workbookId,
           blockType: input.blockType,
           tableId: createdTable?.id || null,
+          fileTableWorkflowId: createdWorkflow?.id || null,
         })
         .returning()
 
@@ -258,6 +283,7 @@ export const createBlock = os
       return {
         block: newBlock,
         table: createdTable,
+        workflow: createdWorkflow,
       }
     })
 

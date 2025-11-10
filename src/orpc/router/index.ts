@@ -8,6 +8,7 @@ import {
 import * as aiTables from './ai-tables'
 import * as connectors from './connectors'
 import * as workbooks from './workbooks'
+import * as fileTableWorkflows from './file-table-workflows'
 
 export default {
   listTodos,
@@ -74,5 +75,15 @@ export default {
     createBlock: workbooks.createBlock,
     updateBlock: workbooks.updateBlock,
     deleteBlock: workbooks.deleteBlock,
+  },
+  
+  // File Table Workflows
+  fileTableWorkflows: {
+    create: fileTableWorkflows.createFileTableWorkflow,
+    list: fileTableWorkflows.listFileTableWorkflows,
+    get: fileTableWorkflows.getFileTableWorkflow,
+    update: fileTableWorkflows.updateFileTableWorkflow,
+    uploadFiles: fileTableWorkflows.uploadWorkflowFiles,
+    complete: fileTableWorkflows.completeFileTableWorkflow,
   },
 }

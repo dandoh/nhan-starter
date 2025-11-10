@@ -1,21 +1,22 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
+import { S3Client, PutObjectCommand, GetObjectCommand, CreateBucketCommand, HeadBucketCommand, type CreateBucketCommandInput, type CreateBucketConfiguration } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { createHash, randomUUID } from 'node:crypto'
+import { env } from '@/env'
 
 /**
  * Create S3 client configured for localstack or AWS
  */
 function createS3Client(): S3Client {
-  const endpoint = process.env.AWS_S3_ENDPOINT || 'http://localhost:4566'
-  const region = process.env.AWS_S3_REGION || 'us-east-1'
+  const endpoint = env.AWS_S3_ENDPOINT
+  const region = env.AWS_S3_REGION
   
   return new S3Client({
     endpoint,
     region,
     forcePathStyle: true, // Required for localstack
     credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'test',
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'test',
+      accessKeyId: env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
     },
   })
 }
@@ -23,10 +24,41 @@ function createS3Client(): S3Client {
 const s3Client = createS3Client()
 
 /**
- * Get default bucket name from environment or use a default
+ * Get default bucket name from environment
  */
 function getDefaultBucket(): string {
-  return process.env.AWS_S3_BUCKET || 'nhan-starter-files'
+  return env.AWS_S3_BUCKET
+}
+
+/**
+ * Ensure S3 bucket exists, create if it doesn't
+ */
+export async function ensureBucketExists(bucket: string, region?: string): Promise<void> {
+  try {
+    await s3Client.send(new HeadBucketCommand({ Bucket: bucket }))
+  } catch (error) {
+    const isNotFound = 
+      error instanceof Error && 
+      (error.name === 'NotFound' || 
+       (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode === 404)
+    
+    if (isNotFound) {
+      const createBucketParams: CreateBucketCommandInput = {
+        Bucket: bucket,
+      }
+      
+      if (region && region !== 'us-east-1') {
+        const config: CreateBucketConfiguration = {
+          LocationConstraint: region as CreateBucketConfiguration['LocationConstraint'],
+        }
+        createBucketParams.CreateBucketConfiguration = config
+      }
+      
+      await s3Client.send(new CreateBucketCommand(createBucketParams))
+    } else {
+      throw error
+    }
+  }
 }
 
 /**

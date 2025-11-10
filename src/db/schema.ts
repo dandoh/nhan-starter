@@ -285,8 +285,8 @@ export type NewWorkbook = typeof workbooks.$inferInsert
 
 // Workbook Blocks - Individual blocks within a workbook (table/chart/doc)
 
-// Block type enum - single source of truth (only 'table' for now)
-export const WORKBOOK_BLOCK_TYPES = ['table'] as const
+// Block type enum - single source of truth
+export const WORKBOOK_BLOCK_TYPES = ['table', 'file_table_workflow'] as const
 export type WorkbookBlockType = (typeof WORKBOOK_BLOCK_TYPES)[number]
 
 export const workbookBlocks = pgTable(
@@ -303,6 +303,12 @@ export const workbookBlocks = pgTable(
     tableId: uuid('table_id').references(() => aiTables.id, {
       onDelete: 'cascade',
     }),
+    fileTableWorkflowId: uuid('file_table_workflow_id').references(
+      () => fileTableWorkflows.id,
+      {
+        onDelete: 'cascade',
+      },
+    ),
     // Future: chartId, docId as nullable columns
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
@@ -316,11 +322,66 @@ export const workbookBlocks = pgTable(
     index('workbook_blocks_workbook_id_idx').on(table.workbookId),
     index('workbook_blocks_block_type_idx').on(table.blockType),
     index('workbook_blocks_table_id_idx').on(table.tableId),
+    index('workbook_blocks_file_table_workflow_id_idx').on(
+      table.fileTableWorkflowId,
+    ),
   ],
 )
 
 export type WorkbookBlock = typeof workbookBlocks.$inferSelect
 export type NewWorkbookBlock = typeof workbookBlocks.$inferInsert
+
+// File Table Workflow - Workflow for creating tables from files
+
+// Type definitions for JSON fields
+export type FileTableWorkflowFile = {
+  id: string
+  s3Bucket: string
+  s3Key: string
+  filename: string
+  size: number
+  status: string
+}
+
+export type FileTableWorkflowColumn = {
+  name: string
+  outputType: AiTableOutputType
+  autoPopulate: boolean
+  primary: boolean
+}
+
+export const fileTableWorkflows = pgTable(
+  'file_table_workflows',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    files: jsonb('files')
+      .$type<FileTableWorkflowFile[]>()
+      .notNull()
+      .default([]),
+    suggestedColumns: jsonb('suggested_columns')
+      .$type<FileTableWorkflowColumn[]>()
+      .notNull()
+      .default([]),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index('file_table_workflows_user_id_idx').on(table.userId),
+  ],
+)
+
+export type FileTableWorkflow =
+  typeof fileTableWorkflows.$inferSelect
+export type NewFileTableWorkflow =
+  typeof fileTableWorkflows.$inferInsert
 
 export const aiConversationsRelations = relations(
   aiConversations,
@@ -405,6 +466,21 @@ export const workbookBlocksRelations = relations(
     table: one(aiTables, {
       fields: [workbookBlocks.tableId],
       references: [aiTables.id],
+    }),
+    fileTableWorkflow: one(fileTableWorkflows, {
+      fields: [workbookBlocks.fileTableWorkflowId],
+      references: [fileTableWorkflows.id],
+    }),
+  }),
+)
+
+// File Table Workflow Relations
+export const fileTableWorkflowsRelations = relations(
+  fileTableWorkflows,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [fileTableWorkflows.userId],
+      references: [users.id],
     }),
   }),
 )

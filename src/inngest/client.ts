@@ -11,6 +11,15 @@ export type Events = {
       cellId: string
     }
   }
+  'workflow/file-table-workflow-file.process': {
+    data: {
+      workflowId: string
+      fileId: string
+      filename: string
+      s3Bucket: string
+      s3Key: string
+    }
+  }
 }
 
 /**

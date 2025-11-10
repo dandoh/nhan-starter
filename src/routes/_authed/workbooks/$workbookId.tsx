@@ -43,13 +43,16 @@ import {
   PanelLeft,
   PanelRight,
 } from 'lucide-react'
-import { createWorkbookDetailStore } from './workbook-detail-store'
 import { useStore } from 'zustand'
 import { useWorkbookSync } from '@/hooks/use-workbook-sync'
 import type { BlocksCollection } from '@/lib/workbooks/collections'
 import { BlockHeader } from '@/components/workbooks/BlockHeader'
 import { TableCollections, tablesCollection } from '@/lib/ai-table/collections'
 import type { WorkbookBlock } from '@/db/schema'
+import { FileTableWorkflowBlock } from '@/components/file-table-workflow/FileTableWorkflowBlock'
+import { orpcClient } from '@/orpc/client'
+import { fileTableWorkflowsCollection } from '@/lib/file-table-workflows/collection'
+import { createWorkbookDetailStore } from '@/lib/workbook-detail-store'
 
 function TableBlock({
   block,
@@ -291,18 +294,92 @@ function WorkbookDetailPage() {
   }, [])
 
   const handleCreateTableBlock = () => {
+    setCreateBlockPopoverType(null)
+
     const tempId = crypto.randomUUID()
     const newBlock = {
       id: tempId,
       workbookId,
       blockType: 'table' as const,
       tableId: null,
+      fileTableWorkflowId: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     }
 
     blocksCollection.insert(newBlock)
+  }
+
+  const handleCreateFileWorkflowBlock = async () => {
     setCreateBlockPopoverType(null)
+
+    // Open file selector
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.multiple = true
+    input.accept = '.pdf'
+
+    const files = await new Promise<File[]>((resolve) => {
+      input.onchange = (e) => {
+        const target = e.target as HTMLInputElement
+        resolve(Array.from(target.files || []))
+      }
+      input.click()
+    })
+
+    if (files.length === 0) {
+      return
+    }
+
+    // Create block and workflow
+    const tempId = crypto.randomUUID()
+    const newBlock = {
+      id: tempId,
+      workbookId,
+      blockType: 'file_table_workflow' as const,
+      tableId: null,
+      fileTableWorkflowId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    const tx = blocksCollection.insert(newBlock as WorkbookBlock)
+    await tx.isPersisted.promise
+
+    const block = blocksCollection.get(tempId)!
+    const fileTableWorkflowId = block.fileTableWorkflowId!
+
+    if (!fileTableWorkflowId) {
+      return
+    }
+
+    // Convert files to base64 and upload
+    const filePromises = files.map(async (file) => {
+      const arrayBuffer = await file.arrayBuffer()
+      // Convert ArrayBuffer to base64
+      const bytes = new Uint8Array(arrayBuffer)
+      let binary = ''
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i])
+      }
+      const base64 = btoa(binary)
+
+      return {
+        name: file.name,
+        data: base64,
+        type: file.type || 'application/octet-stream',
+      }
+    })
+
+    const fileData = await Promise.all(filePromises)
+
+    // Upload files to workflow
+    await orpcClient.fileTableWorkflows.uploadFiles({
+      fileTableWorkflowId,
+      files: fileData,
+    })
+
+    await fileTableWorkflowsCollection.utils.refetch()
   }
 
   return (
@@ -331,6 +408,14 @@ function WorkbookDetailPage() {
                       tablesCollection={tablesCollection}
                     />
                   )}
+                  {block.blockType === 'file_table_workflow' &&
+                    block.fileTableWorkflowId && (
+                      <FileTableWorkflowBlock
+                        blockId={block.id}
+                        workflowId={block.fileTableWorkflowId}
+                        blocksCollection={blocksCollection}
+                      />
+                    )}
                 </ResizableBlock>
               ))}
               {blocks.length === 0 ? (
@@ -349,24 +434,16 @@ function WorkbookDetailPage() {
                     openType={createBlockPopoverType}
                     onOpenTypeChange={setCreateBlockPopoverType}
                     onCreateTable={handleCreateTableBlock}
+                    onCreateFileWorkflow={handleCreateFileWorkflowBlock}
                   />
                 </div>
               ) : (
                 <div className="w-full border-2 border-dashed border-border rounded-lg p-8 min-h-[200px] flex flex-col items-center justify-center gap-6">
-                  <div className="flex flex-col items-center gap-2 text-center max-w-md">
-                    <p className="text-lg text-muted-foreground">
-                      Add another block
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Add a new table, document, or chart block to your
-                      workbook. You can load data from files or connect to data
-                      sources.
-                    </p>
-                  </div>
                   <CreateBlockOptions
                     openType={createBlockPopoverType}
                     onOpenTypeChange={setCreateBlockPopoverType}
                     onCreateTable={handleCreateTableBlock}
+                    onCreateFileWorkflow={handleCreateFileWorkflowBlock}
                   />
                 </div>
               )}
@@ -425,10 +502,12 @@ function CreateBlockOptions({
   openType,
   onOpenTypeChange,
   onCreateTable,
+  onCreateFileWorkflow,
 }: {
   openType: BlockOptionType | null
   onOpenTypeChange: (type: BlockOptionType | null) => void
   onCreateTable: () => void
+  onCreateFileWorkflow?: () => void
 }) {
   const blockTypes: BlockOptionType[] = ['table', 'document', 'chart']
 
@@ -454,7 +533,7 @@ function CreateBlockOptions({
               <div
                 role="button"
                 tabIndex={0}
-                className="flex  flex-col items-center justify-center gap-2 w-24 h-24 border-1 border-dashed border-border rounded-lg transition-all group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:border-muted-foreground/40 hover:bg-accent/30 cursor-pointer"
+                className="flex  flex-col items-center justify-center gap-2 w-24 h-24 border border-dashed border-border rounded-lg transition-all group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:border-muted-foreground/40 hover:bg-accent/30 cursor-pointer"
               >
                 <Icon className="w-6 h-6 text-muted-foreground group-hover:text-foreground/70" />
                 <span className="text-xs text-muted-foreground group-hover:text-foreground/70">
@@ -471,6 +550,7 @@ function CreateBlockOptions({
               {type === 'table' ? (
                 <TableCreationPopoverContent
                   onCreateEmptyTable={onCreateTable}
+                  onCreateFileWorkflow={onCreateFileWorkflow}
                 />
               ) : (
                 <BlockComingSoonContent blockType={type} />
@@ -485,8 +565,10 @@ function CreateBlockOptions({
 
 function TableCreationPopoverContent({
   onCreateEmptyTable,
+  onCreateFileWorkflow,
 }: {
   onCreateEmptyTable: () => void
+  onCreateFileWorkflow?: () => void
 }) {
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -505,17 +587,21 @@ function TableCreationPopoverContent({
           </div>
         </Button>
 
-        <Button
-          disabled
-          variant="outline"
-          className="h-auto p-2 justify-start gap-4 opacity-50 cursor-not-allowed"
-        >
-          <FileText className="w-5 h-5" />
-          <div className="flex flex-col items-start">
-            <span className="font-medium">Load from CSV</span>
-            <span className="text-xs text-muted-foreground">Coming soon</span>
-          </div>
-        </Button>
+        {onCreateFileWorkflow && (
+          <Button
+            onClick={onCreateFileWorkflow}
+            variant="outline"
+            className="h-auto p-2 justify-start gap-4 hover:bg-accent"
+          >
+            <FileText className="w-5 h-5" />
+            <div className="flex flex-col items-start">
+              <span className="font-medium">Create from files</span>
+              <span className="text-xs text-muted-foreground">
+                Upload files and configure columns
+              </span>
+            </div>
+          </Button>
+        )}
 
         <Button
           disabled

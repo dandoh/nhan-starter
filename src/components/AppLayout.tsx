@@ -197,26 +197,28 @@ function SidebarHeaderContent() {
         <SidebarMenuItem>
           <SidebarMenuButton
             size="lg"
+            className={cn(
+              'flex flex-row  h-full w-full',
+              !isExpanded && 'justify-center',
+            )}
             tooltip={session?.user?.name || session?.user?.email || 'User'}
           >
-            <div className={cn(!isExpanded && 'flex items-center justify-center')}>
-              <Avatar className="size-6">
-                <AvatarImage
-                  src={session?.user?.image || undefined}
-                  alt={session?.user?.name || session?.user?.email || 'User'}
-                />
-                <AvatarFallback>
-                  {session?.user?.name?.slice(0, 2).toUpperCase() ||
-                    session?.user?.email?.slice(0, 2).toUpperCase() ||
-                    'U'}
-                </AvatarFallback>
-              </Avatar>
-              {isExpanded && (
-                <span className="truncate font-semibold">
-                  {session?.user?.name || session?.user?.email || 'User'}
-                </span>
-              )}
-            </div>
+            <Avatar className="size-6">
+              <AvatarImage
+                src={session?.user?.image || undefined}
+                alt={session?.user?.name || session?.user?.email || 'User'}
+              />
+              <AvatarFallback>
+                {session?.user?.name?.slice(0, 2).toUpperCase() ||
+                  session?.user?.email?.slice(0, 2).toUpperCase() ||
+                  'U'}
+              </AvatarFallback>
+            </Avatar>
+            {isExpanded && (
+              <span className="truncate font-semibold">
+                {session?.user?.name || session?.user?.email || 'User'}
+              </span>
+            )}
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>

@@ -5,18 +5,10 @@ import {
   AppPageContentWrapper,
 } from '@/components/AppPageWrapper'
 import { Card, CardContent } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { useState } from 'react'
 import {
   CheckCircle2,
@@ -374,15 +366,6 @@ function FileCard({ file }: { file: FileStatus }) {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
-  const getProgressValue = () => {
-    if (file.status === 'uploading') return file.uploadProgress
-    if (file.status === 'processing') return file.processingProgress
-    return 100
-  }
-
-  const isInProgress =
-    file.status === 'uploading' || file.status === 'processing'
-
   return (
     <div className="group rounded-lg border border-border bg-card hover:border-primary/40 transition-all duration-200">
       <div className="p-3">
@@ -410,17 +393,9 @@ function FileCard({ file }: { file: FileStatus }) {
               </Button>
             </div>
 
-            {/* Progress Bar - Always visible */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">{file.statusText}</span>
-                {isInProgress && (
-                  <span className="font-medium text-foreground">
-                    {getProgressValue()}%
-                  </span>
-                )}
-              </div>
-              <Progress value={getProgressValue()} className="h-1" />
+            {/* Status Text */}
+            <div className="text-xs text-muted-foreground mt-1">
+              {file.statusText}
             </div>
           </div>
         </div>
@@ -508,29 +483,9 @@ function ColumnCard({ column }: { column: SuggestedColumn }) {
         <div className="px-3 pb-3 pt-0 border-t border-border/50">
           <div className="pt-3 space-y-2">
             {/* Auto-populate toggle */}
-
-            {/* Type selector */}
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Type</span>
-              <Select value={column.type} disabled={!column.selected}>
-                <SelectTrigger className="w-[140px] !h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="text">Text</SelectItem>
-                  <SelectItem value="number">Number</SelectItem>
-                  <SelectItem value="date">Date</SelectItem>
-                  <SelectItem value="email">Email</SelectItem>
-                  <SelectItem value="url">URL</SelectItem>
-                  <SelectItem value="phone">Phone</SelectItem>
-                  <SelectItem value="select">Select</SelectItem>
-                  <SelectItem value="file">File</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">
-                Auto-populate
+                Auto populate this field based on file content
               </span>
               <Switch
                 id={`auto-${column.id}`}
