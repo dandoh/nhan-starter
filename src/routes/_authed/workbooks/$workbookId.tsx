@@ -40,8 +40,6 @@ import {
   Download,
   Share2,
   Trash2,
-  PanelLeft,
-  PanelRight,
 } from 'lucide-react'
 import { useStore } from 'zustand'
 import { useWorkbookSync } from '@/hooks/use-workbook-sync'
@@ -66,7 +64,6 @@ function TableBlock({
   tablesCollection: TableCollections
 }) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [showLeftSidebar, setShowLeftSidebar] = useState(true)
 
   // Query table name
   const { data: table } = useLiveQuery((q) =>
@@ -82,16 +79,8 @@ function TableBlock({
     setIsDeleteDialogOpen(false)
   }
 
-  const leftSidebarActions = (
+  const headerActions = (
     <>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-8 w-8 p-0"
-        title="Settings"
-      >
-        <Settings className="h-4 w-4" />
-      </Button>
       <Button
         variant="ghost"
         size="sm"
@@ -103,11 +92,14 @@ function TableBlock({
       <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Share">
         <Share2 className="h-4 w-4" />
       </Button>
-    </>
-  )
-
-  const rightHeaderActions = (
-    <>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-8 w-8 p-0"
+        title="Settings"
+      >
+        <Settings className="h-4 w-4" />
+      </Button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -119,23 +111,6 @@ function TableBlock({
             <Settings className="h-4 w-4" />
             <span>Table settings</span>
           </DropdownMenuItem>
-          {leftSidebarActions && (
-            <DropdownMenuItem
-              onSelect={() => setShowLeftSidebar(!showLeftSidebar)}
-            >
-              {showLeftSidebar ? (
-                <>
-                  <PanelLeft className="h-4 w-4" />
-                  <span>Hide left panel</span>
-                </>
-              ) : (
-                <>
-                  <PanelRight className="h-4 w-4" />
-                  <span>Show left panel</span>
-                </>
-              )}
-            </DropdownMenuItem>
-          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"
@@ -176,9 +151,7 @@ function TableBlock({
   return (
     <BlockHeader
       name={table?.name || 'Untitled Table'}
-      leftSidebarActions={leftSidebarActions}
-      rightHeaderActions={rightHeaderActions}
-      showLeftSidebar={showLeftSidebar}
+      headerActions={headerActions}
     >
       <AiTable tableId={tableId} />
     </BlockHeader>

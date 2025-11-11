@@ -101,12 +101,23 @@ export function FileTableWorkflowBlock({
     }
   }
 
+  // Check if all files are ready
+  const allFilesReady =
+    workflow.files.length > 0 &&
+    workflow.files.every((file) => file.status.toLowerCase() === 'ready')
+
+  // Check if any files are still being processed
+  const isAnalyzing =
+    workflow.files.length > 0 &&
+    workflow.files.some((file) => file.status.toLowerCase() !== 'ready')
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex-1 min-h-0">
         <WorkflowLayout
           files={workflow.files}
           columns={workflow.suggestedColumns}
+          isAnalyzing={isAnalyzing}
           onFileDelete={handleFileDelete}
           onColumnUpdate={handleColumnUpdate}
           onAddFiles={handleAddFiles}
@@ -121,7 +132,10 @@ export function FileTableWorkflowBlock({
           >
             Discard
           </Button>
-          <Button onClick={handleCreate} disabled={isCreating}>
+          <Button
+            onClick={handleCreate}
+            disabled={isCreating || !allFilesReady}
+          >
             {isCreating ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
