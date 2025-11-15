@@ -3,16 +3,10 @@ import {
   Scripts,
   createRootRouteWithContext,
 } from '@tanstack/react-router'
-import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
-import { TanStackDevtools } from '@tanstack/react-devtools'
 import { useEffect } from 'react'
 import { scan } from 'react-scan'
 
 import { AppLayout } from '../components/AppLayout'
-
-import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
-
-import StoreDevtools from '../lib/demo-store-devtools'
 
 import appCss from '../styles.css?url'
 

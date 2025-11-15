@@ -187,6 +187,10 @@
   --shadow-2xl: var(--shadow-2xl);
 }
 
+
+
+
+
 /* Scrollbar styling - uses theme variables for automatic light/dark mode support */
 * {
   scrollbar-width: thin;

@@ -1,8 +1,6 @@
-import { computeAiCell } from './functions/compute-ai-cell'
-import { processFileTableWorkflowFile } from './functions/process-file-table-workflow-file'
-
 /**
  * Export all Inngest functions
+ * Add your Inngest functions here
  */
-export const functions = [computeAiCell, processFileTableWorkflowFile]
+export const functions = []
 

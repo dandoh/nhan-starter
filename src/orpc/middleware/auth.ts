@@ -1,5 +1,6 @@
 import { os, ORPCError } from '@orpc/server'
 import { auth } from '@/auth/auth-config'
+import { User } from 'better-auth';
 
 /**
  * Authentication middleware for oRPC routes.
@@ -7,7 +8,7 @@ import { auth } from '@/auth/auth-config'
  * Throws 401 UNAUTHORIZED if no valid session is found.
  */
 export const authMiddleware = os
-  .$context<{ headers?: Headers; user?: { id: string } }>()
+  .$context<{ headers?: Headers; user?: User }>()
   .middleware(async ({ context, next }) => {
     if (context.user) {
       return next({
