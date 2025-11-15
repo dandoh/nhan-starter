@@ -159,33 +159,16 @@ function AiChatInternal({
       console.error('data', data)
     },
     onToolCall: (toolCall) => {
-      console.log('toolCall', toolCall.toolCall.toolName)
       // Refresh columns, records, and cells after AI chat finishes (for table context)
-      if (context.type === 'table') {
-        queryClient.invalidateQueries({
-          queryKey: ['ai-tables', context.tableId, 'columns'],
-        })
-        queryClient.invalidateQueries({
-          queryKey: ['ai-tables', context.tableId, 'records'],
-        })
-        queryClient.invalidateQueries({
-          queryKey: ['ai-tables', context.tableId, 'cells'],
-        })
-      }
+      queryClient.invalidateQueries({
+        queryKey: ['ai-tables'],
+      })
     },
     onFinish: () => {
       // Refresh columns, records, and cells after AI chat finishes (for table context)
-      if (context.type === 'table') {
-        queryClient.invalidateQueries({
-          queryKey: ['ai-tables', context.tableId, 'columns'],
-        })
-        queryClient.invalidateQueries({
-          queryKey: ['ai-tables', context.tableId, 'records'],
-        })
-        queryClient.invalidateQueries({
-          queryKey: ['ai-tables', context.tableId, 'cells'],
-        })
-      }
+      queryClient.invalidateQueries({
+        queryKey: ['ai-tables'],
+      })
     },
   })
 

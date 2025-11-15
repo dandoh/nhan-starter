@@ -5,15 +5,12 @@ import {
   aiConversations,
   aiMessages,
   aiTables,
-  aiTableColumns,
-  aiTableRecords,
-  aiTableCells,
+  workbooks,
 } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import {
   ToolLoopAgent,
   createAgentUIStreamResponse,
-  tool,
   stepCountIs,
   type UIMessage,
 } from 'ai'
@@ -25,52 +22,6 @@ import { createTool } from '@orpc/ai-sdk'
 import { Composio } from '@composio/core'
 import { VercelProvider } from '@composio/vercel'
 
-// Define createColumn tool (only available for table conversations)
-const createColumnToolSchema = z.object({
-  name: z
-    .string()
-    .min(1)
-    .max(255)
-    .describe('Column name - should be descriptive and concise'),
-  description: z
-    .string()
-    .optional()
-    .describe(
-      'Optional description explaining what this column contains or how it works',
-    ),
-  outputType: z
-    .enum(['text', 'long_text', 'single_select', 'multi_select', 'date'])
-    .describe(
-      'Output format: text (short text), long_text (paragraphs), single_select (one option from list), multi_select (multiple options), date (date values)',
-    ),
-  aiPrompt: z
-    .string()
-    .optional()
-    .describe(
-      'Optional: The prompt that tells the AI how to generate values. Should reference other columns by name. If provided, the column will be AI-generated.',
-    ),
-  outputTypeConfig: z
-    .object({
-      options: z
-        .array(z.object({ value: z.string() }))
-        .optional()
-        .describe(
-          'For select types: array of possible options like [{value: "High"}, {value: "Medium"}, {value: "Low"}]',
-        ),
-      maxSelections: z
-        .number()
-        .int()
-        .positive()
-        .optional()
-        .describe('For multi_select: maximum number of selections allowed'),
-      dateFormat: z
-        .string()
-        .optional()
-        .describe('For date type: format string like "YYYY-MM-DD"'),
-    })
-    .optional(),
-})
-
 const RequestSchema = z.object({
   messages: z.array(
     z.object({
@@ -81,6 +32,90 @@ const RequestSchema = z.object({
     }),
   ),
 })
+
+/**
+ * Get context information for a conversation based on its context type and ID
+ * @returns Object with contextString (formatted for AI) and availableTableIds
+ */
+async function getConversationContext(
+  contextType: string | null,
+  contextId: string | null,
+): Promise<{
+  contextString: string
+  availableTableIds: string[]
+}> {
+  let contextString = ''
+  let availableTableIds: string[] = []
+
+  if (contextType === 'table' && contextId) {
+    // Single table context
+    const table = await db.query.aiTables.findFirst({
+      where: eq(aiTables.id, contextId),
+      with: {
+        columns: {
+          orderBy: (columns, { asc }) => [asc(columns.createdAt)],
+        },
+      },
+    })
+
+    if (table) {
+      availableTableIds = [table.id]
+      contextString = `
+<context type="table">
+<table id="${table.id}">
+${JSON.stringify(table, null, 2)}
+</table>
+</context>
+      `
+    }
+  } else if (contextType === 'workbook' && contextId) {
+    // Workbook context - fetch all tables within the workbook
+    const workbook = await db.query.workbooks.findFirst({
+      where: eq(workbooks.id, contextId),
+      with: {
+        blocks: {
+          with: {
+            table: {
+              with: {
+                columns: {
+                  orderBy: (columns, { asc }) => [asc(columns.createdAt)],
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+
+    if (workbook) {
+      // Extract all tables from workbook blocks
+      const tables = workbook.blocks
+        .filter((block) => block.table !== null)
+        .map((block) => block.table)
+
+      availableTableIds = tables.map((t) => t!.id)
+
+      const tablesContext = tables
+        .map(
+          (table) => `
+<table id="${table!.id}">
+${JSON.stringify(table, null, 2)}
+</table>`,
+        )
+        .join('\n')
+
+      contextString = `
+<context type="workbook">
+<workbook id="${workbook.id}" name="${workbook.name}">
+${tablesContext}
+</workbook>
+</context>
+      `
+    }
+  }
+
+  return { contextString, availableTableIds }
+}
 
 export const Route = createFileRoute('/api/_authed-api/chat/$conversationId')({
   server: {
@@ -125,6 +160,13 @@ export const Route = createFileRoute('/api/_authed-api/chat/$conversationId')({
           .set({ status: 'generating' })
           .where(eq(aiConversations.id, conversationId))
 
+        // Get context information
+        const { contextString, availableTableIds } =
+          await getConversationContext(
+            conversation.contextType,
+            conversation.contextId,
+          )
+
         // Convert input messages to UIMessage format
         const uiMessages: UIMessage[] = messages.map((msg) => ({
           id: msg.id,
@@ -133,30 +175,50 @@ export const Route = createFileRoute('/api/_authed-api/chat/$conversationId')({
           metadata: msg.metadata,
         }))
 
-        // Get table context if this is a table conversation
-        const tableId =
-          conversation.contextType === 'table' ? conversation.contextId : null
+        // Build additional instructions message (if there's any context)
+        let additionalInstructions = ''
+        
+        if (availableTableIds.length > 0) {
+          additionalInstructions = `Available table IDs for operations: ${availableTableIds.join(', ')}
 
-        // Fetch table and columns for context (if available)
-        let tableContext = ''
-        if (tableId) {
-          const table = await db.query.aiTables.findFirst({
-            where: eq(aiTables.id, tableId),
-            with: {
-              columns: {
-                orderBy: (columns, { asc }) => [asc(columns.createdAt)],
-              },
-            },
-          })
-
-          if (table) {
-            tableContext = `
-<table_context>
-${JSON.stringify(table, null, 2)}
-</table_context>
-            `
-          }
+When working with tables:
+- Use the createColumn tool to add new columns with specific output types and AI prompts
+- Use the updateColumn tool to modify existing column properties
+- Reference columns by their names when creating AI prompts
+- Suggest useful columns that can enrich the data`
         }
+
+        // Add context and instructions as system messages if available
+        const systemMessages: UIMessage[] = []
+        
+        if (contextString.trim()) {
+          systemMessages.push({
+            id: `context-${conversation.id}`,
+            role: 'system',
+            parts: [
+              {
+                type: 'text',
+                text: contextString,
+              },
+            ],
+          })
+        }
+        
+        if (additionalInstructions.trim()) {
+          systemMessages.push({
+            id: `instructions-${conversation.id}`,
+            role: 'system',
+            parts: [
+              {
+                type: 'text',
+                text: additionalInstructions,
+              },
+            ],
+          })
+        }
+
+        // Prepend system messages to the conversation
+        uiMessages.unshift(...systemMessages)
 
         const createColumnTool = createTool(createColumn, {
           description: 'Create a new column in the table',
@@ -183,21 +245,17 @@ ${JSON.stringify(table, null, 2)}
           toolkits: ['LINEAR'],
         })
 
-        // Build system prompt
-        const systemPrompt = `You are an AI assistant helping users manage their data tables.
-        
-${tableContext}
+        // Static system prompt - defines the assistant's role only
+        const systemPrompt = `You are an AI assistant helping users manage their data tables and workbooks.
 
-You have access to tools to collaborate with the user on modifying the table.
-
-`
+You have access to tools to collaborate with the user on modifying tables and integrating with external services.`
 
         // Create agent with tools
         const agent = new ToolLoopAgent({
           model: anthropic('claude-3-7-sonnet-latest'),
           instructions: systemPrompt,
           tools: {
-            ...(tableId && {
+            ...(availableTableIds.length > 0 && {
               createColumn: createColumnTool,
               updateColumn: updateColumnTool,
               // addRowsWithValues: addRowsWithValuesTool,
@@ -216,7 +274,7 @@ You have access to tools to collaborate with the user on modifying the table.
           agent,
           messages: uiMessages,
           onFinish: async (args) => {
-            const { messages: newMessages, isAborted, isContinuation } = args
+            const { messages: newMessages } = args
             // Wrap in transaction, use bulk insert
             try {
               await db.transaction(async (trx) => {
