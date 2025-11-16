@@ -20,10 +20,10 @@ function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  // Redirect to /app if already logged in
+  // Redirect to home if already logged in
   useEffect(() => {
     if (session?.user) {
-      navigate({ to: '/app', replace: true })
+      navigate({ to: '/', replace: true })
     }
   }, [session, navigate])
 

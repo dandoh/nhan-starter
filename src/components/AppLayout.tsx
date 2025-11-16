@@ -1,5 +1,5 @@
-import { Link, useLocation } from '@tanstack/react-router'
-import { Home, Settings, Moon, Sun, Scan } from 'lucide-react'
+import { Link, useLocation, useRouter } from '@tanstack/react-router'
+import { Home, Settings, Moon, Sun, Scan, LogOut } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -21,7 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useSession } from '@/auth/auth-client'
+import { useSession, signOut } from '@/auth/auth-client'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -41,6 +41,7 @@ function SettingsMenu() {
   const [isDark, setIsDark] = useState(true)
   const [mounted, setMounted] = useState(false)
   const [reactScanShowToolbar, setReactScanShowToolbar] = useState(true) // Default to showing toolbar
+  const router = useRouter()
 
   useEffect(() => {
     setMounted(true)
@@ -143,6 +144,25 @@ function SettingsMenu() {
           >
             <Settings className="mr-2 h-4 w-4" />
             <span>Go to Settings</span>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onSelect={async () => {
+              try {
+                await signOut()
+                toast.success('Logged out successfully')
+                router.invalidate()
+                // Navigate to login page
+                router.navigate({ to: '/login' })
+              } catch (error) {
+                toast.error('Failed to log out')
+                console.error('Logout error:', error)
+              }
+            }}
+            className="text-destructive focus:text-destructive"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            <span>Log Out</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

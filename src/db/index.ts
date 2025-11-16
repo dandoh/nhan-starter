@@ -1,24 +1,23 @@
-import { drizzle } from 'drizzle-orm/postgres-js'
-import postgres from 'postgres'
+import { drizzle } from 'drizzle-orm/mysql2'
+import mysql from 'mysql2/promise'
 import * as schema from './schema'
 
-// Build database URL from environment variables (matching docker-compose)
-function getDatabaseUrl() {
-  const user = process.env.POSTGRES_USER || 'postgres'
-  const password = process.env.POSTGRES_PASSWORD || 'postgres'
-  const host = process.env.POSTGRES_HOST || 'localhost'
-  const port = process.env.POSTGRES_PORT || '5432'
-  const database = process.env.POSTGRES_DB || 'nhan_starter_dev'
-
-  const result = `postgresql://${user}:${password}@${host}:${port}/${database}`
-  return result
+// Build database connection config from environment variables (matching docker-compose)
+function getDatabaseConfig() {
+  return {
+    host: process.env.MYSQL_HOST || 'localhost',
+    port: Number(process.env.MYSQL_PORT) || 3306,
+    user: process.env.MYSQL_USER || 'nhan_user',
+    password: process.env.MYSQL_PASSWORD || 'nhan_password',
+    database: process.env.MYSQL_DATABASE || 'nhan_starter_dev',
+  }
 }
 
-// Create postgres client (server-side only)
-export const client = postgres(getDatabaseUrl())
+// Create mysql client (server-side only)
+export const client = mysql.createPool(getDatabaseConfig())
 
 // Create drizzle instance (server-side only)
-export const db = drizzle(client, { schema })
+export const db = drizzle(client, { schema, mode: 'default' })
 
 // Export schema for convenience
 export { schema }

@@ -5,7 +5,7 @@ import {
   AppPageContentWrapper,
 } from '@/components/AppPageWrapper'
 
-export const Route = createFileRoute('/')({
+export const Route = createFileRoute('/_authed/')({
   component: HomePage,
 })
 
@@ -28,3 +28,4 @@ function HomePage() {
     </AppPageWrapper>
   )
 }
+
