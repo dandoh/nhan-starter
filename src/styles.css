@@ -65,9 +65,9 @@
   --diff-deletion: oklch(0.9650 0.0450 27);
   --diff-deletion-foreground: oklch(0.2050 0.1250 27);
   --diff-deletion-border: oklch(0.5770 0.2050 27);
-  --diff-update: oklch(0.9550 0.0450 245);
-  --diff-update-foreground: oklch(0.2050 0.1250 245);
-  --diff-update-border: oklch(0.5770 0.1650 245);
+  --diff-update: oklch(0.99 0 70);
+  --diff-update-foreground: oklch(0.3050 0.1250 70);
+  --diff-update-border: oklch(0.6270 0.1650 70);
   --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
@@ -129,9 +129,9 @@
   --diff-deletion: oklch(0.2450 0.0650 27);
   --diff-deletion-foreground: oklch(0.8270 0.1250 27);
   --diff-deletion-border: oklch(0.6570 0.1850 27);
-  --diff-update: oklch(0.2250 0.0650 245);
-  --diff-update-foreground: oklch(0.7970 0.1350 245);
-  --diff-update-border: oklch(0.6370 0.1650 245);
+  --diff-update: oklch(0.2650 0.0750 70);
+  --diff-update-foreground: oklch(0.8270 0.1350 70);
+  --diff-update-border: oklch(0.6570 0.1650 70);
   --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
