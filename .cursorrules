@@ -66,3 +66,7 @@ This ensures consistent theming and makes dark mode work automatically.
 ### Database
 
 Never run generate migrations or apply migrations, I'll run it manually myself
+
+### Documentation
+
+NEVER create documentation files (*.md files) unless explicitly asked by the user. This includes README files, setup guides, API documentation, or any other markdown files.
