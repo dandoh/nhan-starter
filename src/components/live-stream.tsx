@@ -241,24 +241,24 @@ export function LiveStream() {
               if (msg.type === 'parsed' && msg.value?.payload?.op) {
                 const op = msg.value.payload.op
                 let opLabel = 'Unknown'
-                let opVariant: 'default' | 'destructive' | 'outline' | 'secondary' = 'secondary'
+                let opClasses = 'bg-secondary text-secondary-foreground'
                 
                 if (op === 'c') {
                   opLabel = 'CREATE'
-                  opVariant = 'default'
+                  opClasses = 'bg-diff-addition text-diff-addition-foreground border-diff-addition-border'
                 } else if (op === 'u') {
                   opLabel = 'UPDATE'
-                  opVariant = 'secondary'
+                  opClasses = 'bg-diff-update text-diff-update-foreground border-diff-update-border'
                 } else if (op === 'd') {
                   opLabel = 'DELETE'
-                  opVariant = 'destructive'
+                  opClasses = 'bg-diff-deletion text-diff-deletion-foreground border-diff-deletion-border'
                 } else if (op === 'r') {
                   opLabel = 'READ'
-                  opVariant = 'outline'
+                  opClasses = 'bg-muted text-muted-foreground'
                 }
                 
                 opBadge = (
-                  <Badge variant={opVariant} className="text-xs">
+                  <Badge variant="outline" className={`text-xs border ${opClasses}`}>
                     {opLabel}
                   </Badge>
                 )

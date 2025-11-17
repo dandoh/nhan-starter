@@ -483,7 +483,7 @@ export async function createCDCConsumer(
             parseError: `Validation failed: ${validationResult.error?.issues.map((issue) => issue.message).join(', ')} ${keyValidationResult.error?.issues.map((issue) => issue.message).join(', ')}`,
           }
 
-          await onMessage(event)
+          // await onMessage(event)
         }
       } catch (error) {
         // Parse error - return unknown event
@@ -495,7 +495,7 @@ export async function createCDCConsumer(
           parseError: error instanceof Error ? error.message : String(error),
         }
 
-        await onMessage(event)
+        // await onMessage(event)
       }
     },
   })
