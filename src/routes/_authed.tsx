@@ -3,6 +3,7 @@ import { createIsomorphicFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import { auth } from '@/auth/auth-config'
 import { authClient } from '@/auth/auth-client'
+import { LeftSidebarLayout } from '@/components/app-layout'
 
 type SessionData = NonNullable<Awaited<ReturnType<typeof auth.api.getSession>>>
 
@@ -49,7 +50,11 @@ export const Route = createFileRoute('/_authed')({
 })
 
 function AuthedLayout() {
-  return <Outlet />
+  return (
+    <LeftSidebarLayout>
+      <Outlet />
+    </LeftSidebarLayout>
+  )
 }
 
 export function useAuthContext() {

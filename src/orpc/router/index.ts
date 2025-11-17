@@ -1,8 +1,12 @@
 // Example router - replace with your own routes
-import { os, eventIterator, withEventMeta } from '@orpc/server'
+import { os, withEventMeta } from '@orpc/server'
 import * as z from 'zod'
 import { authMiddleware } from '../middleware/auth'
 import { createCDCConsumer, type CDCEvent } from '@/lib/kafka-cdc-consumer'
+import { db } from '@/db'
+import { todos } from '@/db/schema'
+import { eq, and, desc } from 'drizzle-orm'
+import { nanoid } from 'nanoid'
 
 // Example: Simple hello world route
 export const hello = os
@@ -30,11 +34,11 @@ export const stream = os
         process.env.KAFKA_BROKER || 'localhost:9092'
 
       console.log(
-        `Starting CDC stream for user: ${context.user.email} (broker: ${broker})`
+        `Starting CDC stream (broker: ${broker})`
       )
 
       // Create unique consumer group per user session
-      const groupId = `cdc-stream-${context.user.id}-${Date.now()}`
+      const groupId = `cdc-stream-${Date.now()}`
 
       // Queue for buffering messages between Kafka callback and generator
       const messageQueue: CDCEvent[] = []
@@ -118,7 +122,76 @@ export const stream = os
     }
   })
 
+// Todo CRUD operations
+export const getTodos = os
+  .use(authMiddleware)
+  .handler(async ({ context }) => {
+    const userTodos = await db
+      .select()
+      .from(todos)
+      .where(eq(todos.userId, context.user.id))
+      .orderBy(desc(todos.createdAt))
+    
+    return userTodos
+  })
+
+export const createTodo = os
+  .use(authMiddleware)
+  .input(
+    z.object({
+      title: z.string().min(1, 'Title is required'),
+      description: z.string().optional(),
+    })
+  )
+  .handler(async ({ input, context }) => {
+    await db.insert(todos).values({
+      id: nanoid(),
+      title: input.title,
+      description: input.description,
+      userId: context.user.id,
+      completed: false,
+    })
+    
+    return { success: true }
+  })
+
+export const updateTodo = os
+  .use(authMiddleware)
+  .input(
+    z.object({
+      id: z.string(),
+      title: z.string().min(1, 'Title is required').optional(),
+      description: z.string().optional(),
+      completed: z.boolean().optional(),
+    })
+  )
+  .handler(async ({ input, context }) => {
+    const { id, ...updates } = input
+    
+    await db
+      .update(todos)
+      .set(updates)
+      .where(and(eq(todos.id, id), eq(todos.userId, context.user.id)))
+    
+    return { success: true }
+  })
+
+export const deleteTodo = os
+  .use(authMiddleware)
+  .input(z.object({ id: z.string() }))
+  .handler(async ({ input, context }) => {
+    await db
+      .delete(todos)
+      .where(and(eq(todos.id, input.id), eq(todos.userId, context.user.id)))
+    
+    return { success: true }
+  })
+
 export default {
   hello,
   stream,
+  getTodos,
+  createTodo,
+  updateTodo,
+  deleteTodo,
 }

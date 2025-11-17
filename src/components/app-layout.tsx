@@ -1,5 +1,5 @@
 import { Link, useLocation, useRouter } from '@tanstack/react-router'
-import { Home, Settings, Moon, Sun, Scan, LogOut, Activity } from 'lucide-react'
+import { Home, Settings, Moon, Sun, Scan, LogOut, Activity, CheckSquare } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -38,6 +38,11 @@ const mainNavigation = [
     title: 'Home',
     icon: Home,
     url: '/',
+  },
+  {
+    title: 'Todos',
+    icon: CheckSquare,
+    url: '/todos',
   },
 ]
 
@@ -217,7 +222,8 @@ function SidebarHeaderContent() {
   )
 }
 
-export function AppLayout({ children }: { children: React.ReactNode }) {
+// Left sidebar layout for authenticated routes only
+export function LeftSidebarLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation()
 
   return (
@@ -253,35 +259,42 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset className="flex flex-1 flex-col overflow-hidden">
-        <ResizablePanelGroup direction="horizontal" className="h-full">
-          {/* Main Content Panel */}
-          <ResizablePanel defaultSize={75} minSize={30}>
-            <div className="flex h-full flex-col overflow-hidden">
-              {children}
-            </div>
-          </ResizablePanel>
-
-          <ResizableHandle withHandle />
-
-          {/* Right Sidebar Panel */}
-          <ResizablePanel
-            defaultSize={25}
-            minSize={15}
-            maxSize={50}
-            className="h-screen"
-          >
-            <div className="flex h-full flex-col">
-              <div className="flex h-14 shrink-0 items-center gap-2 border-b border-border bg-sidebar px-4">
-                <Activity className="h-4 w-4 text-primary" />
-                <h2 className="font-semibold">Live Stream</h2>
-              </div>
-              <div className="flex-1 min-h-0 bg-card">
-                <LiveStream />
-              </div>
-            </div>
-          </ResizablePanel>
-        </ResizablePanelGroup>
+        {children}
       </SidebarInset>
     </SidebarProvider>
+  )
+}
+
+// Right sidebar layout with stream - for all routes
+export function RightSidebarLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <ResizablePanelGroup direction="horizontal" className="h-screen">
+      {/* Main Content Panel */}
+      <ResizablePanel defaultSize={75} minSize={30}>
+        <div className="flex h-full flex-col overflow-hidden">
+          {children}
+        </div>
+      </ResizablePanel>
+
+      <ResizableHandle withHandle />
+
+      {/* Right Sidebar Panel */}
+      <ResizablePanel
+        defaultSize={25}
+        minSize={15}
+        maxSize={50}
+        className="h-screen"
+      >
+        <div className="flex h-full flex-col">
+          <div className="flex h-14 shrink-0 items-center gap-2 border-b border-border bg-sidebar px-4">
+            <Activity className="h-4 w-4 text-primary" />
+            <h2 className="font-semibold">Live Stream</h2>
+          </div>
+          <div className="flex-1 min-h-0 bg-card">
+            <LiveStream />
+          </div>
+        </div>
+      </ResizablePanel>
+    </ResizablePanelGroup>
   )
 }

@@ -166,6 +166,12 @@ export const DebeziumValuePayloadSchema = z.object({
   before: z.record(z.string(), z.any()).nullable(),
   after: z.record(z.string(), z.any()).nullable(),
   source: DebeziumSourceSchema,
+  // Operation type:
+  // 'c' = create (insert) - new row added
+  // 'u' = update - existing row modified
+  // 'd' = delete - row removed
+  // 'r' = read - initial snapshot read
+  // 't' = truncate - table truncated
   op: z.enum(['c', 'u', 'd', 'r', 't']),
   ts_ms: z.number(),
   transaction: DebeziumTransactionSchema,

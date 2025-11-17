@@ -1,5 +1,6 @@
 // Export auth schema
 import { users, sessions, accounts, verifications } from '../auth/auth-schema'
+import { mysqlTable, varchar, timestamp, boolean, text } from 'drizzle-orm/mysql-core'
 
 export { users, sessions, accounts, verifications }
 
@@ -14,3 +15,22 @@ export type NewAccount = typeof accounts.$inferInsert
 
 export type Verification = typeof verifications.$inferSelect
 export type NewVerification = typeof verifications.$inferInsert
+
+// Todos table
+export const todos = mysqlTable('todos', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  title: varchar('title', { length: 500 }).notNull(),
+  description: text('description'),
+  completed: boolean('completed').default(false).notNull(),
+  userId: varchar('user_id', { length: 255 })
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+})
+
+export type Todo = typeof todos.$inferSelect
+export type NewTodo = typeof todos.$inferInsert
