@@ -28,8 +28,8 @@ const connectorConfig = {
     'database.server.id': '184054',
     'topic.prefix': 'dbserver1',
     'database.include.list': MYSQL_DATABASE,
-    // Kafka is also a Docker service name
-    'schema.history.internal.kafka.bootstrap.servers': 'kafka:9092',
+    // Kafka is also a Docker service name - use internal listener
+    'schema.history.internal.kafka.bootstrap.servers': 'kafka:29092',
     'schema.history.internal.kafka.topic': `schemahistory.${MYSQL_DATABASE}`,
   },
 }

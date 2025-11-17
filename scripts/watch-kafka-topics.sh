@@ -29,7 +29,7 @@ docker run -it --rm \
   --name watcher \
   --network nhan-starter_default \
   --link kafka:kafka \
-  -e KAFKA_BROKER=kafka:9092 \
+  -e KAFKA_BROKER=kafka:29092 \
   quay.io/debezium/kafka:3.3 \
   watch-topic -a -k ${TOPIC_PREFIX}
 

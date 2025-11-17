@@ -2,6 +2,7 @@
 import { os, eventIterator, withEventMeta } from '@orpc/server'
 import * as z from 'zod'
 import { authMiddleware } from '../middleware/auth'
+import { createCDCConsumer, type CDCEvent } from '@/lib/kafka-cdc-consumer'
 
 // Example: Simple hello world route
 export const hello = os
@@ -14,61 +15,106 @@ export const hello = os
     }
   })
 
-// SSE Stream endpoint - streams demo data to authenticated users
+// SSE Stream endpoint - streams CDC events from Kafka
 export const stream = os
   .use(authMiddleware)
-  .output(
-    eventIterator(
-      z.object({
-        id: z.string(),
-        type: z.enum(['info', 'success', 'warning', 'error']),
-        message: z.string(),
-        timestamp: z.number(),
-        value: z.number(),
-      })
-    )
-  )
+  .output(eventIterator(z.any())) // Raw JSON output
   .handler(async function* ({ context }) {
-    const userName = context.user.name || 'User'
+    let eventCount = 0
+    let consumer: Awaited<ReturnType<typeof createCDCConsumer>> | null = null
 
     try {
-      let eventCount = 0
-      
-      // Just stream continuously - oRPC will handle connection cleanup
+      // Determine broker based on environment
+      // When running in Docker, use service name; otherwise localhost
+      const broker =
+        process.env.KAFKA_BROKER || 'localhost:9092'
+
+      console.log(
+        `Starting CDC stream for user: ${context.user.email} (broker: ${broker})`
+      )
+
+      // Create unique consumer group per user session
+      const groupId = `cdc-stream-${context.user.id}-${Date.now()}`
+
+      // Queue for buffering messages between Kafka callback and generator
+      const messageQueue: CDCEvent[] = []
+      let messageResolver: ((value: CDCEvent | null) => void) | null = null
+      let streamError: Error | null = null
+
+      // Create consumer with callback
+      consumer = await createCDCConsumer(
+        async (event) => {
+          // If there's a waiting resolver, resolve it immediately
+          if (messageResolver) {
+            messageResolver(event)
+            messageResolver = null
+          } else {
+            // Otherwise, queue the message
+            messageQueue.push(event)
+          }
+        },
+        {
+          broker,
+          groupId,
+          fromBeginning: true,
+        }
+      )
+
+      // Yield messages as they arrive
       while (true) {
-        eventCount++
-
-        const types = ['info', 'success', 'warning', 'error'] as const
-        const messages = [
-          `${userName} processed a transaction`,
-          `${userName} logged in`,
-          `${userName} uploaded a file`,
-          'Database query executed',
-          'Cache updated',
-          `Email sent to ${userName}`,
-          `API request from ${userName}`,
-          'Background job completed',
-        ]
-
-        const data = {
-          id: Math.random().toString(36).substring(7),
-          type: types[Math.floor(Math.random() * types.length)],
-          message: messages[Math.floor(Math.random() * messages.length)],
-          timestamp: Date.now(),
-          value: Math.floor(Math.random() * 1000),
+        // Check for errors
+        if (streamError) {
+          throw streamError
         }
 
-        // Yield event with metadata for resume support
-        yield withEventMeta(data, {
-          id: `event-${eventCount}`,
-          retry: 5000,
-        })
+        // Yield queued messages first
+        if (messageQueue.length > 0) {
+          const event = messageQueue.shift()!
+          eventCount++
 
-        // Wait 2 seconds before next event
-        await new Promise((resolve) => setTimeout(resolve, 2000))
+          // Yield event with metadata for resume support
+          yield withEventMeta(event, {
+            id: `cdc-event-${eventCount}-${event.offset}`,
+          })
+          continue
+        }
+
+        // Wait for next message with a timeout to allow generator to be cancelled
+        const message = await Promise.race<CDCEvent | null>([
+          new Promise<CDCEvent | null>((resolve) => {
+            messageResolver = resolve
+          }),
+          new Promise<null>((resolve) => {
+            setTimeout(() => {
+              if (messageResolver) {
+                messageResolver(null)
+                messageResolver = null
+              }
+              resolve(null)
+            }, 100)
+          }),
+        ])
+
+        if (message) {
+          eventCount++
+
+          // Yield event with metadata for resume support
+          yield withEventMeta(message, {
+            id: `cdc-event-${eventCount}-${message.offset}`,
+          })
+        }
       }
+    } catch (error) {
+      console.error('CDC stream error for user:', context.user.email, error)
+      throw error
     } finally {
-      console.log('Stream closed for user:', context.user.email)
+      console.log(
+        `CDC stream closed for user: ${context.user.email} (events: ${eventCount})`
+      )
+      // Clean up consumer
+      if (consumer) {
+        await consumer.disconnect()
+      }
     }
   })
 

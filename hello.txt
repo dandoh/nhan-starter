@@ -1,0 +1,108 @@
+🚀 Starting Kafka CDC Consumer Test
+📡 Broker: localhost:9092
+📋 Pattern: dbserver1.*
+⏸️  Press Ctrl+C to stop
+
+{"level":"INFO","timestamp":"2025-11-17T19:37:28.714Z","logger":"kafkajs","message":"[Consumer] Starting","groupId":"test-consumer-1763408248694"}
+{"level":"INFO","timestamp":"2025-11-17T19:37:31.754Z","logger":"kafkajs","message":"[ConsumerGroup] Consumer has joined the group","groupId":"test-consumer-1763408248694","memberId":"cdc-client-7190fd45-9131-4539-b613-7480980675fd","leaderId":"cdc-client-7190fd45-9131-4539-b613-7480980675fd","isLeader":true,"memberAssignment":{"dbserver1.nhan_starter_dev.accounts":[0],"dbserver1.nhan_starter_dev.users":[0],"dbserver1.nhan_starter_dev.sessions":[0]},"groupProtocol":"RoundRobinAssigner","duration":3039}
+✅ Connected to Kafka
+⏳ Waiting for CDC events...
+
+
+📨 Event #1
+────────────────────────────────────────────────────────────
+Topic:     dbserver1.nhan_starter_dev.accounts
+Partition: 0
+Offset:    0
+Timestamp: 1763393903839
+
+🔑 Key:
+  Schema:  dbserver1.nhan_starter_dev.accounts.Key
+  Payload: {
+  "id": "4710fbc3-5ed3-42b9-8a60-2a84089a155c"
+}
+
+📦 Value: ❌ VALIDATION FAILED
+  Raw:       {"schema":{"type":"struct","fields":[{"type":"struct","fields":[{"type":"string","optional":false,"field":"id"},{"type":"string","optional":false,"field":"account_id"},{"type":"string","optional":fals...
+
+Headers:   {
+  "__debezium.context.connectorLogicalName": "dbserver1",
+  "__debezium.context.taskId": "0",
+  "__debezium.context.connectorName": "mysql"
+}
+────────────────────────────────────────────────────────────
+
+📨 Event #2
+────────────────────────────────────────────────────────────
+Topic:     dbserver1.nhan_starter_dev.users
+Partition: 0
+Offset:    0
+Timestamp: 1763393904077
+
+🔑 Key:
+  Schema:  dbserver1.nhan_starter_dev.users.Key
+  Payload: {
+  "id": "0996be93-3962-49fc-b364-7d87f0242456"
+}
+
+📦 Value: ❌ VALIDATION FAILED
+  Raw:       {"schema":{"type":"struct","fields":[{"type":"struct","fields":[{"type":"string","optional":false,"field":"id"},{"type":"string","optional":false,"field":"name"},{"type":"string","optional":false,"fie...
+
+Headers:   {
+  "__debezium.context.connectorLogicalName": "dbserver1",
+  "__debezium.context.taskId": "0",
+  "__debezium.context.connectorName": "mysql"
+}
+────────────────────────────────────────────────────────────
+
+📨 Event #3
+────────────────────────────────────────────────────────────
+Topic:     dbserver1.nhan_starter_dev.users
+Partition: 0
+Offset:    1
+Timestamp: 1763394152709
+
+🔑 Key:
+  Schema:  dbserver1.nhan_starter_dev.users.Key
+  Payload: {
+  "id": "0996be93-3962-49fc-b364-7d87f0242456"
+}
+
+📦 Value: ❌ VALIDATION FAILED
+  Raw:       {"schema":{"type":"struct","fields":[{"type":"struct","fields":[{"type":"string","optional":false,"field":"id"},{"type":"string","optional":false,"field":"name"},{"type":"string","optional":false,"fie...
+
+Headers:   {
+  "__debezium.context.connectorLogicalName": "dbserver1",
+  "__debezium.context.taskId": "0",
+  "__debezium.context.connectorName": "mysql"
+}
+────────────────────────────────────────────────────────────
+
+📨 Event #4
+────────────────────────────────────────────────────────────
+Topic:     dbserver1.nhan_starter_dev.sessions
+Partition: 0
+Offset:    0
+Timestamp: 1763393903954
+
+🔑 Key:
+  Schema:  dbserver1.nhan_starter_dev.sessions.Key
+  Payload: {
+  "id": "ef916dc4-85b5-480a-a85c-4a61576950c3"
+}
+
+📦 Value: ❌ VALIDATION FAILED
+  Raw:       {"schema":{"type":"struct","fields":[{"type":"struct","fields":[{"type":"string","optional":false,"field":"id"},{"type":"string","optional":false,"name":"io.debezium.time.ZonedTimestamp","version":1,"...
+
+Headers:   {
+  "__debezium.context.connectorLogicalName": "dbserver1",
+  "__debezium.context.taskId": "0",
+  "__debezium.context.connectorName": "mysql"
+}
+────────────────────────────────────────────────────────────
+
+
+🛑 Stopping consumer...
+
+
+🛑 Stopping consumer...

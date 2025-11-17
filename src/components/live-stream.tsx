@@ -1,8 +1,17 @@
+import { useState } from 'react'
 import { useStream } from '@/hooks/use-stream'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
-import { Trash2, Wifi, WifiOff, Play, Square } from 'lucide-react'
+import {
+  Trash2,
+  Wifi,
+  WifiOff,
+  Play,
+  Square,
+  ChevronDown,
+  ChevronRight,
+} from 'lucide-react'
 import { formatDistance } from 'date-fns'
 
 export function LiveStream() {
@@ -15,6 +24,39 @@ export function LiveStream() {
     startStream,
     clearMessages,
   } = useStream()
+
+  const [expandedMessages, setExpandedMessages] = useState<Set<string>>(
+    new Set(),
+  )
+
+  const toggleExpand = (messageId: string) => {
+    setExpandedMessages((prev) => {
+      const next = new Set(prev)
+      if (next.has(messageId)) {
+        next.delete(messageId)
+      } else {
+        next.add(messageId)
+      }
+      return next
+    })
+  }
+
+  const formatJson = (obj: any): string => {
+    try {
+      return JSON.stringify(obj, null, 2)
+    } catch {
+      return String(obj)
+    }
+  }
+
+  const getPreview = (msg: any): string => {
+    try {
+      const json = JSON.stringify(msg)
+      return json.length > 100 ? json.substring(0, 100) + '...' : json
+    } catch {
+      return String(msg)
+    }
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -93,48 +135,62 @@ export function LiveStream() {
             <div className="flex h-32 items-center justify-center text-center">
               <p className="text-sm text-muted-foreground">
                 {isConnected
-                  ? 'Waiting for data...'
-                  : 'Connect to start receiving data'}
+                  ? 'Waiting for CDC events...'
+                  : 'Connect to start receiving CDC events'}
               </p>
             </div>
           ) : (
-            messages.map((msg) => (
-              <div
-                key={msg.id}
-                className="rounded-lg border border-border bg-card p-3 transition-colors hover:bg-accent"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant={
-                          msg.type === 'success'
-                            ? 'default'
-                            : msg.type === 'error'
-                              ? 'destructive'
-                              : msg.type === 'warning'
-                                ? 'default'
-                                : 'secondary'
-                        }
-                        className="text-xs"
-                      >
-                        {msg.type}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {formatDistance(msg.timestamp, Date.now(), {
-                          addSuffix: true,
-                        })}
-                      </span>
+            messages.map((msg) => {
+              const messageId = `${msg.topic}-${msg.offset}`
+              const isExpanded = expandedMessages.has(messageId)
+              const preview = getPreview(msg)
+
+              return (
+                <div
+                  key={messageId}
+                  className="rounded-lg border border-border bg-card transition-colors hover:bg-accent"
+                >
+                  <button
+                    onClick={() => toggleExpand(messageId)}
+                    className="w-full p-3 text-left"
+                  >
+                    <div className="flex items-start gap-2">
+                      {isExpanded ? (
+                        <ChevronDown className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant="secondary" className="text-xs">
+                            {msg.topic}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {formatDistance(
+                              new Date(Number(msg.timestamp)),
+                              Date.now(),
+                              {
+                                addSuffix: true,
+                              },
+                            )}
+                          </span>
+                        </div>
+                        <pre className="text-xs text-muted-foreground font-mono overflow-hidden text-ellipsis whitespace-nowrap">
+                          {preview}
+                        </pre>
+                      </div>
                     </div>
-                    <p className="mt-1 text-sm font-medium">{msg.message}</p>
-                    <div className="mt-1 flex items-center gap-4 text-xs text-muted-foreground">
-                      <span>Value: {msg.value}</span>
-                      <span>ID: {msg.id}</span>
+                  </button>
+                  {isExpanded && (
+                    <div className="border-t border-border p-3 bg-muted/30">
+                      <pre className="text-xs font-mono overflow-auto max-h-96">
+                        {formatJson(msg)}
+                      </pre>
                     </div>
-                  </div>
+                  )}
                 </div>
-              </div>
-            ))
+              )
+            })
           )}
         </div>
       </ScrollArea>
@@ -149,8 +205,8 @@ export function LiveStream() {
             </span>
           </div>
           <div className="mt-1 flex items-center justify-between">
-            <span>Updates:</span>
-            <span>Every 2s</span>
+            <span>Source:</span>
+            <span>Kafka CDC</span>
           </div>
         </div>
       </div>

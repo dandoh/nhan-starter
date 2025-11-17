@@ -1,17 +1,10 @@
 import { useEffect, useState, useRef } from 'react'
 import { orpcClient } from '@/orpc/client'
-
-export interface StreamData {
-  id: string
-  type: 'info' | 'success' | 'warning' | 'error'
-  message: string
-  timestamp: number
-  value: number
-}
+import type { CDCEvent } from '@/lib/kafka-cdc-consumer'
 
 export function useStream() {
   const [isConnected, setIsConnected] = useState(false)
-  const [messages, setMessages] = useState<StreamData[]>([])
+  const [messages, setMessages] = useState<CDCEvent[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isStreaming, setIsStreaming] = useState(true)
   const abortControllerRef = useRef<AbortController | null>(null)
