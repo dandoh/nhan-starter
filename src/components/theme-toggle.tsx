@@ -1,9 +1,13 @@
-"use client"
+'use client'
 
 import { useEffect, useState } from 'react'
 import { Moon, Sun } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 export function ThemeToggle() {
   const [isDark, setIsDark] = useState(true)
@@ -14,24 +18,22 @@ export function ThemeToggle() {
     // Check initial theme from localStorage or HTML class
     const theme = localStorage.getItem('theme')
     const html = document.documentElement
-    const hasDark = theme 
-      ? theme === 'dark'
-      : html.classList.contains('dark')
+    const hasDark = theme ? theme === 'dark' : html.classList.contains('dark')
     setIsDark(hasDark)
   }, [])
 
   const toggleTheme = () => {
     const html = document.documentElement
     const newIsDark = !isDark
-    
+
     if (newIsDark) {
       html.classList.add('dark')
     } else {
       html.classList.remove('dark')
     }
-    
+
     setIsDark(newIsDark)
-    
+
     // Persist to localStorage
     localStorage.setItem('theme', newIsDark ? 'dark' : 'light')
   }
@@ -54,11 +56,7 @@ export function ThemeToggle() {
           onClick={toggleTheme}
           aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
         >
-          {isDark ? (
-            <Sun className="h-4 w-4" />
-          ) : (
-            <Moon className="h-4 w-4" />
-          )}
+          {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
       </TooltipTrigger>
       <TooltipContent>
@@ -67,4 +65,3 @@ export function ThemeToggle() {
     </Tooltip>
   )
 }
-

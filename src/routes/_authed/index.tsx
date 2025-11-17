@@ -3,7 +3,7 @@ import {
   TopNav,
   AppPageWrapper,
   AppPageContentWrapper,
-} from '@/components/AppPageWrapper'
+} from '@/components/app-page-wrapper'
 
 export const Route = createFileRoute('/_authed/')({
   component: HomePage,

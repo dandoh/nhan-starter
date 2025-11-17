@@ -6,7 +6,7 @@ import {
 import { useEffect } from 'react'
 import { scan } from 'react-scan'
 
-import { AppLayout } from '../components/AppLayout'
+import { AppLayout } from '../components/app-layout'
 
 import appCss from '../styles.css?url'
 
