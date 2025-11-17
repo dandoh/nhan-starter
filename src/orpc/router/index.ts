@@ -18,7 +18,7 @@ export const hello = os
 // SSE Stream endpoint - streams CDC events from Kafka
 export const stream = os
   .use(authMiddleware)
-  .output(eventIterator(z.any())) // Raw JSON output
+  // .output(eventIterator(z.any())) // Raw JSON output
   .handler(async function* ({ context }) {
     let eventCount = 0
     let consumer: Awaited<ReturnType<typeof createCDCConsumer>> | null = null

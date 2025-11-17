@@ -22,6 +22,7 @@ const connectorConfig = {
     'tasks.max': '1',
     // Use Docker service name, not localhost - Kafka Connect runs inside Docker
     'database.hostname': 'mysql',
+    // Use Docker port, not localhost port - Kafka Connect runs inside Docker
     'database.port': '3306',
     'database.user': MYSQL_USER,
     'database.password': MYSQL_PASSWORD,

@@ -8,6 +8,8 @@ export function useStream() {
   const [error, setError] = useState<string | null>(null)
   const [isStreaming, setIsStreaming] = useState(true)
   const abortControllerRef = useRef<AbortController | null>(null)
+  // Track seen messages to prevent duplicates across stream restarts
+  const seenMessageIds = useRef<Set<string>>(new Set())
 
   const stopStream = () => {
     if (abortControllerRef.current) {
@@ -43,6 +45,17 @@ export function useStream() {
         for await (const data of iterator) {
           if (!isActive) break
 
+          // Create unique message ID from topic + offset
+          const messageId = `${data.topic}-${data.offset}`
+          
+          // Skip if we've already seen this message
+          if (seenMessageIds.current.has(messageId)) {
+            continue
+          }
+          
+          // Mark as seen
+          seenMessageIds.current.add(messageId)
+
           setMessages((prev) => {
             const newMessages = [data, ...prev]
             // Keep only the last 50 messages
@@ -74,6 +87,7 @@ export function useStream() {
 
   const clearMessages = () => {
     setMessages([])
+    seenMessageIds.current.clear()
   }
 
   return {

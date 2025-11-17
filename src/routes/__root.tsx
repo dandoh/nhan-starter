@@ -42,10 +42,25 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  // Set initial theme from localStorage
+  useEffect(() => {
+    const theme = localStorage.getItem('theme')
+    const html = document.documentElement
+
+    if (theme === 'light') {
+      html.classList.remove('dark')
+    } else {
+      // Default to dark if no theme is set or if theme is 'dark'
+      html.classList.add('dark')
+    }
+  }, [])
+
   useEffect(() => {
     if (import.meta.env.DEV) {
       // Always initialize scan, but check localStorage for toolbar visibility
-      const reactScanShowToolbar = localStorage.getItem('react-scan-show-toolbar')
+      const reactScanShowToolbar = localStorage.getItem(
+        'react-scan-show-toolbar',
+      )
       // Default to showing toolbar if not set (backward compatibility)
       const showToolbar = reactScanShowToolbar !== 'false'
       scan({ showToolbar })
@@ -53,29 +68,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   }, [])
 
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <head>
         <HeadContent />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                const theme = localStorage.getItem('theme') || 'dark';
-                const html = document.documentElement;
-                if (theme === 'dark') {
-                  html.classList.add('dark');
-                } else {
-                  html.classList.remove('dark');
-                }
-              })();
-            `,
-          }}
-        />
       </head>
       <body>
-        <AppLayout>
-          {children}
-        </AppLayout>
+        <AppLayout>{children}</AppLayout>
         {/* <TanStackDevtools
           config={{
             position: 'bottom-right',
