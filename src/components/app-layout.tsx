@@ -1,5 +1,5 @@
 import { Link, useLocation, useRouter } from '@tanstack/react-router'
-import { Home, Settings, Moon, Sun, Scan, LogOut, Activity, CheckSquare } from 'lucide-react'
+import { Home, Settings, Moon, Sun, Scan, LogOut, Activity, CheckSquare, Receipt } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -43,6 +43,11 @@ const mainNavigation = [
     title: 'Todos',
     icon: CheckSquare,
     url: '/todos',
+  },
+  {
+    title: 'Expenses',
+    icon: Receipt,
+    url: '/expenses',
   },
 ]
 
@@ -210,7 +215,7 @@ function SidebarHeaderContent() {
                 <span className="truncate font-semibold">{displayName}</span>
                 {user?.email && user.email !== user?.name && (
                   <span className="truncate text-xs text-muted-foreground">
-                    {user.email}
+                    abc@gmail.com
                   </span>
                 )}
               </div>

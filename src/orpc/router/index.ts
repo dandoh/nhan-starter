@@ -4,7 +4,7 @@ import * as z from 'zod'
 import { authMiddleware } from '../middleware/auth'
 import { createCDCConsumer, type CDCEvent } from '@/lib/kafka-cdc-consumer'
 import { db } from '@/db'
-import { todos } from '@/db/schema'
+import { todos, expenses } from '@/db/schema'
 import { eq, and, desc } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 
@@ -21,7 +21,6 @@ export const hello = os
 
 // SSE Stream endpoint - streams CDC events from Kafka
 export const stream = os
-  .use(authMiddleware)
   // .output(eventIterator(z.any())) // Raw JSON output
   .handler(async function* ({ context }) {
     let eventCount = 0
@@ -60,7 +59,7 @@ export const stream = os
         {
           broker,
           groupId,
-          fromBeginning: true,
+          fromBeginning: false, // Only consume new messages, not historical ones
         }
       )
 
@@ -187,6 +186,86 @@ export const deleteTodo = os
     return { success: true }
   })
 
+// Expense CRUD operations
+export const getExpenses = os
+  .use(authMiddleware)
+  .handler(async ({ context }) => {
+    const userExpenses = await db
+      .select()
+      .from(expenses)
+      .where(eq(expenses.userId, context.user.id))
+      .orderBy(desc(expenses.date))
+    
+    return userExpenses
+  })
+
+export const createExpense = os
+  .use(authMiddleware)
+  .input(
+    z.object({
+      amount: z.number().positive('Amount must be greater than 0'),
+      description: z.string().min(1, 'Description is required'),
+      category: z.string().optional(),
+      date: z.string().datetime().or(z.date()),
+      notes: z.string().optional(),
+    })
+  )
+  .handler(async ({ input, context }) => {
+    await db.insert(expenses).values({
+      id: nanoid(),
+      amount: input.amount.toString(),
+      description: input.description,
+      category: input.category,
+      date: typeof input.date === 'string' ? new Date(input.date) : input.date,
+      notes: input.notes,
+      userId: context.user.id,
+    })
+    
+    return { success: true }
+  })
+
+export const updateExpense = os
+  .use(authMiddleware)
+  .input(
+    z.object({
+      id: z.string(),
+      amount: z.number().positive('Amount must be greater than 0').optional(),
+      description: z.string().min(1, 'Description is required').optional(),
+      category: z.string().optional(),
+      date: z.string().datetime().or(z.date()).optional(),
+      notes: z.string().optional(),
+    })
+  )
+  .handler(async ({ input, context }) => {
+    const { id, date, amount, ...updates } = input
+    
+    const updateData: any = { ...updates }
+    if (amount !== undefined) {
+      updateData.amount = amount.toString()
+    }
+    if (date !== undefined) {
+      updateData.date = typeof date === 'string' ? new Date(date) : date
+    }
+    
+    await db
+      .update(expenses)
+      .set(updateData)
+      .where(and(eq(expenses.id, id), eq(expenses.userId, context.user.id)))
+    
+    return { success: true }
+  })
+
+export const deleteExpense = os
+  .use(authMiddleware)
+  .input(z.object({ id: z.string() }))
+  .handler(async ({ input, context }) => {
+    await db
+      .delete(expenses)
+      .where(and(eq(expenses.id, input.id), eq(expenses.userId, context.user.id)))
+    
+    return { success: true }
+  })
+
 export default {
   hello,
   stream,
@@ -194,4 +273,8 @@ export default {
   createTodo,
   updateTodo,
   deleteTodo,
+  getExpenses,
+  createExpense,
+  updateExpense,
+  deleteExpense,
 }

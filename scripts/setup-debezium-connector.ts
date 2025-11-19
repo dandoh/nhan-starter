@@ -29,15 +29,58 @@ const connectorConfig = {
     'database.server.id': '184054',
     'topic.prefix': 'dbserver1',
     'database.include.list': MYSQL_DATABASE,
+    // Monitor all tables in the database (including newly created ones)
+    'table.include.list': `${MYSQL_DATABASE}.*`,
     // Kafka is also a Docker service name - use internal listener
     'schema.history.internal.kafka.bootstrap.servers': 'kafka:29092',
     'schema.history.internal.kafka.topic': `schemahistory.${MYSQL_DATABASE}`,
+    'include.schema.changes': 'true',
+    // Take a snapshot of new tables when they're first seen
+    // 'snapshot.mode': 'when_needed',
   },
+}
+
+async function deleteConnectorIfExists(connectorName: string) {
+  try {
+    console.log(`Checking if connector '${connectorName}' exists...`)
+    
+    const checkResponse = await fetch(`${KAFKA_CONNECT_URL}/connectors/${connectorName}`)
+    
+    if (checkResponse.ok) {
+      console.log(`Connector '${connectorName}' exists. Deleting...`)
+      
+      const deleteResponse = await fetch(`${KAFKA_CONNECT_URL}/connectors/${connectorName}`, {
+        method: 'DELETE',
+      })
+      
+      if (deleteResponse.status === 204 || deleteResponse.ok) {
+        console.log(`✅ Connector '${connectorName}' deleted successfully!`)
+      } else {
+        const errorData = await deleteResponse.text()
+        console.error(`❌ Failed to delete connector: ${deleteResponse.status} ${deleteResponse.statusText}`)
+        console.error(errorData)
+        process.exit(1)
+      }
+    } else if (checkResponse.status === 404) {
+      console.log(`Connector '${connectorName}' does not exist. Skipping deletion.`)
+    } else {
+      console.error(`❌ Error checking connector: ${checkResponse.status} ${checkResponse.statusText}`)
+      const errorData = await checkResponse.text()
+      console.error(errorData)
+      process.exit(1)
+    }
+  } catch (error) {
+    console.error('❌ Error checking/deleting connector:', error)
+    process.exit(1)
+  }
 }
 
 async function setupConnector() {
   try {
-    console.log('Setting up Debezium connector...')
+    // Delete existing connector if it exists
+    await deleteConnectorIfExists(connectorConfig.name)
+    
+    console.log('\nSetting up Debezium connector...')
     console.log(`Connector config:`, JSON.stringify(connectorConfig, null, 2))
 
     const response = await fetch(`${KAFKA_CONNECT_URL}/connectors/`, {

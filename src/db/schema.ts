@@ -1,6 +1,6 @@
 // Export auth schema
 import { users, sessions, accounts, verifications } from '../auth/auth-schema'
-import { mysqlTable, varchar, timestamp, boolean, text } from 'drizzle-orm/mysql-core'
+import { mysqlTable, varchar, timestamp, boolean, text, decimal } from 'drizzle-orm/mysql-core'
 
 export { users, sessions, accounts, verifications }
 
@@ -34,3 +34,24 @@ export const todos = mysqlTable('todos', {
 
 export type Todo = typeof todos.$inferSelect
 export type NewTodo = typeof todos.$inferInsert
+
+// Expenses table
+export const expenses = mysqlTable('expenses', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
+  description: varchar('description', { length: 500 }).notNull(),
+  category: varchar('category', { length: 255 }),
+  date: timestamp('date').notNull(),
+  notes: text('notes'),
+  userId: varchar('user_id', { length: 255 })
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+})
+
+export type Expense = typeof expenses.$inferSelect
+export type NewExpense = typeof expenses.$inferInsert

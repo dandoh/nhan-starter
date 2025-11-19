@@ -412,7 +412,8 @@ export async function createCDCConsumer(
     broker = 'localhost:9092',
     groupId = 'cdc-consumer',
     fromBeginning = false,
-    topicPattern = /^dbserver1\..*/,
+    // Match both schema changes (dbserver1) and table changes (dbserver1.database.table)
+    topicPattern = /^dbserver1($|\..*)/,
   } = options
 
   const kafka = new Kafka({
@@ -420,7 +421,9 @@ export async function createCDCConsumer(
     brokers: [broker],
   })
 
-  const consumer: Consumer = kafka.consumer({ groupId })
+  const consumer: Consumer = kafka.consumer({
+    groupId,
+  })
 
   await consumer.connect()
 
@@ -483,7 +486,7 @@ export async function createCDCConsumer(
             parseError: `Validation failed: ${validationResult.error?.issues.map((issue) => issue.message).join(', ')} ${keyValidationResult.error?.issues.map((issue) => issue.message).join(', ')}`,
           }
 
-          // await onMessage(event)
+          await onMessage(event)
         }
       } catch (error) {
         // Parse error - return unknown event
@@ -495,7 +498,7 @@ export async function createCDCConsumer(
           parseError: error instanceof Error ? error.message : String(error),
         }
 
-        // await onMessage(event)
+        await onMessage(event)
       }
     },
   })
