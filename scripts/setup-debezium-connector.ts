@@ -35,8 +35,11 @@ const connectorConfig = {
     'schema.history.internal.kafka.bootstrap.servers': 'kafka:29092',
     'schema.history.internal.kafka.topic': `schemahistory.${MYSQL_DATABASE}`,
     'include.schema.changes': 'true',
-    // Take a snapshot of new tables when they're first seen
-    // 'snapshot.mode': 'when_needed',
+    // Route all table changes into a single topic
+    'transforms': 'route',
+    'transforms.route.type': 'org.apache.kafka.connect.transforms.RegexRouter',
+    'transforms.route.regex': '([^.]+)\\.([^.]+)\\.([^.]+)',
+    'transforms.route.replacement': '$1.all-changes',
   },
 }
 

@@ -1,5 +1,5 @@
 import { Link, useLocation, useRouter } from '@tanstack/react-router'
-import { Home, Settings, Moon, Sun, Scan, LogOut, Activity, CheckSquare, Receipt } from 'lucide-react'
+import { Home, Settings, Moon, Sun, Scan, LogOut, Activity, CheckSquare, Receipt, ChevronRight, ChevronLeft } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -272,30 +272,53 @@ export function LeftSidebarLayout({ children }: { children: React.ReactNode }) {
 
 // Right sidebar layout with stream - for all routes
 export function RightSidebarLayout({ children }: { children: React.ReactNode }) {
+  const [isCollapsed, setIsCollapsed] = useState(false)
+
   return (
     <ResizablePanelGroup direction="horizontal" className="h-screen">
       {/* Main Content Panel */}
-      <ResizablePanel defaultSize={75} minSize={30}>
-        <div className="flex h-full flex-col overflow-hidden">
+      <ResizablePanel defaultSize={isCollapsed ? 100 : 75} minSize={30}>
+        <div className="flex h-full flex-col overflow-hidden relative">
           {children}
+          
+          {/* Collapse/Expand Button */}
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="absolute right-4 bottom-4 z-50 flex items-center gap-2 bg-base-950 border-2 border-primary-600 text-primary-400 px-3 py-2 rounded-lg shadow-lg hover:bg-base-900 transition-all font-mono text-xs group"
+            title={isCollapsed ? 'Show CDC Stream' : 'Hide CDC Stream'}
+          >
+            <Activity className="h-3 w-3 animate-pulse" />
+            {!isCollapsed && <span>CDC</span>}
+            {isCollapsed ? (
+              <ChevronLeft className="h-3 w-3" />
+            ) : (
+              <ChevronRight className="h-3 w-3" />
+            )}
+          </button>
         </div>
       </ResizablePanel>
 
-      <ResizableHandle withHandle />
+      {/* Keep ResizableHandle visible but hide it when collapsed */}
+      <ResizableHandle className={isCollapsed ? 'hidden' : ''} />
 
-      {/* Right Sidebar Panel */}
+      {/* Right Sidebar Panel - Dev Tool - Always mounted but hidden when collapsed */}
       <ResizablePanel
         defaultSize={25}
         minSize={15}
         maxSize={50}
-        className="h-screen"
+        className={`h-screen ${isCollapsed ? 'hidden' : ''}`}
       >
-        <div className="flex h-full flex-col">
-          <div className="flex h-14 shrink-0 items-center gap-2 border-b border-border bg-sidebar px-4">
-            <Activity className="h-4 w-4 text-primary" />
-            <h2 className="font-semibold">Live Stream</h2>
-          </div>
-          <div className="flex-1 min-h-0 bg-card">
+        <div className="flex h-full flex-col bg-base-1000 border-l-border border-primary-600 relative">
+          {/* Subtle grid pattern overlay */}
+          <div 
+            className="absolute inset-0 opacity-[0.02] pointer-events-none"
+            style={{
+              backgroundImage: `linear-gradient(oklch(var(--primary-500)) 1px, transparent 1px),
+                                linear-gradient(90deg, oklch(var(--primary-500)) 1px, transparent 1px)`,
+              backgroundSize: '20px 20px'
+            }}
+          />
+          <div className="relative z-10 h-full">
             <LiveStream />
           </div>
         </div>

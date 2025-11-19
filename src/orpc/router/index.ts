@@ -59,7 +59,7 @@ export const stream = os
         {
           broker,
           groupId,
-          fromBeginning: false, // Only consume new messages, not historical ones
+          fromBeginning: false,
         }
       )
 
@@ -108,12 +108,8 @@ export const stream = os
         }
       }
     } catch (error) {
-      console.error('CDC stream error for user:', context.user.email, error)
       throw error
     } finally {
-      console.log(
-        `CDC stream closed for user: ${context.user.email} (events: ${eventCount})`
-      )
       // Clean up consumer
       if (consumer) {
         await consumer.disconnect()

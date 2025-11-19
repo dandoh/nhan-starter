@@ -59,14 +59,13 @@ export function useStream() {
           setMessages((prev) => {
             const newMessages = [data, ...prev]
             // Keep only the last 50 messages
-            return newMessages.slice(0, 50)
+            // return newMessages.slice(0, 50)
+            return newMessages
           })
         }
       } catch (err: any) {
         if (err.name === 'AbortError') {
-          console.log('Stream aborted')
         } else {
-          console.error('Stream error:', err)
           setError(err.message || 'Stream error occurred')
           setIsConnected(false)
         }

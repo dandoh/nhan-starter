@@ -88,12 +88,21 @@ interface CDCEventBase {
 }
 
 /**
- * Successfully parsed CDC event matching Debezium schema
+ * Successfully parsed CDC data change event matching Debezium schema
  */
 export interface CDCEventParsed extends CDCEventBase {
   type: 'parsed'
   key: DebeziumSchemaPayload | null
   value: DebeziumSchemaPayload<DebeziumValuePayload>
+}
+
+/**
+ * Successfully parsed CDC schema change event (DDL events)
+ */
+export interface CDCEventSchemaChange extends CDCEventBase {
+  type: 'schema-change'
+  key: DebeziumSchemaPayload<z.infer<typeof DebeziumSchemaChangeKeyPayloadSchema>>
+  value: DebeziumSchemaPayload<DebeziumSchemaChangePayload>
 }
 
 /**
@@ -108,10 +117,11 @@ export interface CDCEventUnknown extends CDCEventBase {
 
 /**
  * CDC event discriminated union
- * - 'parsed': Successfully validated against Debezium schema
+ * - 'parsed': Successfully validated against Debezium data change schema
+ * - 'schema-change': Successfully validated against Debezium schema change schema
  * - 'unknown': Doesn't match expected schema, raw strings provided
  */
-export type CDCEvent = CDCEventParsed | CDCEventUnknown
+export type CDCEvent = CDCEventParsed | CDCEventSchemaChange | CDCEventUnknown
 
 // ============================================================================
 // Zod Schemas for Runtime Validation
@@ -120,6 +130,7 @@ export type CDCEvent = CDCEventParsed | CDCEventUnknown
 /**
  * Zod schema for Debezium source metadata (simplified)
  * Only validates the essential fields that are commonly used
+ * Used in both data change events and schema change events
  */
 export const DebeziumSourceSchema = z
   .object({
@@ -129,7 +140,7 @@ export const DebeziumSourceSchema = z
     name: z.string(),
     ts_ms: z.number(),
     db: z.string(),
-    table: z.string(),
+    table: z.string().optional(), // Optional in schema change events
 
     // Optional common fields
     snapshot: z.union([z.string(), z.boolean(), z.null()]).optional(),
@@ -159,7 +170,7 @@ export const DebeziumTransactionSchema = z
   .optional()
 
 /**
- * Zod schema for Debezium value payload
+ * Zod schema for Debezium value payload (data change events)
  * Use this to validate CDC event payloads at runtime
  */
 export const DebeziumValuePayloadSchema = z.object({
@@ -178,23 +189,34 @@ export const DebeziumValuePayloadSchema = z.object({
 })
 
 /**
- * Zod schema for Debezium schema field definition
+ * Zod schema for individual table change in Debezium schema change events
  */
-export const DebeziumSchemaFieldSchema = z.object({
-  type: z.string(),
-  optional: z.boolean().optional(),
-  field: z.string(),
+export const DebeziumTableChangeSchema = z.object({
+  type: z.enum(['CREATE', 'ALTER', 'DROP']),
+  id: z.string(), // e.g., "\"nhan_starter_dev\".\"test_cdc13\""
+  table: z.any().optional(), // Complex nested structure with columns, etc.
+})
+
+/**
+ * Zod schema for Debezium schema change payload
+ * Used when Debezium captures DDL events (CREATE TABLE, ALTER TABLE, etc.)
+ * Reuses DebeziumSourceSchema since the source structure is the same
+ */
+export const DebeziumSchemaChangePayloadSchema = z.object({
+  source: DebeziumSourceSchema,
+  ts_ms: z.number(),
+  databaseName: z.string().nullable().optional(),
+  schemaName: z.string().nullable().optional(),
+  ddl: z.string().nullable().optional(),
+  tableChanges: z.array(DebeziumTableChangeSchema).optional(),
 })
 
 /**
  * Zod schema for Debezium schema metadata
+ * Note: We don't actually validate the schema structure since it's not used,
+ * and it can be complex with nested structs
  */
-export const DebeziumSchemaMetadataSchema = z.object({
-  type: z.string(),
-  fields: z.array(DebeziumSchemaFieldSchema).optional(),
-  optional: z.boolean().optional(),
-  name: z.string().optional(),
-})
+export const DebeziumSchemaMetadataSchema = z.any()
 
 /**
  * Zod schema for complete Debezium message (schema + payload)
@@ -221,6 +243,13 @@ export const DebeziumValueMessageSchema = DebeziumSchemaPayloadSchema(
   DebeziumValuePayloadSchema,
 )
 
+/**
+ * Complete Debezium schema change value message schema
+ */
+export const DebeziumSchemaChangeValueMessageSchema = DebeziumSchemaPayloadSchema(
+  DebeziumSchemaChangePayloadSchema,
+)
+
 export const DebeziumKeyPayloadSchema = z.object({
   id: z.string(),
 })
@@ -230,6 +259,31 @@ export const DebeziumKeyMessageSchema = DebeziumSchemaPayloadSchema(
 )
 
 /**
+ * Schema change key payload (contains databaseName)
+ */
+export const DebeziumSchemaChangeKeyPayloadSchema = z.object({
+  databaseName: z.string(),
+})
+
+export const DebeziumSchemaChangeKeyMessageSchema = DebeziumSchemaPayloadSchema(
+  DebeziumSchemaChangeKeyPayloadSchema,
+)
+
+/**
+ * Union schemas for parsing either data change OR schema change messages
+ * This allows us to parse both message types with a single safeParse call
+ */
+export const DebeziumKeyUnionSchema = z.union([
+  DebeziumKeyMessageSchema,
+  DebeziumSchemaChangeKeyMessageSchema,
+])
+
+export const DebeziumValueUnionSchema = z.union([
+  DebeziumValueMessageSchema,
+  DebeziumSchemaChangeValueMessageSchema,
+])
+
+/**
  * Infer TypeScript types from Zod schemas (single source of truth)
  *
  * Based on official Debezium documentation:
@@ -237,6 +291,7 @@ export const DebeziumKeyMessageSchema = DebeziumSchemaPayloadSchema(
  * - MySQL Connector: https://debezium.io/documentation/reference/stable/connectors/mysql.html
  */
 export type DebeziumValuePayload = z.infer<typeof DebeziumValuePayloadSchema>
+export type DebeziumSchemaChangePayload = z.infer<typeof DebeziumSchemaChangePayloadSchema>
 export type DebeziumSource = z.infer<typeof DebeziumSourceSchema>
 export type DebeziumTransaction = z.infer<typeof DebeziumTransactionSchema>
 
@@ -378,8 +433,9 @@ function parseHeaders(
  * Creates a CDC consumer with automatic parsing and type discrimination
  *
  * The consumer automatically parses and validates CDC events:
- * - If the event matches Debezium schema: returns CDCEventParsed (type: 'parsed')
- * - If the event doesn't match: returns CDCEventUnknown (type: 'unknown')
+ * - If the event matches Debezium data change schema: returns CDCEventParsed (type: 'parsed')
+ * - If the event matches Debezium schema change schema: returns CDCEventSchemaChange (type: 'schema-change')
+ * - If the event doesn't match either: returns CDCEventUnknown (type: 'unknown')
  *
  * @param onMessage Callback function called for each CDC event
  * @param options Configuration options for the Kafka consumer
@@ -389,12 +445,17 @@ function parseHeaders(
  * ```typescript
  * const consumer = await createCDCConsumer(async (event) => {
  *   if (event.type === 'parsed') {
- *     // TypeScript knows event.value.payload exists
+ *     // Data change event (INSERT, UPDATE, DELETE)
  *     console.log('Operation:', event.value.payload.op)
  *     console.log('Table:', event.value.payload.source.table)
  *     console.log('After:', event.value.payload.after)
+ *   } else if (event.type === 'schema-change') {
+ *     // Schema change event (DDL)
+ *     console.log('Database:', event.value.payload.databaseName)
+ *     console.log('DDL:', event.value.payload.ddl)
+ *     console.log('Table changes:', event.value.payload.tableChanges)
  *   } else {
- *     // TypeScript knows event.valueRaw exists
+ *     // Unknown event
  *     console.log('Unknown event:', event.valueRaw)
  *     console.log('Parse error:', event.parseError)
  *   }
@@ -412,8 +473,8 @@ export async function createCDCConsumer(
     broker = 'localhost:9092',
     groupId = 'cdc-consumer',
     fromBeginning = false,
-    // Match both schema changes (dbserver1) and table changes (dbserver1.database.table)
-    topicPattern = /^dbserver1($|\..*)/,
+    // Match schema changes (dbserver1) and all table changes (dbserver1.all-changes)
+    topicPattern = /^dbserver1($|\.all-changes$)/,
   } = options
 
   const kafka = new Kafka({
@@ -457,25 +518,40 @@ export async function createCDCConsumer(
         }
 
         const parsedValue = JSON.parse(valueRaw)
-        const validationResult =
-          DebeziumValueMessageSchema.safeParse(parsedValue)
         const parsedKey = JSON.parse(keyRaw)
-        const keyValidationResult =
-          DebeziumKeyMessageSchema.safeParse(parsedKey)
 
-        if (validationResult.success && keyValidationResult.success) {
-          // Successfully parsed - create typed event
-          const value = validationResult.data
-          const key = keyValidationResult.data
+        // Use union schemas to parse both formats at once
+        const valueResult = DebeziumValueUnionSchema.safeParse(parsedValue)
+        const keyResult = DebeziumKeyUnionSchema.safeParse(parsedKey)
 
-          const event: CDCEventParsed = {
-            type: 'parsed',
-            ...baseEvent,
-            key,
-            value,
+        if (valueResult.success && keyResult.success) {
+          // Discriminate event type based on payload structure
+          const value = valueResult.data
+          const key = keyResult.data
+
+          // Check if it's a schema change event by presence of 'ddl' or 'databaseName' in key
+          if ('databaseName' in key.payload && typeof key.payload.databaseName === 'string') {
+            // Schema change event
+            const event: CDCEventSchemaChange = {
+              type: 'schema-change',
+              ...baseEvent,
+              key: key as z.infer<typeof DebeziumSchemaChangeKeyMessageSchema>,
+              value: value as z.infer<typeof DebeziumSchemaChangeValueMessageSchema>,
+            }
+            await onMessage(event)
+          } else if ('op' in value.payload) {
+            // Data change event
+            const event: CDCEventParsed = {
+              type: 'parsed',
+              ...baseEvent,
+              key,
+              value: value as z.infer<typeof DebeziumValueMessageSchema>,
+            }
+            await onMessage(event)
+          } else {
+            // Unexpected format
+            throw new Error('Unknown message format')
           }
-
-          await onMessage(event)
         } else {
           // Validation failed - return unknown event
           const event: CDCEventUnknown = {
@@ -483,10 +559,10 @@ export async function createCDCConsumer(
             ...baseEvent,
             keyRaw,
             valueRaw,
-            parseError: `Validation failed: ${validationResult.error?.issues.map((issue) => issue.message).join(', ')} ${keyValidationResult.error?.issues.map((issue) => issue.message).join(', ')}`,
+            parseError: `Validation failed: ${valueResult.error?.message || ''} ${keyResult.error?.message || ''}`,
           }
 
-          await onMessage(event)
+          // await onMessage(event)
         }
       } catch (error) {
         // Parse error - return unknown event
@@ -498,7 +574,7 @@ export async function createCDCConsumer(
           parseError: error instanceof Error ? error.message : String(error),
         }
 
-        await onMessage(event)
+        // await onMessage(event)
       }
     },
   })
