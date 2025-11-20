@@ -73,21 +73,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <RightSidebarLayout>{children}</RightSidebarLayout>
-        {/* <TanStackDevtools
-          config={{
-            position: 'bottom-right',
-          }}
-          plugins={[
-            {
-              name: 'Tanstack Router',
-              render: <TanStackRouterDevtoolsPanel />,
-            },
-
-            TanStackQueryDevtools,
-            StoreDevtools,
-          ]}
-        /> */}
+        {children}
         <Scripts />
       </body>
     </html>

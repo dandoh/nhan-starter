@@ -9,166 +9,54 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as AuthedRouteImport } from './routes/_authed'
-import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
-import { Route as ApiInngestRouteImport } from './routes/api/inngest'
-import { Route as AuthedTodosRouteImport } from './routes/_authed/todos'
-import { Route as AuthedExpensesRouteImport } from './routes/_authed/expenses'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiRpcSplatRouteImport } from './routes/api/rpc.$'
-import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
 
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthedRoute = AuthedRouteImport.update({
-  id: '/_authed',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthedIndexRoute = AuthedIndexRouteImport.update({
+const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => AuthedRoute,
-} as any)
-const ApiInngestRoute = ApiInngestRouteImport.update({
-  id: '/api/inngest',
-  path: '/api/inngest',
   getParentRoute: () => rootRouteImport,
-} as any)
-const AuthedTodosRoute = AuthedTodosRouteImport.update({
-  id: '/todos',
-  path: '/todos',
-  getParentRoute: () => AuthedRoute,
-} as any)
-const AuthedExpensesRoute = AuthedExpensesRouteImport.update({
-  id: '/expenses',
-  path: '/expenses',
-  getParentRoute: () => AuthedRoute,
 } as any)
 const ApiRpcSplatRoute = ApiRpcSplatRouteImport.update({
   id: '/api/rpc/$',
   path: '/api/rpc/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
-  id: '/api/auth/$',
-  path: '/api/auth/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
-  '/login': typeof LoginRoute
-  '/expenses': typeof AuthedExpensesRoute
-  '/todos': typeof AuthedTodosRoute
-  '/api/inngest': typeof ApiInngestRoute
-  '/': typeof AuthedIndexRoute
-  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/': typeof IndexRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
 }
 export interface FileRoutesByTo {
-  '/login': typeof LoginRoute
-  '/expenses': typeof AuthedExpensesRoute
-  '/todos': typeof AuthedTodosRoute
-  '/api/inngest': typeof ApiInngestRoute
-  '/': typeof AuthedIndexRoute
-  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/': typeof IndexRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/_authed': typeof AuthedRouteWithChildren
-  '/login': typeof LoginRoute
-  '/_authed/expenses': typeof AuthedExpensesRoute
-  '/_authed/todos': typeof AuthedTodosRoute
-  '/api/inngest': typeof ApiInngestRoute
-  '/_authed/': typeof AuthedIndexRoute
-  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/': typeof IndexRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/login'
-    | '/expenses'
-    | '/todos'
-    | '/api/inngest'
-    | '/'
-    | '/api/auth/$'
-    | '/api/rpc/$'
+  fullPaths: '/' | '/api/rpc/$'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/login'
-    | '/expenses'
-    | '/todos'
-    | '/api/inngest'
-    | '/'
-    | '/api/auth/$'
-    | '/api/rpc/$'
-  id:
-    | '__root__'
-    | '/_authed'
-    | '/login'
-    | '/_authed/expenses'
-    | '/_authed/todos'
-    | '/api/inngest'
-    | '/_authed/'
-    | '/api/auth/$'
-    | '/api/rpc/$'
+  to: '/' | '/api/rpc/$'
+  id: '__root__' | '/' | '/api/rpc/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  AuthedRoute: typeof AuthedRouteWithChildren
-  LoginRoute: typeof LoginRoute
-  ApiInngestRoute: typeof ApiInngestRoute
-  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  IndexRoute: typeof IndexRoute
   ApiRpcSplatRoute: typeof ApiRpcSplatRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authed': {
-      id: '/_authed'
-      path: ''
-      fullPath: ''
-      preLoaderRoute: typeof AuthedRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authed/': {
-      id: '/_authed/'
+    '/': {
+      id: '/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof AuthedIndexRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/api/inngest': {
-      id: '/api/inngest'
-      path: '/api/inngest'
-      fullPath: '/api/inngest'
-      preLoaderRoute: typeof ApiInngestRouteImport
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/_authed/todos': {
-      id: '/_authed/todos'
-      path: '/todos'
-      fullPath: '/todos'
-      preLoaderRoute: typeof AuthedTodosRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/expenses': {
-      id: '/_authed/expenses'
-      path: '/expenses'
-      fullPath: '/expenses'
-      preLoaderRoute: typeof AuthedExpensesRouteImport
-      parentRoute: typeof AuthedRoute
     }
     '/api/rpc/$': {
       id: '/api/rpc/$'
@@ -177,36 +65,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiRpcSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/auth/$': {
-      id: '/api/auth/$'
-      path: '/api/auth/$'
-      fullPath: '/api/auth/$'
-      preLoaderRoute: typeof ApiAuthSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
-interface AuthedRouteChildren {
-  AuthedExpensesRoute: typeof AuthedExpensesRoute
-  AuthedTodosRoute: typeof AuthedTodosRoute
-  AuthedIndexRoute: typeof AuthedIndexRoute
-}
-
-const AuthedRouteChildren: AuthedRouteChildren = {
-  AuthedExpensesRoute: AuthedExpensesRoute,
-  AuthedTodosRoute: AuthedTodosRoute,
-  AuthedIndexRoute: AuthedIndexRoute,
-}
-
-const AuthedRouteWithChildren =
-  AuthedRoute._addFileChildren(AuthedRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
-  AuthedRoute: AuthedRouteWithChildren,
-  LoginRoute: LoginRoute,
-  ApiInngestRoute: ApiInngestRoute,
-  ApiAuthSplatRoute: ApiAuthSplatRoute,
+  IndexRoute: IndexRoute,
   ApiRpcSplatRoute: ApiRpcSplatRoute,
 }
 export const routeTree = rootRouteImport
