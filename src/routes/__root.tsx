@@ -6,7 +6,6 @@ import {
 import { useEffect } from 'react'
 import { scan } from 'react-scan'
 
-import { RightSidebarLayout } from '../components/app-layout'
 
 import appCss from '../styles.css?url'
 
@@ -73,7 +72,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <RightSidebarLayout>{children}</RightSidebarLayout>
+        {children}
         {/* <TanStackDevtools
           config={{
             position: 'bottom-right',
