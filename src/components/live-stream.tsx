@@ -185,7 +185,7 @@ export function LiveStream() {
       </div>
 
       {/* Messages List */}
-      <div className="flex-1 min-h-0 bg-base-1000 h-full overflow-y-auto">
+      <div className="flex-1 min-h-0 bg-background h-full overflow-y-auto">
         <div className="space-y-1.5 p-2 w-full max-w-full">
           {error ? (
             <div className="flex h-32 items-center justify-center text-center">
@@ -193,15 +193,15 @@ export function LiveStream() {
                 <p className="text-sm font-medium font-mono text-destructive">
                   Stream Error
                 </p>
-                <p className="text-xs font-mono text-base-400">{error}</p>
-                <p className="text-xs font-mono text-base-500">
+                <p className="text-xs font-mono text-muted-foreground">{error}</p>
+                <p className="text-xs font-mono text-muted-foreground">
                   Please refresh the page to reconnect
                 </p>
               </div>
             </div>
           ) : messages.length === 0 ? (
             <div className="flex h-32 items-center justify-center text-center">
-              <p className="text-sm font-mono text-base-500">
+              <p className="text-sm font-mono text-muted-foreground">
                 {isConnected
                   ? 'Waiting for CDC events...'
                   : 'Connect to start receiving CDC events'}
@@ -263,7 +263,7 @@ export function LiveStream() {
               return (
                 <div
                   key={messageId}
-                  className="rounded border border-primary-900 bg-base-950 transition-colors hover:bg-base-900 hover:border-primary-800"
+                  className="rounded border border-border bg-card transition-colors hover:bg-muted/50 hover:border-primary/50"
                 >
                   <button
                     onClick={() => toggleExpand(messageId)}
@@ -273,7 +273,7 @@ export function LiveStream() {
                       {isExpanded ? (
                         <ChevronDown className="h-3 w-3 text-primary-400 mt-0.5 shrink-0" />
                       ) : (
-                        <ChevronRight className="h-3 w-3 text-base-500 mt-0.5 shrink-0" />
+                        <ChevronRight className="h-3 w-3 text-muted-foreground mt-0.5 shrink-0" />
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 mb-1">
@@ -306,14 +306,14 @@ export function LiveStream() {
                             )}
                           </span>
                         </div>
-                        {/* <pre className="text-[11px] text-base-400 font-mono overflow-hidden text-ellipsis whitespace-nowrap">
+                        {/* <pre className="text-[11px] text-muted-foreground font-mono overflow-hidden text-ellipsis whitespace-nowrap">
                           {preview}
                         </pre> */}
                       </div>
                     </div>
                   </button>
                   {isExpanded && (
-                    <div className="border-t border-primary-900 p-2 bg-base-1000">
+                    <div className="border-t border-border p-2 bg-muted/10">
                       {renderDiff(msg)}
                     </div>
                   )}

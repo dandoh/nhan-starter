@@ -4,9 +4,9 @@
  */
 
 import { execSync } from 'child_process'
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, unlinkSync } from 'fs'
 import { join } from 'path'
-import { cdcConfigSchema, type CDCConfig } from './schemas'
+import { cdcConfigSchema, type CDCConfig, type Connection } from './schemas'
 
 const CONFIG_FILE = join(process.cwd(), 'data', 'config.json')
 const DATA_DIR = join(process.cwd(), 'data')
@@ -218,7 +218,7 @@ export async function startInfrastructure(): Promise<void> {
   // Use -p flag to set project name (affects network and volume names)
   execSync(`${composeCmd} -p ${config.projectName} up -d kafka kafka-connect`, {
     cwd: projectRoot,
-    stdio: 'ignore', // Suppress docker-compose output
+    stdio: 'inherit', // Suppress docker-compose output
     env: {
       ...process.env,
       ...getDockerComposeEnv(),
@@ -344,6 +344,255 @@ export async function getInfrastructureStatus() {
       },
     },
     ready: dockerAvailable && dockerComposeAvailable && kafkaConnectHealthy,
+  }
+}
+
+/**
+ * List all connectors from the connectors directory
+ */
+export function listConnectors(): Connection[] {
+  ensureDataDirectories()
+  
+  const files = existsSync(CONNECTORS_DIR) 
+    ? readdirSync(CONNECTORS_DIR).filter((f: string) => f.endsWith('.json'))
+    : []
+  
+  const connectors: Connection[] = []
+  
+  for (const file of files) {
+    try {
+      const content = readFileSync(join(CONNECTORS_DIR, file), 'utf-8')
+      const connector = JSON.parse(content)
+      connectors.push(connector)
+    } catch (error) {
+      console.error(`❌ Error loading connector file ${file}:`, error)
+      // Skip malformed files and continue
+    }
+  }
+  
+  return connectors
+}
+
+/**
+ * Get a single connector by ID
+ */
+export function getConnector(id: string): Connection {
+  ensureDataDirectories()
+  
+  const filePath = join(CONNECTORS_DIR, `${id}.json`)
+  if (!existsSync(filePath)) {
+    console.error(`❌ Connector ${id} not found at ${filePath}`)
+    throw new Error(`Connector ${id} not found`)
+  }
+  
+  try {
+    const content = readFileSync(filePath, 'utf-8')
+    return JSON.parse(content)
+  } catch (error) {
+    console.error(`❌ Error parsing connector file ${id}.json:`, error)
+    throw new Error(`Failed to parse connector ${id}: ${error instanceof Error ? error.message : String(error)}`)
+  }
+}
+
+/**
+ * Setup or update Debezium connector in Kafka Connect
+ */
+async function setupDebeziumConnector(connector: Connection): Promise<void> {
+  const kafkaConnectUrl = getKafkaConnectURL()
+  const connectorName = connector.connectorName
+  
+  // Build Debezium connector configuration based on database type
+  const debeziumConfig: any = {
+    name: connectorName,
+    config: {
+      'tasks.max': '1',
+      'database.hostname': connector.host === 'localhost' ? 'mysql' : connector.host,
+      'database.port': connector.port.toString(),
+      'database.user': connector.username,
+      'database.password': connector.password,
+      'database.server.id': Math.floor(Math.random() * 1000000).toString(),
+      'topic.prefix': connector.topicPrefix,
+      'database.include.list': connector.database,
+      'table.include.list': `${connector.database}.*`,
+      'schema.history.internal.kafka.bootstrap.servers': 'kafka:29092',
+      'schema.history.internal.kafka.topic': `schemahistory.${connector.database}`,
+      'include.schema.changes': 'true',
+      // Route all table changes into a single topic
+      'transforms': 'route',
+      'transforms.route.type': 'org.apache.kafka.connect.transforms.RegexRouter',
+      'transforms.route.regex': '([^.]+)\\.([^.]+)\\.([^.]+)',
+      'transforms.route.replacement': '$1.all-changes',
+    },
+  }
+  
+  // Set connector class based on database type
+  if (connector.dbType === 'mysql') {
+    debeziumConfig.config['connector.class'] = 'io.debezium.connector.mysql.MySqlConnector'
+  } else {
+    throw new Error(`Unsupported database type: ${connector.dbType}`)
+  }
+  
+  try {
+    console.log(`🔌 Setting up Debezium connector: ${connectorName}`)
+    
+    // Check if connector already exists
+    const checkResponse = await fetch(`${kafkaConnectUrl}/connectors/${connectorName}`)
+    
+    if (checkResponse.ok) {
+      // Connector exists - update it
+      console.log(`📝 Updating existing Debezium connector: ${connectorName}`)
+      
+      const updateResponse = await fetch(
+        `${kafkaConnectUrl}/connectors/${connectorName}/config`,
+        {
+          method: 'PUT',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(debeziumConfig.config),
+        }
+      )
+      
+      if (!updateResponse.ok) {
+        const errorData = await updateResponse.text()
+        console.error(`❌ Failed to update Debezium connector: ${updateResponse.status} ${updateResponse.statusText}`)
+        console.error(errorData)
+        throw new Error(`Failed to update Debezium connector: ${errorData}`)
+      }
+      
+      console.log(`✅ Debezium connector updated successfully: ${connectorName}`)
+    } else if (checkResponse.status === 404) {
+      // Connector doesn't exist - create it
+      console.log(`🆕 Creating new Debezium connector: ${connectorName}`)
+      
+      const createResponse = await fetch(`${kafkaConnectUrl}/connectors/`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(debeziumConfig),
+      })
+      
+      if (!createResponse.ok) {
+        const errorData = await createResponse.text()
+        console.error(`❌ Failed to create Debezium connector: ${createResponse.status} ${createResponse.statusText}`)
+        console.error(errorData)
+        throw new Error(`Failed to create Debezium connector: ${errorData}`)
+      }
+      
+      console.log(`✅ Debezium connector created successfully: ${connectorName}`)
+    } else {
+      const errorData = await checkResponse.text()
+      console.error(`❌ Error checking connector: ${checkResponse.status} ${checkResponse.statusText}`)
+      console.error(errorData)
+      throw new Error(`Error checking connector: ${errorData}`)
+    }
+  } catch (error) {
+    console.error('❌ Error setting up Debezium connector:', error)
+    throw error
+  }
+}
+
+/**
+ * Save a connector to file and setup Debezium connector
+ */
+export async function saveConnector(connector: Connection): Promise<Connection> {
+  ensureDataDirectories()
+  
+  const filePath = join(CONNECTORS_DIR, `${connector.id}.json`)
+  writeFileSync(filePath, JSON.stringify(connector, null, 2), 'utf-8')
+  
+  console.log(`✅ Connector ${connector.name} saved`)
+  
+  // Try to setup Debezium connector
+  try {
+    await setupDebeziumConnector(connector)
+  } catch (error) {
+    console.error('⚠️  Connector saved but Debezium setup failed:', error)
+    // Don't throw - connector is saved, Debezium setup can be retried
+  }
+  
+  return connector
+}
+
+/**
+ * Delete Debezium connector from Kafka Connect
+ */
+async function deleteDebeziumConnector(connectorName: string): Promise<void> {
+  const kafkaConnectUrl = getKafkaConnectURL()
+  
+  try {
+    console.log(`🗑️  Deleting Debezium connector: ${connectorName}`)
+    
+    // Check if connector exists
+    const checkResponse = await fetch(`${kafkaConnectUrl}/connectors/${connectorName}`)
+    
+    if (checkResponse.ok) {
+      // Connector exists - delete it
+      const deleteResponse = await fetch(
+        `${kafkaConnectUrl}/connectors/${connectorName}`,
+        {
+          method: 'DELETE',
+        }
+      )
+      
+      if (deleteResponse.status === 204 || deleteResponse.ok) {
+        console.log(`✅ Debezium connector deleted successfully: ${connectorName}`)
+      } else {
+        const errorData = await deleteResponse.text()
+        console.error(`❌ Failed to delete Debezium connector: ${deleteResponse.status} ${deleteResponse.statusText}`)
+        console.error(errorData)
+        throw new Error(`Failed to delete Debezium connector: ${errorData}`)
+      }
+    } else if (checkResponse.status === 404) {
+      console.log(`ℹ️  Debezium connector does not exist: ${connectorName}`)
+    } else {
+      const errorData = await checkResponse.text()
+      console.error(`❌ Error checking connector: ${checkResponse.status} ${checkResponse.statusText}`)
+      console.error(errorData)
+      throw new Error(`Error checking connector: ${errorData}`)
+    }
+  } catch (error) {
+    console.error('❌ Error deleting Debezium connector:', error)
+    throw error
+  }
+}
+
+/**
+ * Delete a connector by ID
+ */
+export async function deleteConnector(id: string) {
+  ensureDataDirectories()
+  
+  const filePath = join(CONNECTORS_DIR, `${id}.json`)
+  if (!existsSync(filePath)) {
+    throw new Error(`Connector ${id} not found`)
+  }
+  
+  // Read connector to get the connector name for Debezium cleanup
+  let connectorName: string | undefined
+  try {
+    const content = readFileSync(filePath, 'utf-8')
+    const connector = JSON.parse(content)
+    connectorName = connector.connectorName
+  } catch (error) {
+    console.error('⚠️  Could not read connector name for Debezium cleanup:', error)
+  }
+  
+  // Delete the connector file
+  unlinkSync(filePath)
+  console.log(`✅ Connector ${id} deleted`)
+  
+  // Try to delete the Debezium connector
+  if (connectorName) {
+    try {
+      await deleteDebeziumConnector(connectorName)
+    } catch (error) {
+      console.error('⚠️  Connector deleted but Debezium cleanup failed:', error)
+      // Don't throw - connector is deleted, Debezium cleanup can be done manually
+    }
   }
 }
 

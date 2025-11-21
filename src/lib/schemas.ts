@@ -37,7 +37,7 @@ export type CDCConfig = z.infer<typeof cdcConfigSchema>
 export const connectionSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1),
-  dbType: z.enum(['mysql', 'postgresql']),
+  dbType: z.enum(['mysql']),
   host: z.string().min(1),
   port: z.number().int().min(1).max(65535),
   username: z.string().min(1),

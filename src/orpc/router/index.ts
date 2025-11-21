@@ -9,8 +9,13 @@ import {
   loadConfig,
   updateConfig,
   saveConfigAndRestart,
+  listConnectors,
+  getConnector,
+  saveConnector,
+  deleteConnector,
 } from '@/lib/infrastructure'
-import { cdcConfigSchema } from '@/lib/schemas'
+import { cdcConfigSchema, connectionSchema } from '@/lib/schemas'
+import { z } from 'zod'
 
 // SSE Stream endpoint - streams CDC events from Kafka
 export const stream = os
@@ -156,6 +161,41 @@ export const saveConfigAndRestartInfra = os
     return { success: true, message: 'Configuration saved and infrastructure restarted' }
   })
 
+// List all connectors
+export const listAllConnectors = os.handler(() => {
+  try {
+    const connectors = listConnectors()
+    return connectors
+  } catch (error) {
+    console.error('❌ Error in listAllConnectors:', error)
+    throw error
+  }
+})
+
+// Get a single connector
+export const getConnectorById = os
+  .input(z.object({ id: z.string() }))
+  .handler(({ input }) => {
+    const connector = getConnector(input.id)
+    return connector
+  })
+
+// Create/Update a connector
+export const saveConnectorData = os
+  .input(connectionSchema)
+  .handler(async ({ input }) => {
+    const connector = await saveConnector(input)
+    return connector
+  })
+
+// Delete a connector
+export const deleteConnectorById = os
+  .input(z.object({ id: z.string() }))
+  .handler(async ({ input }) => {
+    await deleteConnector(input.id)
+    return { success: true, message: 'Connector deleted successfully' }
+  })
+
 export default {
   stream,
   infrastructureStatus,
@@ -165,4 +205,8 @@ export default {
   getConfig,
   setConfig,
   saveConfigAndRestartInfra,
+  listAllConnectors,
+  getConnectorById,
+  saveConnectorData,
+  deleteConnectorById,
 }

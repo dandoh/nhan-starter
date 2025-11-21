@@ -69,11 +69,13 @@ export function TextField({
   placeholder,
   readOnly,
   description,
+  type = 'text',
 }: {
   label: string
   placeholder?: string
   readOnly?: boolean
   description?: string
+  type?: string
 }) {
   const field = useFieldContext<string>()
   const errors = useStore(field.store, (state) => state.meta.errors)
@@ -85,6 +87,7 @@ export function TextField({
         </Label>
       )}
       <Input
+        type={type}
         value={field.state.value}
         placeholder={placeholder}
         onBlur={field.handleBlur}
