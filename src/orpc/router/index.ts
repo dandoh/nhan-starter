@@ -19,7 +19,10 @@ import { z } from 'zod'
 
 // SSE Stream endpoint - streams CDC events from Kafka
 export const stream = os
-  .handler(async function* () {
+  .input(z.object({ 
+    topicPrefix: z.string()
+  }))
+  .handler(async function* ({ input }) {
     let eventCount = 0
     let consumer: Awaited<ReturnType<typeof createCDCConsumer>> | null = null
 
@@ -29,8 +32,12 @@ export const stream = os
       const broker =
         process.env.KAFKA_BROKER || 'localhost:9092'
 
+      // Build topic pattern based on topicPrefix
+      const topicPrefix = input.topicPrefix
+      const topicPattern = new RegExp(`^${topicPrefix}($|\\.all-changes$)`)
+
       console.log(
-        `Starting CDC stream (broker: ${broker})`
+        `Starting CDC stream (broker: ${broker}, topic pattern: ${topicPattern})`
       )
 
       // Create unique consumer group per user session
@@ -57,6 +64,7 @@ export const stream = os
           broker,
           groupId,
           fromBeginning: false,
+          topicPattern,
         }
       )
 

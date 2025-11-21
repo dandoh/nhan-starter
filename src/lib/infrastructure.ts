@@ -401,12 +401,18 @@ async function setupDebeziumConnector(connector: Connection): Promise<void> {
   const kafkaConnectUrl = getKafkaConnectURL()
   const connectorName = connector.connectorName
   
+  // Translate localhost to host.docker.internal for Docker containers
+  // Kafka Connect runs inside Docker and needs to access the host machine
+  const dbHostname = connector.host === 'localhost' || connector.host === '127.0.0.1' 
+    ? 'host.docker.internal' 
+    : connector.host
+  
   // Build Debezium connector configuration based on database type
   const debeziumConfig: any = {
     name: connectorName,
     config: {
       'tasks.max': '1',
-      'database.hostname': connector.host === 'localhost' ? 'mysql' : connector.host,
+      'database.hostname': dbHostname,
       'database.port': connector.port.toString(),
       'database.user': connector.username,
       'database.password': connector.password,
@@ -458,7 +464,29 @@ async function setupDebeziumConnector(connector: Connection): Promise<void> {
         const errorData = await updateResponse.text()
         console.error(`❌ Failed to update Debezium connector: ${updateResponse.status} ${updateResponse.statusText}`)
         console.error(errorData)
-        throw new Error(`Failed to update Debezium connector: ${errorData}`)
+        
+        // Parse error for better user messaging
+        let errorMessage = 'Failed to update Debezium connector'
+        try {
+          const errorJson = JSON.parse(errorData)
+          if (errorJson.message) {
+            // Extract the key part of the error message
+            if (errorJson.message.includes('Communications link failure')) {
+              errorMessage = 'Cannot connect to database. Please verify:\n' +
+                '- Database is running and accessible\n' +
+                '- Host, port, username, and password are correct\n' +
+                `- Using host "${dbHostname}" to connect from Docker`
+            } else if (errorJson.message.includes('Access denied')) {
+              errorMessage = 'Database access denied. Please check username and password.'
+            } else {
+              errorMessage = errorJson.message
+            }
+          }
+        } catch {
+          errorMessage = errorData
+        }
+        
+        throw new Error(errorMessage)
       }
       
       console.log(`✅ Debezium connector updated successfully: ${connectorName}`)
@@ -479,7 +507,29 @@ async function setupDebeziumConnector(connector: Connection): Promise<void> {
         const errorData = await createResponse.text()
         console.error(`❌ Failed to create Debezium connector: ${createResponse.status} ${createResponse.statusText}`)
         console.error(errorData)
-        throw new Error(`Failed to create Debezium connector: ${errorData}`)
+        
+        // Parse error for better user messaging
+        let errorMessage = 'Failed to create Debezium connector'
+        try {
+          const errorJson = JSON.parse(errorData)
+          if (errorJson.message) {
+            // Extract the key part of the error message
+            if (errorJson.message.includes('Communications link failure')) {
+              errorMessage = 'Cannot connect to database. Please verify:\n' +
+                '- Database is running and accessible\n' +
+                '- Host, port, username, and password are correct\n' +
+                `- Using host "${dbHostname}" to connect from Docker`
+            } else if (errorJson.message.includes('Access denied')) {
+              errorMessage = 'Database access denied. Please check username and password.'
+            } else {
+              errorMessage = errorJson.message
+            }
+          }
+        } catch {
+          errorMessage = errorData
+        }
+        
+        throw new Error(errorMessage)
       }
       
       console.log(`✅ Debezium connector created successfully: ${connectorName}`)
@@ -497,22 +547,20 @@ async function setupDebeziumConnector(connector: Connection): Promise<void> {
 
 /**
  * Save a connector to file and setup Debezium connector
+ * Only saves if Debezium connector is successfully created
  */
 export async function saveConnector(connector: Connection): Promise<Connection> {
   ensureDataDirectories()
   
+  // Try to setup Debezium connector FIRST
+  // If this fails, we don't save the connector file
+  await setupDebeziumConnector(connector)
+  
+  // Only save the connector file if Debezium setup succeeded
   const filePath = join(CONNECTORS_DIR, `${connector.id}.json`)
   writeFileSync(filePath, JSON.stringify(connector, null, 2), 'utf-8')
   
   console.log(`✅ Connector ${connector.name} saved`)
-  
-  // Try to setup Debezium connector
-  try {
-    await setupDebeziumConnector(connector)
-  } catch (error) {
-    console.error('⚠️  Connector saved but Debezium setup failed:', error)
-    // Don't throw - connector is saved, Debezium setup can be retried
-  }
   
   return connector
 }

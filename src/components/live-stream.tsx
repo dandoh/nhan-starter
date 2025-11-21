@@ -1,12 +1,5 @@
 import { useState } from 'react'
-import { useStream } from '@/hooks/use-stream'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import {
-  Trash2,
-  Wifi,
-  WifiOff,
-  Play,
-  Square,
   ChevronDown,
   ChevronRight,
 } from 'lucide-react'
@@ -15,17 +8,13 @@ import { diffJson, Change } from 'diff'
 import type { CDCEvent } from '@/lib/kafka-cdc-consumer'
 import { Badge } from '@/components/ui/badge'
 
-export function LiveStream() {
-  const {
-    isConnected,
-    isStreaming,
-    messages,
-    error,
-    stopStream,
-    startStream,
-    clearMessages,
-  } = useStream()
+export interface LiveStreamProps {
+  messages: CDCEvent[]
+  isConnected: boolean
+  error: string | null
+}
 
+export function LiveStream({ messages, isConnected, error }: LiveStreamProps) {
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(
     new Set(),
   )
@@ -98,7 +87,7 @@ export function LiveStream() {
                     }
                     return (
                       <div key={lineIndex} className="flex py-0.5">
-                        <span className="select-none opacity-50 w-8 flex-shrink-0 text-center">
+                        <span className="select-none opacity-50 w-8 shrink-0 text-center">
                           {prefix}
                         </span>
                         <span className="flex-1 whitespace-pre">{line}</span>
@@ -143,50 +132,10 @@ export function LiveStream() {
   }
 
   return (
-    <div className="flex h-full flex-col bg-card  w-full">
-      {/* Compact Controls Bar */}
-      <div className="flex items-center justify-between gap-2 backdrop-blur-sm px-3 py-2 border-b border-accent/20 w-full">
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold font-mono uppercase tracking-wider opacity-60">
-            CDC Stream
-          </span>
-          <div className="h-3 w-px bg-accent/20" />
-        </div>
-
-        <div className="flex items-center gap-2">
-          {isStreaming ? (
-            <button
-              onClick={stopStream}
-              className="flex items-center gap-1.5 bg-destructive/20 border border-destructive/40 text-destructive hover:bg-destructive/30 px-2 py-1 rounded text-[10px] font-mono transition-colors"
-              title="Stop Stream"
-            >
-              <Square className="h-3 w-3" />
-              <span>Stop</span>
-            </button>
-          ) : (
-            <button
-              onClick={startStream}
-              className="flex items-center gap-1.5 bg-primary/20 border border-primary/40 text-primary hover:bg-primary/30 px-2 py-1 rounded text-[10px] font-mono transition-colors"
-              title="Start Stream"
-            >
-              <Play className="h-3 w-3" />
-              <span>Start</span>
-            </button>
-          )}
-          <button
-            onClick={clearMessages}
-            disabled={messages.length === 0}
-            className="flex items-center bg-accent/10 border border-accent/20 text-muted-foreground hover:bg-accent/20 disabled:opacity-30 disabled:cursor-not-allowed p-1 rounded transition-colors"
-            title="Clear Messages"
-          >
-            <Trash2 className="h-3 w-3" />
-          </button>
-        </div>
-      </div>
-
+    <div className="flex h-full flex-col bg-card w-full">
       {/* Messages List */}
       <div className="flex-1 min-h-0 bg-background h-full overflow-y-auto">
-        <div className="space-y-1.5 p-2 w-full max-w-full">
+        <div className="space-y-1.5 p-4 w-full max-w-full">
           {error ? (
             <div className="flex h-32 items-center justify-center text-center">
               <div className="space-y-2">
@@ -200,12 +149,15 @@ export function LiveStream() {
               </div>
             </div>
           ) : messages.length === 0 ? (
-            <div className="flex h-32 items-center justify-center text-center">
-              <p className="text-sm font-mono text-muted-foreground">
-                {isConnected
-                  ? 'Waiting for CDC events...'
-                  : 'Connect to start receiving CDC events'}
-              </p>
+            <div className="flex h-64 items-center justify-center text-center">
+              <div className="space-y-2">
+                <div className={`h-3 w-3 rounded-full mx-auto ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-muted-foreground'}`} />
+                <p className="text-sm font-mono text-muted-foreground">
+                  {isConnected
+                    ? 'Waiting for changes...'
+                    : 'Connecting to stream...'}
+                </p>
+              </div>
             </div>
           ) : (
             messages.map((msg) => {

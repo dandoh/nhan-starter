@@ -2,7 +2,12 @@ import { useEffect, useState, useRef } from 'react'
 import { orpcClient } from '@/orpc/client'
 import type { CDCEvent } from '@/lib/kafka-cdc-consumer'
 
-export function useStream() {
+export interface UseStreamOptions {
+  topicPrefix: string
+}
+
+export function useStream(options: UseStreamOptions) {
+  const { topicPrefix } = options
   const [isConnected, setIsConnected] = useState(false)
   const [messages, setMessages] = useState<CDCEvent[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -38,6 +43,8 @@ export function useStream() {
 
         // Subscribe to the SSE stream using oRPC
         const iterator = await orpcClient.stream({
+          topicPrefix,
+        }, {
           signal: abortController.signal,
         })
         
@@ -82,7 +89,12 @@ export function useStream() {
       isActive = false
       abortController.abort()
     }
-  }, [isStreaming])
+  }, [isStreaming, topicPrefix])
+
+  // Clear messages when topicPrefix changes
+  useEffect(() => {
+    clearMessages()
+  }, [topicPrefix])
 
   const clearMessages = () => {
     setMessages([])

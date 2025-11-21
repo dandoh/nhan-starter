@@ -1,6 +1,6 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
-import { Settings, Activity, Plus, Database, Trash2, Loader2 } from 'lucide-react'
+import { Settings, Activity, Plus, Trash2, Loader2, Play } from 'lucide-react'
 import { InfrastructureStatusWidget } from '@/components/infrastructure-status-widget'
 import { orpcQuery } from '@/orpc/client'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -32,6 +32,7 @@ export const Route = createFileRoute('/')({
 function HomePage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
 
   // Fetch connectors
   const { data: connectors = [], isLoading } = useQuery(
@@ -59,10 +60,10 @@ function HomePage() {
     <div className="container mx-auto max-w-6xl p-6 space-y-6">
       <header className="flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Activity className="h-5 w-5" />
           </div>
-          <h1 className="text-xl font-bold tracking-tight">Diff Streamer</h1>
+          <h1 className="text-md font-bold tracking-tight">Diff Streamer</h1>
         </div>
         <div className="ml-auto flex items-center gap-2">
           <InfrastructureStatusWidget />
@@ -75,42 +76,32 @@ function HomePage() {
         </div>
       </header>
 
-      <main className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight">Connectors</h2>
-            <p className="text-sm text-muted-foreground">
-              Manage your database connectors for CDC streaming
-            </p>
-          </div>
-          <Button onClick={() => setIsCreateDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Connector
-          </Button>
-        </div>
-
+      <main>
         {isLoading ? (
           <div className="flex h-64 items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : connectors.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-16">
-              <Database className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No connectors yet</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Create your first connector to start streaming database changes
+          /* Empty State */
+          <Card className="border-dashed border-2">
+            <CardContent className="flex flex-col items-center justify-center py-16 sm:py-20">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-6">
+                <Activity className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">No connectors yet</h3>
+              <p className="text-sm text-muted-foreground text-center max-w-sm mb-6">
+                Get started by creating your first database connector to stream events in real-time
               </p>
-              <Button onClick={() => setIsCreateDialogOpen(true)}>
+              <Button onClick={() => setIsCreateDialogOpen(true)} size="sm">
                 <Plus className="h-4 w-4 mr-2" />
-                Create Connector
+                Create Your First Connector
               </Button>
             </CardContent>
           </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {connectors.map((connector: Connection) => (
-              <Card key={connector.id} className="relative">
+              <Card key={connector.id} className="relative group">
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
@@ -125,28 +116,58 @@ function HomePage() {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      onClick={() => handleDelete(connector.id)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDelete(connector.id)
+                      }}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Host:</span>{' '}
-                    <span className="font-mono">{connector.host}:{connector.port}</span>
+                <CardContent className="space-y-3 text-sm">
+                  <div className="space-y-2">
+                    <div>
+                      <span className="text-muted-foreground">Host:</span>{' '}
+                      <span className="font-mono">{connector.host}:{connector.port}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Database:</span>{' '}
+                      <span className="font-mono">{connector.database}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Topic Prefix:</span>{' '}
+                      <span className="font-mono">{connector.topicPrefix}</span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-muted-foreground">Database:</span>{' '}
-                    <span className="font-mono">{connector.database}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Topic Prefix:</span>{' '}
-                    <span className="font-mono">{connector.topicPrefix}</span>
-                  </div>
+                  <Button
+                    className="w-full"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate({ to: '/connector/$id', params: { id: connector.id } })}
+                  >
+                    <Play className="h-4 w-4 mr-2" />
+                    View Stream
+                  </Button>
                 </CardContent>
               </Card>
             ))}
+            
+            {/* Create New Connector Card */}
+            <Card 
+              className="relative group border-dashed border-2 hover:border-primary/50 hover:bg-accent/50 transition-colors cursor-pointer"
+              onClick={() => setIsCreateDialogOpen(true)}
+            >
+              <CardContent className="flex flex-col items-center justify-center py-16 h-full">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary mb-4">
+                  <Plus className="h-6 w-6" />
+                </div>
+                <h3 className="text-base font-semibold mb-1">Create Connector</h3>
+                <p className="text-xs text-muted-foreground text-center">
+                  Add a new database connection
+                </p>
+              </CardContent>
+            </Card>
           </div>
         )}
       </main>
@@ -181,15 +202,15 @@ function CreateConnectorDialog({ open, onOpenChange }: CreateConnectorDialogProp
   const form = useAppForm({
     defaultValues: {
       id: crypto.randomUUID(),
-      name: '',
+      name: 'testconnector',
       dbType: 'mysql' as const,
       host: 'localhost',
-      port: 5432,
-      username: '',
-      password: '',
-      database: '',
-      connectorName: '',
-      topicPrefix: '',
+      port: 3306,
+      username: 'root',
+      password: 'rootpassword',
+      database: 'nhan_starter_dev',
+      connectorName: 'testconnector',
+      topicPrefix: 'testconnector',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     } as Connection,
@@ -207,7 +228,7 @@ function CreateConnectorDialog({ open, onOpenChange }: CreateConnectorDialogProp
         <DialogHeader>
           <DialogTitle>Create New Connector</DialogTitle>
           <DialogDescription>
-            Configure a new database connector for CDC streaming
+            Configure a new database connector for streaming
           </DialogDescription>
         </DialogHeader>
 
