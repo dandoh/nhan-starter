@@ -236,14 +236,15 @@ export async function startInfrastructure(): Promise<void> {
 /**
  * Stop CDC infrastructure
  */
-export function stopInfrastructure(): void {
+export function stopInfrastructure(projectName?: string): void {
   const config = loadConfig()
+  const nameToUse = projectName || config.projectName
   const composeCmd = getDockerComposeCommand()
   const projectRoot = process.cwd()
 
-  console.log(`🛑 Stopping CDC infrastructure for project: ${config.projectName}`)
+  console.log(`🛑 Stopping CDC infrastructure for project: ${nameToUse}`)
 
-  execSync(`${composeCmd} -p ${config.projectName} stop kafka kafka-connect`, {
+  execSync(`${composeCmd} -p ${nameToUse} stop kafka kafka-connect`, {
     cwd: projectRoot,
     stdio: 'ignore', // Suppress docker-compose output
     env: {
@@ -261,6 +262,37 @@ export function stopInfrastructure(): void {
 export async function restartInfrastructure(): Promise<void> {
   stopInfrastructure()
   await startInfrastructure()
+}
+
+/**
+ * Save config and restart infrastructure
+ * Handles project name changes properly by using old name to stop
+ */
+export async function saveConfigAndRestart(newConfig: CDCConfig): Promise<void> {
+  // Load the old config to get the old project name
+  const oldConfig = loadConfig()
+  const projectNameChanged = oldConfig.projectName !== newConfig.projectName
+
+  if (projectNameChanged) {
+    console.log(
+      `📝 Project name changed from "${oldConfig.projectName}" to "${newConfig.projectName}"`,
+    )
+  }
+
+  // Stop using the OLD project name
+  stopInfrastructure(oldConfig.projectName)
+
+  // Save the new config
+  updateConfig(newConfig)
+
+  // Start using the NEW project name
+  await startInfrastructure()
+
+  if (projectNameChanged) {
+    console.log(
+      `✅ Infrastructure migrated to new project name: ${newConfig.projectName}`,
+    )
+  }
 }
 
 /**

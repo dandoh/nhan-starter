@@ -67,9 +67,13 @@ function ErrorMessages({
 export function TextField({
   label,
   placeholder,
+  readOnly,
+  description,
 }: {
   label: string
   placeholder?: string
+  readOnly?: boolean
+  description?: string
 }) {
   const field = useFieldContext<string>()
   const errors = useStore(field.store, (state) => state.meta.errors)
@@ -85,6 +89,45 @@ export function TextField({
         placeholder={placeholder}
         onBlur={field.handleBlur}
         onChange={(e) => field.handleChange(e.target.value)}
+        readOnly={readOnly}
+        className={readOnly ? 'bg-muted' : ''}
+      />
+      {description && (
+        <p className="text-xs text-muted-foreground mt-1">{description}</p>
+      )}
+      {field.state.meta.isTouched && <ErrorMessages errors={errors} />}
+    </div>
+  )
+}
+
+export function NumberField({
+  label,
+  placeholder,
+  min,
+  max,
+}: {
+  label: string
+  placeholder?: string
+  min?: number
+  max?: number
+}) {
+  const field = useFieldContext<number>()
+  const errors = useStore(field.store, (state) => state.meta.errors)
+  return (
+    <div>
+      {label && (
+        <Label htmlFor={label} className="mb-2">
+          {label}
+        </Label>
+      )}
+      <Input
+        type="number"
+        value={field.state.value}
+        placeholder={placeholder}
+        onBlur={field.handleBlur}
+        onChange={(e) => field.handleChange(parseInt(e.target.value) || 0)}
+        min={min}
+        max={max}
       />
       {field.state.meta.isTouched && <ErrorMessages errors={errors} />}
     </div>

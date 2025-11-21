@@ -8,6 +8,7 @@ import {
   restartInfrastructure,
   loadConfig,
   updateConfig,
+  saveConfigAndRestart,
 } from '@/lib/infrastructure'
 import { cdcConfigSchema } from '@/lib/schemas'
 
@@ -138,12 +139,21 @@ export const getConfig = os.handler(() => {
   return config
 })
 
-// Update CDC configuration
+// Update CDC configuration (without restart)
 export const setConfig = os
   .input(cdcConfigSchema)
   .handler(({ input }) => {
     updateConfig(input)
     return { success: true, message: 'Configuration updated successfully' }
+  })
+
+// Save configuration and restart infrastructure
+// Handles project name changes properly
+export const saveConfigAndRestartInfra = os
+  .input(cdcConfigSchema)
+  .handler(async ({ input }) => {
+    await saveConfigAndRestart(input)
+    return { success: true, message: 'Configuration saved and infrastructure restarted' }
   })
 
 export default {
@@ -154,4 +164,5 @@ export default {
   infrastructureRestart,
   getConfig,
   setConfig,
+  saveConfigAndRestartInfra,
 }

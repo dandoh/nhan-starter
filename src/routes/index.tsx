@@ -1,5 +1,5 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { orpcClient, orpcQuery } from '@/orpc/client'
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { orpcQuery } from '@/orpc/client'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,7 @@ import {
   Play,
   Square,
   RotateCw,
+  Settings,
 } from 'lucide-react'
 
 export const Route = createFileRoute('/')({
@@ -203,6 +204,15 @@ function InfrastructureStatusTest() {
 function HomePage() {
   return (
     <div className="flex h-full w-full flex-col gap-4 p-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">CDC Streamer</h1>
+        <Link to="/config">
+          <Button variant="outline" size="sm">
+            <Settings className="h-4 w-4 mr-2" />
+            Configure
+          </Button>
+        </Link>
+      </div>
       <InfrastructureStatusTest />
     </div>
   )
