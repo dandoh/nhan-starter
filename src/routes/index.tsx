@@ -24,7 +24,7 @@ import { connectionSchema, type Connection } from '@/lib/schemas'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
-import { MySQLValidationStatus } from '@/components/mysql-validation-status'
+import { DatabaseValidationStatus } from '@/components/database-validation-status'
 
 export const Route = createFileRoute('/')({
   component: HomePage,
@@ -205,7 +205,7 @@ function CreateConnectorDialog({ open, onOpenChange }: CreateConnectorDialogProp
   )
 
   const validateMutation = useMutation(
-    orpcQuery.validateMySQLConfig.mutationOptions({
+    orpcQuery.validateConnection.mutationOptions({
       onSuccess: (data) => {
         setValidationResults(data)
         setConnectionTested(true)
@@ -225,7 +225,7 @@ function CreateConnectorDialog({ open, onOpenChange }: CreateConnectorDialogProp
   )
 
   const fixMutation = useMutation(
-    orpcQuery.validateAndFixMySQLConfig.mutationOptions({
+    orpcQuery.fixConnectionConfig.mutationOptions({
       onSuccess: (data) => {
         setValidationResults(data)
       },
@@ -236,12 +236,12 @@ function CreateConnectorDialog({ open, onOpenChange }: CreateConnectorDialogProp
     defaultValues: {
       id: crypto.randomUUID(),
       name: 'testconnector',
-      dbType: 'mysql' as const,
+      dbType: 'postgres' as const,
       host: 'localhost',
       port: 3306,
-      username: 'root',
-      password: 'rootpassword',
-      database: 'nhan_starter_dev',
+      username: 'postgres',
+      password: 'postgres',
+      database: 'test_cdc_db',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     } as Connection,
@@ -260,29 +260,27 @@ function CreateConnectorDialog({ open, onOpenChange }: CreateConnectorDialogProp
     setConnectionTested(false)
     setValidationResults(null)
     
-    if (values.dbType === 'mysql') {
-      validateMutation.mutate({
-        host: values.host,
-        port: values.port,
-        username: values.username,
-        password: values.password,
-        database: values.database,
-      })
-    }
+    validateMutation.mutate({
+      dbType: values.dbType,
+      host: values.host,
+      port: values.port,
+      username: values.username,
+      password: values.password,
+      database: values.database,
+    })
   }
 
   const handleRunFixes = () => {
     const values = form.state.values
     
-    if (values.dbType === 'mysql') {
-      fixMutation.mutate({
-        host: values.host,
-        port: values.port,
-        username: values.username,
-        password: values.password,
-        database: values.database,
-      })
-    }
+    fixMutation.mutate({
+      dbType: values.dbType,
+      host: values.host,
+      port: values.port,
+      username: values.username,
+      password: values.password,
+      database: values.database,
+    })
   }
 
   const isConnectionReady = connectionTested && validationResults?.isReady
@@ -347,6 +345,7 @@ function CreateConnectorDialog({ open, onOpenChange }: CreateConnectorDialogProp
                   label="Database Type"
                   values={[
                     { value: 'mysql', label: 'MySQL' },
+                    { value: 'postgres', label: 'PostgreSQL' },
                   ]}
                 />
               )}
@@ -412,12 +411,13 @@ function CreateConnectorDialog({ open, onOpenChange }: CreateConnectorDialogProp
           {/* Validation Results */}
           {(validateMutation.isPending || fixMutation.isPending || validationResults) && (
             <div className="mt-4">
-              <MySQLValidationStatus
+              <DatabaseValidationStatus
                 isValidating={validateMutation.isPending || fixMutation.isPending}
                 validationResults={validationResults?.results || null}
                 isReady={validationResults?.isReady || false}
                 onRunFixes={handleRunFixes}
                 canRunFixes={!fixMutation.isPending}
+                databaseType={form.state.values.dbType}
               />
             </div>
           )}

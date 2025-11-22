@@ -250,9 +250,7 @@ export const DebeziumSchemaChangeValueMessageSchema = DebeziumSchemaPayloadSchem
   DebeziumSchemaChangePayloadSchema,
 )
 
-export const DebeziumKeyPayloadSchema = z.object({
-  id: z.string(),
-})
+export const DebeziumKeyPayloadSchema = z.any()
 
 export const DebeziumKeyMessageSchema = DebeziumSchemaPayloadSchema(
   DebeziumKeyPayloadSchema,
@@ -261,9 +259,7 @@ export const DebeziumKeyMessageSchema = DebeziumSchemaPayloadSchema(
 /**
  * Schema change key payload (contains databaseName)
  */
-export const DebeziumSchemaChangeKeyPayloadSchema = z.object({
-  databaseName: z.string(),
-})
+export const DebeziumSchemaChangeKeyPayloadSchema = z.any()
 
 export const DebeziumSchemaChangeKeyMessageSchema = DebeziumSchemaPayloadSchema(
   DebeziumSchemaChangeKeyPayloadSchema,
@@ -496,6 +492,7 @@ export async function createCDCConsumer(
   // Start consuming messages
   await consumer.run({
     eachMessage: async (payload: EachMessagePayload) => {
+      // console.log('payload', payload)
       const keyRaw = payload.message.key?.toString() || null
       const valueRaw = payload.message.value?.toString() || null
       const headers = parseHeaders(payload.message.headers)
@@ -562,7 +559,14 @@ export async function createCDCConsumer(
             parseError: `Validation failed: ${valueResult.error?.message || ''} ${keyResult.error?.message || ''}`,
           }
 
-          // await onMessage(event)
+          console.log("-------------------------")
+          console.log('keyRaw', keyRaw)
+          console.log('valueRaw', valueRaw)
+          console.log(valueResult.error?.message || '')
+          console.log(keyResult.error?.message || '')
+          console.log("-------------------------")
+
+          await onMessage(event)
         }
       } catch (error) {
         // Parse error - return unknown event
@@ -574,7 +578,7 @@ export async function createCDCConsumer(
           parseError: error instanceof Error ? error.message : String(error),
         }
 
-        // await onMessage(event)
+        await onMessage(event)
       }
     },
   })

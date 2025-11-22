@@ -15,7 +15,7 @@ import {
   deleteConnector,
 } from '@/lib/infrastructure'
 import { cdcConfigSchema, connectionSchema } from '@/lib/schemas'
-import { validateMySQL, validateAndFixMySQL } from '@/lib/mysql-validator'
+import { getDatabaseHandler } from '@/lib/handlers'
 import { z } from 'zod'
 
 // SSE Stream endpoint - streams CDC events from Kafka
@@ -193,6 +193,23 @@ export const getConnectorById = os
 export const saveConnectorData = os
   .input(connectionSchema)
   .handler(async ({ input }) => {
+    // Prepare database for CDC connector (e.g., set REPLICA IDENTITY for PostgreSQL)
+    console.log(`🔧 Preparing ${input.dbType} database for CDC...`)
+    const handler = getDatabaseHandler(input.dbType)
+    
+    try {
+      await handler.prepareForConnector({
+        host: input.host,
+        port: input.port,
+        username: input.username,
+        password: input.password,
+        database: input.database,
+      })
+    } catch (error) {
+      console.error('⚠️  Failed to prepare database for connector:', error)
+      // Continue anyway - preparation might not always be necessary
+    }
+    
     const connector = await saveConnector(input)
     return connector
   })
@@ -205,9 +222,10 @@ export const deleteConnectorById = os
     return { success: true, message: 'Connector deleted successfully' }
   })
 
-// Validate MySQL configuration for Debezium
-export const validateMySQLConfig = os
+// Validate database configuration for Debezium (generic for all database types)
+export const validateConnection = os
   .input(z.object({
+    dbType: z.string(),
     host: z.string().min(1),
     port: z.number().int().min(1).max(65535),
     username: z.string().min(1),
@@ -215,13 +233,21 @@ export const validateMySQLConfig = os
     database: z.string().min(1),
   }))
   .handler(async ({ input }) => {
-    const report = await validateMySQL(input)
+    const handler = getDatabaseHandler(input.dbType)
+    const report = await handler.validate({
+      host: input.host,
+      port: input.port,
+      username: input.username,
+      password: input.password,
+      database: input.database,
+    })
     return report
   })
 
-// Validate and attempt to fix MySQL configuration
-export const validateAndFixMySQLConfig = os
+// Validate and attempt to fix database configuration (generic for all database types)
+export const fixConnectionConfig = os
   .input(z.object({
+    dbType: z.string(),
     host: z.string().min(1),
     port: z.number().int().min(1).max(65535),
     username: z.string().min(1),
@@ -229,7 +255,14 @@ export const validateAndFixMySQLConfig = os
     database: z.string().min(1),
   }))
   .handler(async ({ input }) => {
-    const report = await validateAndFixMySQL(input)
+    const handler = getDatabaseHandler(input.dbType)
+    const report = await handler.fix({
+      host: input.host,
+      port: input.port,
+      username: input.username,
+      password: input.password,
+      database: input.database,
+    })
     return report
   })
 
@@ -246,6 +279,6 @@ export default {
   getConnectorById,
   saveConnectorData,
   deleteConnectorById,
-  validateMySQLConfig,
-  validateAndFixMySQLConfig,
+  validateConnection,
+  fixConnectionConfig,
 }

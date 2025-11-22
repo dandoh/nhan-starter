@@ -105,6 +105,7 @@ export function DatabaseValidationStatus({
               step={result.step}
               status={result.status}
               message={result.message}
+              details={result.details}
             />
           ))}
         </div>
@@ -159,6 +160,7 @@ export function DatabaseValidationStatus({
               step={result.step}
               status={result.status}
               message={result.message}
+              details={result.details}
             />
           ))}
         </div>
@@ -204,9 +206,10 @@ interface ValidationStepProps {
   step: string
   status: 'success' | 'error' | 'warning'
   message: string
+  details?: string
 }
 
-function ValidationStep({ step, status, message }: ValidationStepProps) {
+function ValidationStep({ step, status, message, details }: ValidationStepProps) {
   const icon = {
     success: <CheckCircle2 className="h-3.5 w-3.5 text-green-600 shrink-0" />,
     error: <XCircle className="h-3.5 w-3.5 text-destructive shrink-0" />,
@@ -226,6 +229,11 @@ function ValidationStep({ step, status, message }: ValidationStepProps) {
         <div className={`text-xs ${textColor}`}>
           <span className="font-medium">{step}:</span> {message}
         </div>
+        {details && (
+          <div className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">
+            {details}
+          </div>
+        )}
       </div>
     </div>
   )

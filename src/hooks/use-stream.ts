@@ -28,6 +28,7 @@ export function useStream(options: UseStreamOptions) {
     setIsStreaming(true)
   }
 
+
   useEffect(() => {
     if (!isStreaming) return
 

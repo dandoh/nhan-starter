@@ -4,9 +4,6 @@ import {
   createRootRouteWithContext,
 } from '@tanstack/react-router'
 import { useEffect } from 'react'
-import { scan } from 'react-scan'
-
-import { RightSidebarLayout } from '../components/app-layout'
 
 import appCss from '../styles.css?url'
 
@@ -52,18 +49,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
     } else {
       // Default to dark if no theme is set or if theme is 'dark'
       html.classList.add('dark')
-    }
-  }, [])
-
-  useEffect(() => {
-    if (import.meta.env.DEV) {
-      // Always initialize scan, but check localStorage for toolbar visibility
-      const reactScanShowToolbar = localStorage.getItem(
-        'react-scan-show-toolbar',
-      )
-      // Default to showing toolbar if not set (backward compatibility)
-      const showToolbar = reactScanShowToolbar !== 'false'
-      scan({ showToolbar })
     }
   }, [])
 

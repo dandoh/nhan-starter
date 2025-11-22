@@ -7,7 +7,7 @@ import { execSync } from 'child_process'
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, unlinkSync } from 'fs'
 import { join } from 'path'
 import { cdcConfigSchema, type CDCConfig, type Connection, getConnectorName, getTopicPrefix } from './schemas'
-import { validateMySQL } from './mysql-validator'
+import { getDatabaseHandler } from './handlers'
 
 const CONFIG_FILE = join(process.cwd(), 'data', 'config.json')
 const DATA_DIR = join(process.cwd(), 'data')
@@ -423,48 +423,24 @@ async function setupDebeziumConnector(connector: Connection): Promise<void> {
   const connectorName = getConnectorName(connector)
   const topicPrefix = getTopicPrefix(connector)
   
-  // Translate localhost for Docker containers
-  // Kafka Connect runs inside Docker and needs to access the host machine
-  let dbHostname = connector.host
+  // Get the appropriate handler for this database type
+  const handler = getDatabaseHandler(connector.dbType)
   
-  if (connector.host === 'localhost' || connector.host === '127.0.0.1') {
-    // On macOS/Windows with Docker Desktop: use host.docker.internal
-    // On Linux: use host.containers.internal or bridge IP
-    // We'll use host.docker.internal as primary, but log a warning
-    dbHostname = 'host.docker.internal'
-    console.log(`⚠️  Converting ${connector.host} to ${dbHostname} for Docker networking`)
-    console.log(`   If connection fails, your MySQL may need to listen on 0.0.0.0 instead of 127.0.0.1`)
-  }
+  // Get database-specific configuration from handler
+  const dbSpecificConfig = await handler.getDebeziumConfig(connector)
   
-  // Build Debezium connector configuration based on database type
+  // Build Debezium connector configuration
   const debeziumConfig: any = {
     name: connectorName,
     config: {
-      'tasks.max': '1',
-      'database.hostname': dbHostname,
-      'database.port': connector.port.toString(),
-      'database.user': connector.username,
-      'database.password': connector.password,
-      'database.server.id': Math.floor(Math.random() * 1000000).toString(),
+      ...dbSpecificConfig,
       'topic.prefix': topicPrefix,
-      'database.include.list': connector.database,
-      'table.include.list': `${connector.database}.*`,
-      'schema.history.internal.kafka.bootstrap.servers': 'kafka:29092',
-      'schema.history.internal.kafka.topic': `schemahistory.${connector.database}`,
-      'include.schema.changes': 'true',
       // Route all table changes into a single topic
       'transforms': 'route',
       'transforms.route.type': 'org.apache.kafka.connect.transforms.RegexRouter',
       'transforms.route.regex': '([^.]+)\\.([^.]+)\\.([^.]+)',
       'transforms.route.replacement': '$1.all-changes',
     },
-  }
-  
-  // Set connector class based on database type
-  if (connector.dbType === 'mysql') {
-    debeziumConfig.config['connector.class'] = 'io.debezium.connector.mysql.MySqlConnector'
-  } else {
-    throw new Error(`Unsupported database type: ${connector.dbType}`)
   }
   
   try {
@@ -504,7 +480,7 @@ async function setupDebeziumConnector(connector: Connection): Promise<void> {
               errorMessage = 'Cannot connect to database. Please verify:\n' +
                 '- Database is running and accessible\n' +
                 '- Host, port, username, and password are correct\n' +
-                `- Using host "${dbHostname}" to connect from Docker`
+                '- Database is accessible from Docker containers'
             } else if (errorJson.message.includes('Access denied')) {
               errorMessage = 'Database access denied. Please check username and password.'
             } else {
@@ -547,7 +523,7 @@ async function setupDebeziumConnector(connector: Connection): Promise<void> {
               errorMessage = 'Cannot connect to database. Please verify:\n' +
                 '- Database is running and accessible\n' +
                 '- Host, port, username, and password are correct\n' +
-                `- Using host "${dbHostname}" to connect from Docker`
+                '- Database is accessible from Docker containers'
             } else if (errorJson.message.includes('Access denied')) {
               errorMessage = 'Database access denied. Please check username and password.'
             } else {
@@ -576,37 +552,36 @@ async function setupDebeziumConnector(connector: Connection): Promise<void> {
 
 /**
  * Save a connector to file and setup Debezium connector
- * Only saves if MySQL validation and Debezium connector are successfully created
+ * Only saves if database validation and Debezium connector are successfully created
  */
 export async function saveConnector(connector: Connection): Promise<Connection> {
   ensureDataDirectories()
   
-  // Step 1: Validate MySQL configuration for MySQL connectors
-  if (connector.dbType === 'mysql') {
-    console.log('🔍 Validating MySQL configuration for Debezium...')
+  // Step 1: Validate database configuration using the appropriate handler
+  console.log(`🔍 Validating ${connector.dbType} configuration for Debezium...`)
+  
+  const handler = getDatabaseHandler(connector.dbType)
+  const validationReport = await handler.validate({
+    host: connector.host,
+    port: connector.port,
+    username: connector.username,
+    password: connector.password,
+    database: connector.database,
+  })
+  
+  if (!validationReport.isReady) {
+    const errorMessages = validationReport.results
+      .filter(r => r.status === 'error')
+      .map(r => `${r.step}: ${r.message}${r.details ? '\n  ' + r.details : ''}`)
+      .join('\n')
     
-    const validationReport = await validateMySQL({
-      host: connector.host,
-      port: connector.port,
-      username: connector.username,
-      password: connector.password,
-      database: connector.database,
-    })
-    
-    if (!validationReport.isReady) {
-      const errorMessages = validationReport.results
-        .filter(r => r.status === 'error')
-        .map(r => `${r.step}: ${r.message}${r.details ? '\n  ' + r.details : ''}`)
-        .join('\n')
-      
-      throw new Error(
-        `MySQL is not properly configured for Debezium CDC:\n\n${errorMessages}\n\n` +
-        'Please fix these issues using the "View & Apply Fixes" button and try again.'
-      )
-    }
-    
-    console.log('✅ MySQL validation passed')
+    throw new Error(
+      `${connector.dbType} is not properly configured for Debezium CDC:\n\n${errorMessages}\n\n` +
+      'Please fix these issues using the "Apply Fixes Automatically" button and try again.'
+    )
   }
+  
+  console.log(`✅ ${connector.dbType} validation passed`)
   
   // Step 2: Try to setup Debezium connector
   // If this fails, we don't save the connector file
