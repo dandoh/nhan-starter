@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import { LiveStream } from '@/components/live-stream'
 import { Badge } from '@/components/ui/badge'
 import { useStream } from '@/hooks/use-stream'
+import { getTopicPrefix } from '@/lib/schemas'
 
 export const Route = createFileRoute('/connector/$id')({
   component: ConnectorStreamPage,
@@ -32,7 +33,7 @@ function ConnectorStreamPage() {
     startStream,
     clearMessages,
   } = useStream({ 
-    topicPrefix: connector?.topicPrefix || '' 
+    topicPrefix: connector ? getTopicPrefix(connector) : '' 
   })
 
   if (isConnectorLoading) {

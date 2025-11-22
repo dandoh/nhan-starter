@@ -33,6 +33,7 @@ export type CDCConfig = z.infer<typeof cdcConfigSchema>
 
 /**
  * Database Connection Schema
+ * Note: connectorName and topicPrefix are derived from the id
  */
 export const connectionSchema = z.object({
   id: z.string().uuid(),
@@ -43,12 +44,21 @@ export const connectionSchema = z.object({
   username: z.string().min(1),
   password: z.string().min(1),
   database: z.string().min(1),
-  connectorName: z.string().min(1),
-  topicPrefix: z.string().min(1),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 })
 
 export type Connection = z.infer<typeof connectionSchema>
 export type NewConnection = Omit<Connection, 'id' | 'createdAt' | 'updatedAt'>
+
+/**
+ * Helper functions to derive connector name and topic prefix from connection
+ */
+export function getConnectorName(connection: Connection): string {
+  return connection.id
+}
+
+export function getTopicPrefix(connection: Connection): string {
+  return connection.id
+}
 

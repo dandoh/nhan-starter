@@ -103,51 +103,6 @@ async function checkBinlogRowImage(connection: mysql.Connection): Promise<MySQLV
   }
 }
 
-/**
- * Check if MySQL is accessible from Docker
- */
-async function checkDockerConnectivity(config: {
-  host: string
-  port: number
-  username: string
-  password: string
-  database: string
-}): Promise<MySQLValidationResult> {
-  // Only check if host is localhost
-  if (config.host !== 'localhost' && config.host !== '127.0.0.1') {
-    return {
-      step: 'Docker Connectivity',
-      status: 'success',
-      message: 'Using remote host (Docker connectivity not required) ✓'
-    }
-  }
-  
-  try {
-    // Test connection using host.docker.internal (what Debezium will use)
-    const dockerConnection = await mysql.createConnection({
-      host: 'host.docker.internal',
-      port: config.port,
-      user: config.username,
-      password: config.password,
-      database: config.database,
-    })
-    
-    await dockerConnection.end()
-    
-    return {
-      step: 'Docker Connectivity',
-      status: 'success',
-      message: 'MySQL is accessible from Docker containers ✓'
-    }
-  } catch (error) {
-    return {
-      step: 'Docker Connectivity',
-      status: 'warning',
-      message: 'MySQL may not be accessible from Docker',
-      details: 'Ensure MySQL bind-address is set to 0.0.0.0 (not 127.0.0.1) in my.cnf or my.ini. Restart MySQL after changing.'
-    }
-  }
-}
 
 /**
  * Check user permissions for Debezium
@@ -310,10 +265,6 @@ export async function validateMySQL(config: {
     // Check binlog row image
     const binlogRowImageResult = await checkBinlogRowImage(connection)
     results.push(binlogRowImageResult)
-    
-    // Check Docker connectivity (for localhost connections)
-    const dockerConnectivityResult = await checkDockerConnectivity(config)
-    results.push(dockerConnectivityResult)
     
     // Check user permissions
     const permissionsResult = await checkUserPermissions(connection, config.username)

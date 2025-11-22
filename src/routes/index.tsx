@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
-import { Settings, Activity, Plus, Trash2, Loader2, Play, TestTube2, CheckCircle2 } from 'lucide-react'
+import { Settings, Activity, Plus, Trash2, Loader2, Play, TestTube2 } from 'lucide-react'
 import { InfrastructureStatusWidget } from '@/components/infrastructure-status-widget'
 import { orpcQuery } from '@/orpc/client'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -137,8 +137,8 @@ function HomePage() {
                       <span className="font-mono">{connector.database}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Topic Prefix:</span>{' '}
-                      <span className="font-mono">{connector.topicPrefix}</span>
+                      <span className="text-muted-foreground">Connector ID:</span>{' '}
+                      <span className="font-mono text-xs">{connector.id}</span>
                     </div>
                   </div>
                   <Button
@@ -242,8 +242,6 @@ function CreateConnectorDialog({ open, onOpenChange }: CreateConnectorDialogProp
       username: 'root',
       password: 'rootpassword',
       database: 'nhan_starter_dev',
-      connectorName: 'testconnector',
-      topicPrefix: 'testconnector',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     } as Connection,
@@ -251,7 +249,9 @@ function CreateConnectorDialog({ open, onOpenChange }: CreateConnectorDialogProp
       onChange: connectionSchema,
     },
     onSubmit: async ({ value }) => {
-      await saveMutation.mutateAsync(value)
+      // Clean the value to ensure only schema-valid fields are sent
+      const cleanedValue = connectionSchema.parse(value)
+      await saveMutation.mutateAsync(cleanedValue)
     },
   })
 
@@ -289,13 +289,17 @@ function CreateConnectorDialog({ open, onOpenChange }: CreateConnectorDialogProp
 
   // Reset validation state when dialog closes
   const handleDialogOpenChange = (isOpen: boolean) => {
-    onOpenChange(isOpen)
-    if (!isOpen) {
+    if (isOpen) {
+      // Generate a fresh UUID when opening the dialog
+      form.setFieldValue('id', crypto.randomUUID())
+    } else {
       setConnectionTested(false)
       setValidationResults(null)
       validateMutation.reset()
       fixMutation.reset()
+      form.reset()
     }
+    onOpenChange(isOpen)
   }
 
   return (
@@ -403,39 +407,17 @@ function CreateConnectorDialog({ open, onOpenChange }: CreateConnectorDialogProp
                 )}
               />
             </div>
-
-            <form.AppField
-              name="connectorName"
-              children={(field) => (
-                <field.TextField
-                  label="Kafka Connector Name"
-                  placeholder="my-db-connector"
-                  description="Unique name for the Kafka Connect connector"
-                />
-              )}
-            />
-
-            <form.AppField
-              name="topicPrefix"
-              children={(field) => (
-                <field.TextField
-                  label="Topic Prefix"
-                  placeholder="mydb"
-                  description="Prefix for Kafka topics (e.g., mydb.public.users)"
-                />
-              )}
-            />
           </div>
 
           {/* Validation Results */}
-          {(validateMutation.isPending || validationResults) && (
+          {(validateMutation.isPending || fixMutation.isPending || validationResults) && (
             <div className="mt-4">
               <MySQLValidationStatus
                 isValidating={validateMutation.isPending || fixMutation.isPending}
                 validationResults={validationResults?.results || null}
                 isReady={validationResults?.isReady || false}
                 onRunFixes={handleRunFixes}
-                canRunFixes={true}
+                canRunFixes={!fixMutation.isPending}
               />
             </div>
           )}

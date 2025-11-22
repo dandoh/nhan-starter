@@ -6,7 +6,7 @@
 import { execSync } from 'child_process'
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, unlinkSync } from 'fs'
 import { join } from 'path'
-import { cdcConfigSchema, type CDCConfig, type Connection } from './schemas'
+import { cdcConfigSchema, type CDCConfig, type Connection, getConnectorName, getTopicPrefix } from './schemas'
 import { validateAndFixMySQL } from './mysql-validator'
 
 const CONFIG_FILE = join(process.cwd(), 'data', 'config.json')
@@ -349,6 +349,22 @@ export async function getInfrastructureStatus() {
 }
 
 /**
+ * Migrate old connector format to new format
+ * Old format had connectorName and topicPrefix fields
+ * New format uses id for both
+ */
+function migrateConnectorIfNeeded(connector: any): Connection {
+  // If it has the old fields, remove them (they're now derived from id)
+  if ('connectorName' in connector) {
+    delete connector.connectorName
+  }
+  if ('topicPrefix' in connector) {
+    delete connector.topicPrefix
+  }
+  return connector as Connection
+}
+
+/**
  * List all connectors from the connectors directory
  */
 export function listConnectors(): Connection[] {
@@ -364,7 +380,9 @@ export function listConnectors(): Connection[] {
     try {
       const content = readFileSync(join(CONNECTORS_DIR, file), 'utf-8')
       const connector = JSON.parse(content)
-      connectors.push(connector)
+      // Migrate old format if needed
+      const migratedConnector = migrateConnectorIfNeeded(connector)
+      connectors.push(migratedConnector)
     } catch (error) {
       console.error(`❌ Error loading connector file ${file}:`, error)
       // Skip malformed files and continue
@@ -388,7 +406,9 @@ export function getConnector(id: string): Connection {
   
   try {
     const content = readFileSync(filePath, 'utf-8')
-    return JSON.parse(content)
+    const connector = JSON.parse(content)
+    // Migrate old format if needed
+    return migrateConnectorIfNeeded(connector)
   } catch (error) {
     console.error(`❌ Error parsing connector file ${id}.json:`, error)
     throw new Error(`Failed to parse connector ${id}: ${error instanceof Error ? error.message : String(error)}`)
@@ -400,7 +420,8 @@ export function getConnector(id: string): Connection {
  */
 async function setupDebeziumConnector(connector: Connection): Promise<void> {
   const kafkaConnectUrl = getKafkaConnectURL()
-  const connectorName = connector.connectorName
+  const connectorName = getConnectorName(connector)
+  const topicPrefix = getTopicPrefix(connector)
   
   // Translate localhost for Docker containers
   // Kafka Connect runs inside Docker and needs to access the host machine
@@ -425,7 +446,7 @@ async function setupDebeziumConnector(connector: Connection): Promise<void> {
       'database.user': connector.username,
       'database.password': connector.password,
       'database.server.id': Math.floor(Math.random() * 1000000).toString(),
-      'topic.prefix': connector.topicPrefix,
+      'topic.prefix': topicPrefix,
       'database.include.list': connector.database,
       'table.include.list': `${connector.database}.*`,
       'schema.history.internal.kafka.bootstrap.servers': 'kafka:29092',
@@ -659,7 +680,7 @@ export async function deleteConnector(id: string) {
   try {
     const content = readFileSync(filePath, 'utf-8')
     const connector = JSON.parse(content)
-    connectorName = connector.connectorName
+    connectorName = getConnectorName(connector)
   } catch (error) {
     console.error('⚠️  Could not read connector name for Debezium cleanup:', error)
   }

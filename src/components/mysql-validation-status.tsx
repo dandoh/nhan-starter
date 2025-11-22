@@ -1,23 +1,11 @@
-import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   CheckCircle2,
   XCircle,
   Loader2,
   AlertTriangle,
   Wrench,
-  Copy,
-  Check,
 } from 'lucide-react'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 
 interface ValidationResult {
   step: string
@@ -41,8 +29,6 @@ export function MySQLValidationStatus({
   onRunFixes,
   canRunFixes,
 }: MySQLValidationStatusProps) {
-  const [showFixDialog, setShowFixDialog] = useState(false)
-  const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
 
   if (isValidating) {
     return (
@@ -50,9 +36,14 @@ export function MySQLValidationStatus({
         <div className="flex items-center gap-3">
           <Loader2 className="h-5 w-5 animate-spin text-blue-600 shrink-0" />
           <div>
-            <div className="font-medium text-sm">Testing connection...</div>
+            <div className="font-medium text-sm">
+              {validationResults ? 'Applying fixes...' : 'Testing connection...'}
+            </div>
             <div className="text-xs text-muted-foreground mt-0.5">
-              Validating MySQL configuration for Debezium CDC
+              {validationResults 
+                ? 'Attempting to fix MySQL configuration automatically' 
+                : 'Validating MySQL configuration for Debezium CDC'
+              }
             </div>
           </div>
         </div>
@@ -66,21 +57,7 @@ export function MySQLValidationStatus({
 
   const hasErrors = validationResults.some((r) => r.status === 'error')
   const errorSteps = validationResults.filter((r) => r.status === 'error')
-  const fixableErrors = errorSteps.filter((r) => r.details && r.details.includes('Run:'))
-
-  // Generate SQL commands from error details
-  const sqlCommands = fixableErrors
-    .map((r) => {
-      const match = r.details?.match(/Run: (.+)/)
-      return match ? match[1] : null
-    })
-    .filter(Boolean) as string[]
-
-  const handleCopy = (text: string, index: number) => {
-    navigator.clipboard.writeText(text)
-    setCopiedIndex(index)
-    setTimeout(() => setCopiedIndex(null), 2000)
-  }
+  const hasFixableErrors = errorSteps.some((r) => r.details)
 
   if (isReady) {
     return (
@@ -132,82 +109,25 @@ export function MySQLValidationStatus({
                 <div key={idx}>• {error.message}</div>
               ))}
             </div>
-            {canRunFixes && sqlCommands.length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowFixDialog(true)}
-              >
-                <Wrench className="h-4 w-4 mr-2" />
-                View & Apply Fixes
-              </Button>
+            {canRunFixes && hasFixableErrors && (
+              <>
+                <div className="text-xs text-muted-foreground mb-2">
+                  Click below to automatically apply configuration fixes to your MySQL database.
+                </div>
+                <Button
+                  variant="outline"
+                  type="button"
+                  size="sm"
+                  onClick={onRunFixes}
+                >
+                  <Wrench className="h-4 w-4 mr-2" />
+                  Apply Fixes Automatically
+                </Button>
+              </>
             )}
           </div>
         )}
       </div>
-
-      {/* Fix Dialog */}
-      <Dialog open={showFixDialog} onOpenChange={setShowFixDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>MySQL Configuration Fixes</DialogTitle>
-            <DialogDescription>
-              The following SQL commands will be executed to configure MySQL for Debezium CDC
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-3">
-            <Alert>
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                <div className="font-medium">Review before applying</div>
-                <div className="text-sm mt-1">
-                  These commands will modify global MySQL settings and grant replication permissions.
-                  Make sure you have sufficient privileges.
-                </div>
-              </AlertDescription>
-            </Alert>
-
-            <div className="space-y-2">
-              {sqlCommands.map((sql, index) => (
-                <div key={index} className="relative">
-                  <div className="text-xs text-muted-foreground mb-1">Command {index + 1}:</div>
-                  <div className="relative">
-                    <pre className="bg-muted rounded-lg p-3 pr-12 text-sm overflow-x-auto border">
-                      {sql}
-                    </pre>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-2 right-2 h-7 w-7"
-                      onClick={() => handleCopy(sql, index)}
-                    >
-                      {copiedIndex === index ? (
-                        <Check className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowFixDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => {
-              setShowFixDialog(false)
-              onRunFixes()
-            }}>
-              <Wrench className="h-4 w-4 mr-2" />
-              Apply Fixes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   )
 }
