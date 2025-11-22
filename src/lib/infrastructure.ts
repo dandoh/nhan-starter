@@ -7,7 +7,7 @@ import { execSync } from 'child_process'
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, unlinkSync } from 'fs'
 import { join } from 'path'
 import { cdcConfigSchema, type CDCConfig, type Connection, getConnectorName, getTopicPrefix } from './schemas'
-import { validateAndFixMySQL } from './mysql-validator'
+import { validateMySQL } from './mysql-validator'
 
 const CONFIG_FILE = join(process.cwd(), 'data', 'config.json')
 const DATA_DIR = join(process.cwd(), 'data')
@@ -581,11 +581,11 @@ async function setupDebeziumConnector(connector: Connection): Promise<void> {
 export async function saveConnector(connector: Connection): Promise<Connection> {
   ensureDataDirectories()
   
-  // Step 1: Validate and fix MySQL configuration for MySQL connectors
+  // Step 1: Validate MySQL configuration for MySQL connectors
   if (connector.dbType === 'mysql') {
     console.log('🔍 Validating MySQL configuration for Debezium...')
     
-    const validationReport = await validateAndFixMySQL({
+    const validationReport = await validateMySQL({
       host: connector.host,
       port: connector.port,
       username: connector.username,
@@ -601,7 +601,7 @@ export async function saveConnector(connector: Connection): Promise<Connection> 
       
       throw new Error(
         `MySQL is not properly configured for Debezium CDC:\n\n${errorMessages}\n\n` +
-        'Please fix these issues and try again.'
+        'Please fix these issues using the "View & Apply Fixes" button and try again.'
       )
     }
     

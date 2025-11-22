@@ -357,6 +357,12 @@ export async function validateAndFixMySQL(config: {
       const fixResult = await fixUserPermissions(connection, config.username)
       results.push(fixResult)
     }
+
+    
+    // If everything is successful, wait for 10 seconds
+    if (results.every(r => r.status === 'success')) {
+      await new Promise(resolve => setTimeout(resolve, 10000))
+    }
     
     // Final validation check
     const finalBinlogFormat = await checkBinlogFormat(connection)
