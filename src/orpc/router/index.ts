@@ -15,6 +15,7 @@ import {
   deleteConnector,
 } from '@/lib/infrastructure'
 import { cdcConfigSchema, connectionSchema } from '@/lib/schemas'
+import { validateMySQL, validateAndFixMySQL } from '@/lib/mysql-validator'
 import { z } from 'zod'
 
 // SSE Stream endpoint - streams CDC events from Kafka
@@ -204,6 +205,34 @@ export const deleteConnectorById = os
     return { success: true, message: 'Connector deleted successfully' }
   })
 
+// Validate MySQL configuration for Debezium
+export const validateMySQLConfig = os
+  .input(z.object({
+    host: z.string().min(1),
+    port: z.number().int().min(1).max(65535),
+    username: z.string().min(1),
+    password: z.string().min(1),
+    database: z.string().min(1),
+  }))
+  .handler(async ({ input }) => {
+    const report = await validateMySQL(input)
+    return report
+  })
+
+// Validate and attempt to fix MySQL configuration
+export const validateAndFixMySQLConfig = os
+  .input(z.object({
+    host: z.string().min(1),
+    port: z.number().int().min(1).max(65535),
+    username: z.string().min(1),
+    password: z.string().min(1),
+    database: z.string().min(1),
+  }))
+  .handler(async ({ input }) => {
+    const report = await validateAndFixMySQL(input)
+    return report
+  })
+
 export default {
   stream,
   infrastructureStatus,
@@ -217,4 +246,6 @@ export default {
   getConnectorById,
   saveConnectorData,
   deleteConnectorById,
+  validateMySQLConfig,
+  validateAndFixMySQLConfig,
 }

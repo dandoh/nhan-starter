@@ -7,6 +7,7 @@ import { execSync } from 'child_process'
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, unlinkSync } from 'fs'
 import { join } from 'path'
 import { cdcConfigSchema, type CDCConfig, type Connection } from './schemas'
+import { validateAndFixMySQL } from './mysql-validator'
 
 const CONFIG_FILE = join(process.cwd(), 'data', 'config.json')
 const DATA_DIR = join(process.cwd(), 'data')
@@ -401,11 +402,18 @@ async function setupDebeziumConnector(connector: Connection): Promise<void> {
   const kafkaConnectUrl = getKafkaConnectURL()
   const connectorName = connector.connectorName
   
-  // Translate localhost to host.docker.internal for Docker containers
+  // Translate localhost for Docker containers
   // Kafka Connect runs inside Docker and needs to access the host machine
-  const dbHostname = connector.host === 'localhost' || connector.host === '127.0.0.1' 
-    ? 'host.docker.internal' 
-    : connector.host
+  let dbHostname = connector.host
+  
+  if (connector.host === 'localhost' || connector.host === '127.0.0.1') {
+    // On macOS/Windows with Docker Desktop: use host.docker.internal
+    // On Linux: use host.containers.internal or bridge IP
+    // We'll use host.docker.internal as primary, but log a warning
+    dbHostname = 'host.docker.internal'
+    console.log(`⚠️  Converting ${connector.host} to ${dbHostname} for Docker networking`)
+    console.log(`   If connection fails, your MySQL may need to listen on 0.0.0.0 instead of 127.0.0.1`)
+  }
   
   // Build Debezium connector configuration based on database type
   const debeziumConfig: any = {
@@ -547,16 +555,43 @@ async function setupDebeziumConnector(connector: Connection): Promise<void> {
 
 /**
  * Save a connector to file and setup Debezium connector
- * Only saves if Debezium connector is successfully created
+ * Only saves if MySQL validation and Debezium connector are successfully created
  */
 export async function saveConnector(connector: Connection): Promise<Connection> {
   ensureDataDirectories()
   
-  // Try to setup Debezium connector FIRST
+  // Step 1: Validate and fix MySQL configuration for MySQL connectors
+  if (connector.dbType === 'mysql') {
+    console.log('🔍 Validating MySQL configuration for Debezium...')
+    
+    const validationReport = await validateAndFixMySQL({
+      host: connector.host,
+      port: connector.port,
+      username: connector.username,
+      password: connector.password,
+      database: connector.database,
+    })
+    
+    if (!validationReport.isReady) {
+      const errorMessages = validationReport.results
+        .filter(r => r.status === 'error')
+        .map(r => `${r.step}: ${r.message}${r.details ? '\n  ' + r.details : ''}`)
+        .join('\n')
+      
+      throw new Error(
+        `MySQL is not properly configured for Debezium CDC:\n\n${errorMessages}\n\n` +
+        'Please fix these issues and try again.'
+      )
+    }
+    
+    console.log('✅ MySQL validation passed')
+  }
+  
+  // Step 2: Try to setup Debezium connector
   // If this fails, we don't save the connector file
   await setupDebeziumConnector(connector)
   
-  // Only save the connector file if Debezium setup succeeded
+  // Step 3: Only save the connector file if everything succeeded
   const filePath = join(CONNECTORS_DIR, `${connector.id}.json`)
   writeFileSync(filePath, JSON.stringify(connector, null, 2), 'utf-8')
   

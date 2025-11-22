@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
-import { Settings, Activity, Plus, Trash2, Loader2, Play } from 'lucide-react'
+import { Settings, Activity, Plus, Trash2, Loader2, Play, TestTube2, CheckCircle2 } from 'lucide-react'
 import { InfrastructureStatusWidget } from '@/components/infrastructure-status-widget'
 import { orpcQuery } from '@/orpc/client'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -24,6 +24,7 @@ import { connectionSchema, type Connection } from '@/lib/schemas'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
+import { MySQLValidationStatus } from '@/components/mysql-validation-status'
 
 export const Route = createFileRoute('/')({
   component: HomePage,
@@ -187,6 +188,8 @@ interface CreateConnectorDialogProps {
 
 function CreateConnectorDialog({ open, onOpenChange }: CreateConnectorDialogProps) {
   const queryClient = useQueryClient()
+  const [connectionTested, setConnectionTested] = useState(false)
+  const [validationResults, setValidationResults] = useState<any>(null)
 
   const saveMutation = useMutation(
     orpcQuery.saveConnectorData.mutationOptions({
@@ -194,7 +197,37 @@ function CreateConnectorDialog({ open, onOpenChange }: CreateConnectorDialogProp
         queryClient.invalidateQueries({
           queryKey: orpcQuery.listAllConnectors.queryKey(),
         })
-        onOpenChange(false)
+        handleDialogOpenChange(false)
+        // Reset form
+        form.reset()
+      },
+    }),
+  )
+
+  const validateMutation = useMutation(
+    orpcQuery.validateMySQLConfig.mutationOptions({
+      onSuccess: (data) => {
+        setValidationResults(data)
+        setConnectionTested(true)
+      },
+      onError: (error) => {
+        setValidationResults({
+          isReady: false,
+          results: [{
+            step: 'Connection',
+            status: 'error',
+            message: String(error),
+          }]
+        })
+        setConnectionTested(true)
+      }
+    }),
+  )
+
+  const fixMutation = useMutation(
+    orpcQuery.validateAndFixMySQLConfig.mutationOptions({
+      onSuccess: (data) => {
+        setValidationResults(data)
       },
     }),
   )
@@ -222,8 +255,51 @@ function CreateConnectorDialog({ open, onOpenChange }: CreateConnectorDialogProp
     },
   })
 
+  const handleTestConnection = () => {
+    const values = form.state.values
+    setConnectionTested(false)
+    setValidationResults(null)
+    
+    if (values.dbType === 'mysql') {
+      validateMutation.mutate({
+        host: values.host,
+        port: values.port,
+        username: values.username,
+        password: values.password,
+        database: values.database,
+      })
+    }
+  }
+
+  const handleRunFixes = () => {
+    const values = form.state.values
+    
+    if (values.dbType === 'mysql') {
+      fixMutation.mutate({
+        host: values.host,
+        port: values.port,
+        username: values.username,
+        password: values.password,
+        database: values.database,
+      })
+    }
+  }
+
+  const isConnectionReady = connectionTested && validationResults?.isReady
+
+  // Reset validation state when dialog closes
+  const handleDialogOpenChange = (isOpen: boolean) => {
+    onOpenChange(isOpen)
+    if (!isOpen) {
+      setConnectionTested(false)
+      setValidationResults(null)
+      validateMutation.reset()
+      fixMutation.reset()
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Connector</DialogTitle>
@@ -242,7 +318,9 @@ function CreateConnectorDialog({ open, onOpenChange }: CreateConnectorDialogProp
           {saveMutation.error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{String(saveMutation.error)}</AlertDescription>
+              <AlertDescription className="whitespace-pre-wrap">
+                {String(saveMutation.error)}
+              </AlertDescription>
             </Alert>
           )}
 
@@ -349,36 +427,72 @@ function CreateConnectorDialog({ open, onOpenChange }: CreateConnectorDialogProp
             />
           </div>
 
+          {/* Validation Results */}
+          {(validateMutation.isPending || validationResults) && (
+            <div className="mt-4">
+              <MySQLValidationStatus
+                isValidating={validateMutation.isPending || fixMutation.isPending}
+                validationResults={validationResults?.results || null}
+                isReady={validationResults?.isReady || false}
+                onRunFixes={handleRunFixes}
+                canRunFixes={true}
+              />
+            </div>
+          )}
+
+          {/* Actions */}
           <form.Subscribe
             selector={(state) => ({
               canSubmit: state.canSubmit,
             })}
           >
             {({ canSubmit }) => (
-              <div className="flex justify-end gap-2">
+              <div className="flex items-center justify-end gap-3 pt-6 border-t border-border mt-6">
                 <Button
                   type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
+                  variant="ghost"
+                  onClick={() => handleDialogOpenChange(false)}
                 >
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={!canSubmit || saveMutation.isPending}
-                >
-                  {saveMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create Connector
-                    </>
-                  )}
-                </Button>
+
+                {!isConnectionReady ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleTestConnection}
+                    disabled={validateMutation.isPending || fixMutation.isPending}
+                  >
+                    {validateMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Testing...
+                      </>
+                    ) : (
+                      <>
+                        <TestTube2 className="h-4 w-4 mr-2" />
+                        Test Connection
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    disabled={!canSubmit || saveMutation.isPending}
+                  >
+                    {saveMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create Connector
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
             )}
           </form.Subscribe>
