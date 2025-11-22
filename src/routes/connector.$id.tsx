@@ -77,120 +77,130 @@ function ConnectorStreamPage() {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div className="flex h-screen flex-col bg-background font-sans selection:bg-primary/10">
+      {/* Texture Overlay */}
+      <div
+        className="fixed inset-0 pointer-events-none opacity-[0.03]"
+        style={{
+          backgroundImage:
+            'radial-gradient(oklch(var(--foreground)) 1px, transparent 1px)',
+          backgroundSize: '24px 24px',
+        }}
+      />
+
       {/* Header */}
-      <header className="border-b border-border bg-card">
-        {/* Top Row */}
-        <div className="flex items-center gap-2 px-3 py-2.5 sm:px-4 sm:py-3">
-          <Link to="/" className="shrink-0">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 sm:h-8 sm:w-8"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-
-          <div className="flex items-center gap-1.5 min-w-0 flex-1">
-            <h1 className="text-sm sm:text-base font-semibold truncate">
-              {connector.name}
-            </h1>
-            <Badge
-              variant="secondary"
-              className="text-[10px] sm:text-xs font-normal shrink-0 h-5"
-            >
-              {connector.dbType}
-            </Badge>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-5 w-5 text-muted-foreground hover:text-foreground">
-                    <Info className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <div className="flex items-center gap-1.5 text-xs">
-                    <Database className="h-3.5 w-3.5 shrink-0" />
-                    <span className="font-mono">
-                      {connector.host}:{connector.port}
-                    </span>
-                    <span className="text-muted-foreground/40 shrink-0">/</span>
-                    <span className="font-mono">{connector.database}</span>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {isConnected ? (
-              <div className="flex items-center gap-1 sm:gap-1.5">
-                <span className="relative flex h-1.5 w-1.5 sm:h-2 sm:w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 sm:h-2 sm:w-2 bg-green-500"></span>
-                </span>
-                <span className="text-[10px] sm:text-xs text-green-600 font-medium hidden sm:inline">
-                  Live
-                </span>
-              </div>
-            ) : (
-              <span className="text-[10px] sm:text-xs text-muted-foreground hidden sm:inline">
-                Off
-              </span>
-            )}
-
-            <span className="text-[10px] sm:text-xs text-muted-foreground font-mono tabular-nums">
-              {messages.length}
-            </span>
-
-            <div className="h-3 sm:h-4 w-px bg-border" />
-
-            {isStreaming ? (
+      <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container mx-auto max-w-7xl px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4 min-w-0">
+            <Link to="/">
               <Button
                 variant="ghost"
-                size="sm"
-                onClick={stopStream}
-                className="h-6 sm:h-7 text-destructive hover:text-destructive hover:bg-destructive/10 px-1.5 sm:px-2"
+                size="icon"
+                className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-accent"
               >
-                <Square className="h-3 w-3" />
-                <span className="hidden sm:inline ml-1.5">Stop</span>
+                <ArrowLeft className="h-5 w-5" />
               </Button>
-            ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={startStream}
-                className="h-6 sm:h-7 text-primary hover:text-primary hover:bg-primary/10 px-1.5 sm:px-2"
-              >
-                <Play className="h-3 w-3" />
-                <span className="hidden sm:inline ml-1.5">Start</span>
-              </Button>
-            )}
+            </Link>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={clearMessages}
-              disabled={messages.length === 0}
-              className="h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground hover:text-destructive"
-              title="Clear Messages"
-            >
-              <Trash2 className="h-3 w-3" />
-            </Button>
+            <div className="flex items-center gap-3 min-w-0">
+              <h1 className="text-lg font-bold tracking-tight text-foreground truncate">
+                {connector.name}
+              </h1>
+            </div>
           </div>
         </div>
-
       </header>
 
       {/* Stream Content */}
-      <div className="flex-1 overflow-hidden bg-muted/5">
-        <LiveStream
-          messages={messages}
-          isConnected={isConnected}
-          error={streamError}
-        />
-      </div>
+      <main className="flex-1 overflow-hidden relative z-10">
+        <div className="container mx-auto max-w-7xl h-full px-6 py-6 flex flex-col gap-4">
+          {/* Toolbar */}
+          <div className="flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2 overflow-x-auto mask-fade-r">
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-border/50 bg-background/50 text-xs text-muted-foreground hover:bg-muted/30 hover:text-foreground transition-colors cursor-default">
+                <span className="font-bold opacity-70">Type</span>
+                <span className="text-foreground">
+                  {connector.dbType}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-border/50 bg-background/50 text-xs text-muted-foreground hover:bg-muted/30 hover:text-foreground transition-colors cursor-default">
+                <span className="font-bold opacity-70">Host</span>
+                <span className="text-foreground">
+                  {connector.host}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-border/50 bg-background/50 text-xs text-muted-foreground hover:bg-muted/30 hover:text-foreground transition-colors cursor-default">
+                <span className="font-bold opacity-70">Port</span>
+                <span className="text-foreground">
+                  {connector.port}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-border/50 bg-background/50 text-xs text-muted-foreground hover:bg-muted/30 hover:text-foreground transition-colors cursor-default">
+                <span className="font-bold opacity-70">Database</span>
+                <span className="text-foreground">
+                  {connector.database}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 bg-background border border-border/50 rounded-md p-1">
+              {/* Status & Count */}
+              <div className="flex items-center gap-2 px-3 border-r border-border/50">
+                <div
+                  className={`h-2 w-2 rounded-full ${isConnected ? 'bg-success animate-pulse' : 'bg-muted-foreground/30'}`}
+                />
+                <span className="text-xs font-mono text-muted-foreground tabular-nums min-w-[3ch] text-center">
+                  {messages.length}
+                </span>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-0.5">
+                {isStreaming ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={stopStream}
+                    className="h-7 px-2.5 text-xs hover:bg-destructive/10 hover:text-destructive font-medium"
+                  >
+                    <Square className="h-3 w-3 mr-1.5 fill-current" />
+                    Stop
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={startStream}
+                    className="h-7 px-2.5 text-xs hover:bg-primary/10 hover:text-primary font-medium"
+                  >
+                    <Play className="h-3 w-3 mr-1.5 fill-current" />
+                    Start
+                  </Button>
+                )}
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={clearMessages}
+                  disabled={messages.length === 0}
+                  className="h-7 w-7 hover:bg-destructive/10 hover:text-destructive"
+                  title="Clear Messages"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 rounded-xl border border-border overflow-hidden backdrop-blur-sm">
+            <LiveStream
+              messages={messages}
+              isConnected={isConnected}
+              error={streamError}
+            />
+          </div>
+        </div>
+      </main>
     </div>
   )
 }

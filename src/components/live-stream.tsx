@@ -151,7 +151,7 @@ export function LiveStream({ messages, isConnected, error }: LiveStreamProps) {
           ) : messages.length === 0 ? (
             <div className="flex h-64 items-center justify-center text-center">
               <div className="space-y-2">
-                <div className={`h-3 w-3 rounded-full mx-auto ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-muted-foreground'}`} />
+                <div className={`h-3 w-3 rounded-full mx-auto ${isConnected ? 'bg-success animate-pulse' : 'bg-muted-foreground'}`} />
                 <p className="text-sm font-mono text-muted-foreground">
                   {isConnected
                     ? 'Waiting for changes...'
@@ -223,7 +223,7 @@ export function LiveStream({ messages, isConnected, error }: LiveStreamProps) {
                   >
                     <div className="flex items-start gap-1.5">
                       {isExpanded ? (
-                        <ChevronDown className="h-3 w-3 text-primary-400 mt-0.5 shrink-0" />
+                        <ChevronDown className="h-3 w-3 text-primary mt-0.5 shrink-0" />
                       ) : (
                         <ChevronRight className="h-3 w-3 text-muted-foreground mt-0.5 shrink-0" />
                       )}

@@ -203,10 +203,10 @@ export function InfrastructureStatusWidget() {
         variant="ghost"
         size="sm"
         onClick={() => setOpen(true)}
-        className="h-8 gap-2 px-2 text-muted-foreground hover:text-foreground"
+        className="h-9 gap-2 px-3 text-muted-foreground hover:text-foreground"
       >
-        <div className={`h-2 w-2 rounded-full ${getStatusColor()}`} />
-        <span className="text-xs font-medium">System</span>
+        <div className={`h-2.5 w-2.5 rounded-full ${getStatusColor()}`} />
+        <span className="text-sm font-medium">System</span>
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>

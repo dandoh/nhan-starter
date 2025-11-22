@@ -5,7 +5,11 @@ import {
   Loader2,
   AlertTriangle,
   Wrench,
+  Check,
+  X,
+  AlertCircle
 } from 'lucide-react'
+
 
 interface ValidationResult {
   step: string
@@ -35,19 +39,15 @@ export function DatabaseValidationStatus({
 
   if (isValidating) {
     return (
-      <div className="rounded-lg border border-blue-500/50 bg-blue-500/5 p-4">
-        <div className="flex items-center gap-3">
-          <Loader2 className="h-5 w-5 animate-spin text-blue-600 shrink-0" />
-          <div>
-            <div className="font-medium text-sm">
+      <div className="rounded-xl border border-info/20 bg-info/5 overflow-hidden">
+        <div className="p-4 flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-info/10 text-info shrink-0">
+            <Loader2 className="h-4 w-4 animate-spin" />
+          </div>
+          <div className="space-y-0.5">
+            <h4 className="text-sm font-semibold text-foreground">
               {validationResults ? 'Applying fixes...' : 'Testing connection...'}
-            </div>
-            <div className="text-xs text-muted-foreground mt-0.5">
-              {validationResults 
-                ? `Attempting to fix ${dbName} configuration automatically` 
-                : `Validating ${dbName} configuration for Debezium CDC`
-              }
-            </div>
+            </h4>
           </div>
         </div>
       </div>
@@ -64,96 +64,87 @@ export function DatabaseValidationStatus({
   const warningSteps = validationResults.filter((r) => r.status === 'warning')
   const hasFixableErrors = errorSteps.some((r) => r.details)
 
+  // Success State
   if (isReady && !hasWarnings) {
     return (
-      <div className="rounded-lg border border-green-500/50 bg-green-500/5 p-4">
-        <div className="flex items-center gap-3">
-          <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
-          <div>
-            <div className="font-medium text-sm text-green-900 dark:text-green-100">
-              Connection Verified
-            </div>
-            <div className="text-xs text-green-800 dark:text-green-200 mt-0.5">
-              {dbName} is ready for streaming.
-            </div>
+      <div className="rounded-xl border border-success/30 bg-success/5 overflow-hidden">
+        <div className="p-4 flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-success/10 text-success shrink-0">
+            <Check className="h-4 w-4" />
           </div>
+          <h4 className="text-sm font-semibold text-foreground">
+            Connection Verified
+          </h4>
         </div>
       </div>
     )
   }
 
+  // Warning State
   if (isReady && hasWarnings) {
     return (
-      <div className="rounded-lg border border-yellow-500/50 bg-yellow-500/5 p-4 space-y-3">
-        <div className="flex items-center gap-3">
-          <AlertTriangle className="h-5 w-5 text-yellow-600 shrink-0" />
-          <div>
-            <div className="font-medium text-sm text-yellow-900 dark:text-yellow-100">
-              Connection Verified with Warnings
-            </div>
-            <div className="text-xs text-yellow-800 dark:text-yellow-200 mt-0.5">
-              {dbName} is connected but has configuration warnings.
-            </div>
+      <div className="rounded-xl border border-warning/30 bg-warning/5 overflow-hidden">
+        <div className="p-4 flex items-center gap-3 border-b border-warning/20">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-warning/10 text-warning shrink-0">
+            <AlertTriangle className="h-4 w-4" />
           </div>
+          <h4 className="text-sm font-semibold text-foreground">
+            Connection Verified with Warnings
+          </h4>
         </div>
+        
+        <div className="p-4 bg-warning/5 space-y-3">
+           {/* Validation Steps List */}
+           <div className="space-y-2">
+            {validationResults.map((result, index) => (
+              <ValidationStep
+                key={index}
+                step={result.step}
+                status={result.status}
+                message={result.message}
+                details={result.details}
+              />
+            ))}
+          </div>
 
-        {/* Validation Steps */}
-        <div className="space-y-2 pl-7">
-          {validationResults.map((result, index) => (
-            <ValidationStep
-              key={index}
-              step={result.step}
-              status={result.status}
-              message={result.message}
-              details={result.details}
-            />
-          ))}
-        </div>
-
-        {/* Warning Summary */}
-        {warningSteps.length > 0 && (
-          <div className="pl-7 pt-2 border-t border-yellow-500/20">
-            <div className="text-xs font-medium text-yellow-900 dark:text-yellow-100 mb-2">
-              Configuration Recommendations
-            </div>
-            <div className="text-xs text-muted-foreground space-y-1 mb-3">
-              {warningSteps.map((warning, idx) => (
-                <div key={idx}>• {warning.message}</div>
-              ))}
-            </div>
-            {canRunFixes && (
-              <>
-                <div className="text-xs text-muted-foreground mb-2">
-                  Click below to automatically apply recommended configuration fixes.
+          {warningSteps.length > 0 && canRunFixes && (
+             <div className="pt-3 mt-3 border-t border-warning/30">
+                <div className="flex items-center justify-between gap-4">
+                  <p className="text-xs text-foreground font-medium">
+                    Recommended fixes available
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onRunFixes}
+                    className="bg-card border-warning/30 text-foreground hover:bg-warning/10 hover:text-foreground h-8 text-xs"
+                  >
+                    <Wrench className="h-3.5 w-3.5 mr-2" />
+                    Apply Fixes
+                  </Button>
                 </div>
-                <Button
-                  variant="outline"
-                  type="button"
-                  size="sm"
-                  onClick={onRunFixes}
-                >
-                  <Wrench className="h-4 w-4 mr-2" />
-                  Apply Fixes Automatically
-                </Button>
-              </>
-            )}
-          </div>
-        )}
+             </div>
+          )}
+        </div>
       </div>
     )
   }
 
+  // Error State
   return (
-    <>
-      <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-4 space-y-3">
-        {/* Header */}
-        <div className="flex items-center gap-2 text-destructive">
-          <XCircle className="h-5 w-5 shrink-0" />
-          <div className="font-semibold text-sm">Connection Test Failed</div>
+    <div className="rounded-xl border border-destructive/20 bg-card overflow-hidden shadow-sm">
+      <div className="p-4 flex items-center gap-3 border-b border-border bg-destructive/5">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-destructive/10 text-destructive shrink-0">
+          <X className="h-4 w-4" />
         </div>
+        <h4 className="text-sm font-semibold text-foreground">
+          Connection Test Failed
+        </h4>
+      </div>
 
-        {/* Validation Steps */}
-        <div className="space-y-2 pl-7">
+      <div className="p-4 space-y-4">
+         {/* Validation Steps List */}
+        <div className="space-y-1">
           {validationResults.map((result, index) => (
             <ValidationStep
               key={index}
@@ -165,37 +156,26 @@ export function DatabaseValidationStatus({
           ))}
         </div>
 
-        {/* Error Summary with Fix Button */}
-        {hasErrors && (
-          <div className="pl-7 pt-2 border-t border-destructive/20">
-            <div className="text-xs font-medium text-destructive mb-2">
-              {dbName} requires configuration for CDC
-            </div>
-            <div className="text-xs text-muted-foreground space-y-1 mb-3">
-              {errorSteps.map((error, idx) => (
-                <div key={idx}>• {error.message}</div>
-              ))}
-            </div>
-            {canRunFixes && hasFixableErrors && (
-              <>
-                <div className="text-xs text-muted-foreground mb-2">
-                  Click below to automatically apply configuration fixes to your {dbName} database.
-                </div>
-                <Button
-                  variant="outline"
-                  type="button"
-                  size="sm"
-                  onClick={onRunFixes}
-                >
-                  <Wrench className="h-4 w-4 mr-2" />
-                  Apply Fixes Automatically
-                </Button>
-              </>
-            )}
+        {/* Fix Action Area */}
+        {hasErrors && hasFixableErrors && canRunFixes && (
+          <div className="rounded-lg border border-border bg-muted p-3 flex items-center justify-between gap-3">
+             <div className="text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground block mb-0.5">Auto-Fix Available</span>
+                We can attempt to configure {dbName} automatically.
+             </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onRunFixes}
+                className="bg-card hover:bg-muted border-border text-foreground h-8 text-xs whitespace-nowrap"
+              >
+                <Wrench className="h-3.5 w-3.5 mr-2" />
+                Apply Fixes
+              </Button>
           </div>
         )}
       </div>
-    </>
+    </div>
   )
 }
 
@@ -211,26 +191,29 @@ interface ValidationStepProps {
 
 function ValidationStep({ step, status, message, details }: ValidationStepProps) {
   const icon = {
-    success: <CheckCircle2 className="h-3.5 w-3.5 text-green-600 shrink-0" />,
-    error: <XCircle className="h-3.5 w-3.5 text-destructive shrink-0" />,
-    warning: <AlertTriangle className="h-3.5 w-3.5 text-yellow-600 shrink-0" />,
-  }[status]
-
-  const textColor = {
-    success: 'text-green-900 dark:text-green-100',
-    error: 'text-destructive',
-    warning: 'text-yellow-900 dark:text-yellow-100',
+    success: <CheckCircle2 className="h-4 w-4 text-success shrink-0" />,
+    error: <XCircle className="h-4 w-4 text-destructive shrink-0" />,
+    warning: <AlertCircle className="h-4 w-4 text-warning shrink-0" />,
   }[status]
 
   return (
-    <div className="flex items-start gap-2">
-      <div className="mt-0.5">{icon}</div>
-      <div className="flex-1 min-w-0">
-        <div className={`text-xs ${textColor}`}>
-          <span className="font-medium">{step}:</span> {message}
+    <div className="flex items-start gap-3 py-2 text-left group">
+      <div className="mt-0.5 transition-transform group-hover:scale-110">{icon}</div>
+      <div className="flex-1 min-w-0 space-y-1">
+        <div className="flex items-center gap-2 flex-wrap">
+           <span className="text-xs font-medium text-foreground">{step}</span>
+           {status === 'error' && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-destructive/10 text-destructive tracking-wide">
+                Failed
+              </span>
+           )}
         </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          {message}
+        </p>
+        
         {details && (
-          <div className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">
+          <div className="mt-2 p-2 rounded bg-muted border border-border text-[10px] font-mono text-muted-foreground overflow-x-auto">
             {details}
           </div>
         )}

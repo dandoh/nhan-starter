@@ -115,7 +115,7 @@ async function startMySQLContainer(): Promise<void> {
     mysql:8.0 \
     --server-id=1 \
     --log-bin=mysql-bin \
-    --binlog-format=ROW \
+    --binlog-format=MIXED \
     --binlog-row-image=FULL \
     --gtid-mode=ON \
     --enforce-gtid-consistency=ON`

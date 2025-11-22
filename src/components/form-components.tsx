@@ -1,4 +1,5 @@
 import { useStore } from '@tanstack/react-form'
+import { cn } from '@/lib/utils'
 
 import { useFieldContext, useFormContext } from '@/hooks/form-context'
 
@@ -55,7 +56,7 @@ function ErrorMessages({
       {errors.map((error) => (
         <div
           key={typeof error === 'string' ? error : error.message}
-          className="text-xs text-error mt-1"
+          className="text-xs text-destructive mt-1"
         >
           {typeof error === 'string' ? error : error.message}
         </div>
@@ -70,12 +71,14 @@ export function TextField({
   readOnly,
   description,
   type = 'text',
+  className,
 }: {
   label: string
   placeholder?: string
   readOnly?: boolean
   description?: string
   type?: string
+  className?: string
 }) {
   const field = useFieldContext<string>()
   const errors = useStore(field.store, (state) => state.meta.errors)
@@ -93,7 +96,7 @@ export function TextField({
         onBlur={field.handleBlur}
         onChange={(e) => field.handleChange(e.target.value)}
         readOnly={readOnly}
-        className={readOnly ? 'bg-muted' : ''}
+        className={cn(readOnly ? 'bg-muted' : '', className)}
       />
       {description && (
         <p className="text-xs text-muted-foreground mt-1">{description}</p>
@@ -108,11 +111,13 @@ export function NumberField({
   placeholder,
   min,
   max,
+  className,
 }: {
   label: string
   placeholder?: string
   min?: number
   max?: number
+  className?: string
 }) {
   const field = useFieldContext<number>()
   const errors = useStore(field.store, (state) => state.meta.errors)
@@ -131,6 +136,7 @@ export function NumberField({
         onChange={(e) => field.handleChange(parseInt(e.target.value) || 0)}
         min={min}
         max={max}
+        className={className}
       />
       {field.state.meta.isTouched && <ErrorMessages errors={errors} />}
     </div>
@@ -180,6 +186,11 @@ export function Select({
 
   return (
     <div>
+      {label && (
+        <Label className="mb-2 block">
+          {label}
+        </Label>
+      )}
       <ShadcnSelect.Select
         name={field.name}
         value={field.state.value}
@@ -190,7 +201,6 @@ export function Select({
         </ShadcnSelect.SelectTrigger>
         <ShadcnSelect.SelectContent>
           <ShadcnSelect.SelectGroup>
-            <ShadcnSelect.SelectLabel>{label}</ShadcnSelect.SelectLabel>
             {values.map((value) => (
               <ShadcnSelect.SelectItem key={value.value} value={value.value}>
                 {value.label}

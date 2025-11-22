@@ -44,11 +44,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
     const theme = localStorage.getItem('theme')
     const html = document.documentElement
 
-    if (theme === 'light') {
-      html.classList.remove('dark')
-    } else {
-      // Default to dark if no theme is set or if theme is 'dark'
+    // Default to light mode (Light Mode Mastery)
+    if (theme === 'dark') {
       html.classList.add('dark')
+    } else {
+      html.classList.remove('dark')
     }
   }, [])
 

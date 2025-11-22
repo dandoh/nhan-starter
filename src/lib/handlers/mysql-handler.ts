@@ -420,7 +420,7 @@ export class MySQLHandler implements DatabaseHandler {
       
       // Data type handling - convert decimals to numbers
       'decimal.handling.mode': 'double',
-      'time.precision.mode': 'adaptive',
+      'time.precision.mode': 'adaptive_time_microseconds',
     }
   }
 }
