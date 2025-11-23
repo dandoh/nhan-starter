@@ -12,8 +12,7 @@ const config = defineConfig({
     }),
     tailwindcss(),
     tanstackStart({
-      serverFns: {
-      }
+      serverFns: {},
     }),
     viteReact(),
   ],

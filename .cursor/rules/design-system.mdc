@@ -61,8 +61,6 @@ This project follows a strict "Engineering Clarity" aesthetic—visualizing comp
 -   **Cards**:
     -   Background: `bg-card` (NOT `bg-white`).
     -   Border: `border-border` (NOT `border-slate-200`).
-    -   Shadow: `shadow-sm`.
-    -   Hover effect: `hover:shadow-md hover:border-primary/30 transition-all duration-300`.
 -   **Dialogs**:
     -   Clean headers with `bg-muted` and `border-b border-border`.
     -   Content on `bg-card`.

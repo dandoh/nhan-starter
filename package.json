@@ -14,7 +14,6 @@
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@libsql/client": "^0.15.15",
-    "@lmnr-ai/lmnr": "^0.7.6",
     "@orpc/ai-sdk": "^1.11.2",
     "@orpc/client": "^1.11.2",
     "@orpc/contract": "^1.11.2",

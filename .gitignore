@@ -11,6 +11,8 @@ count.txt
 .vinxi
 todos.json
 
+.pnpm-store/
+
 # Docker volumes
 docker-data/
 
