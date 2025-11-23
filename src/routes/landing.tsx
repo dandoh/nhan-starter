@@ -60,7 +60,7 @@ function LandingPage() {
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-tight text-foreground">
-                Seq
+                SeqDB
               </h1>
             </div>
           </div>
@@ -846,7 +846,7 @@ function LandingPage() {
                   <Zap className="h-5 w-5 fill-current" />
                 </div>
                 <span className="text-xl font-bold tracking-tight text-foreground">
-                  Seq
+                  SeqDB
                 </span>
               </div>
 

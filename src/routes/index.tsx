@@ -82,7 +82,7 @@ function HomePage() {
               <Zap className="h-5 w-5 fill-current" />
             </div>
             <h1 className="text-lg font-bold tracking-tight text-foreground">
-              Seq
+              SeqDB
             </h1>
           </div>
           <div className="flex items-center gap-4">
