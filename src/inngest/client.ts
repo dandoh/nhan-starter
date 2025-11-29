@@ -1,25 +1,11 @@
 import { EventSchemas, Inngest } from 'inngest'
-import { env } from '@/env'
 
 /**
  * Define event schemas for type safety
  * This provides autocomplete and type checking when sending events
  */
 export type Events = {
-  'ai/cell.compute': {
-    data: {
-      cellId: string
-    }
-  }
-  'workflow/file-table-workflow-file.process': {
-    data: {
-      workflowId: string
-      fileId: string
-      filename: string
-      s3Bucket: string
-      s3Key: string
-    }
-  }
+  
 }
 
 /**
@@ -32,6 +18,6 @@ export type Events = {
  */
 export const inngest = new Inngest({
   id: 'nhan-starter',
-  eventKey: env.INNGEST_EVENT_KEY,
+  eventKey: process.env.INNGEST_EVENT_KEY,
   schemas: new EventSchemas().fromRecord<Events>(),
 })

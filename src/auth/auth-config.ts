@@ -2,7 +2,7 @@ import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { db } from '../db'
 import * as authSchema from './auth-schema'
-import { v4 as uuidv4 } from 'uuid'
+// import { v4 as uuidv4 } from 'uuid'
 import { reactStartCookies } from 'better-auth/react-start'
 
 export const auth = betterAuth({
@@ -20,7 +20,7 @@ export const auth = betterAuth({
   },
   advanced: {
     database: {
-      generateId: () => uuidv4(),
+      // generateId: () => uuidv4(),
     },
   },
   // Add other configuration options as needed

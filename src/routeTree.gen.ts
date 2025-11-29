@@ -13,8 +13,6 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
 import { Route as ApiInngestRouteImport } from './routes/api/inngest'
-import { Route as AuthedTodosRouteImport } from './routes/_authed/todos'
-import { Route as AuthedExpensesRouteImport } from './routes/_authed/expenses'
 import { Route as ApiRpcSplatRouteImport } from './routes/api/rpc.$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
 
@@ -37,16 +35,6 @@ const ApiInngestRoute = ApiInngestRouteImport.update({
   path: '/api/inngest',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthedTodosRoute = AuthedTodosRouteImport.update({
-  id: '/todos',
-  path: '/todos',
-  getParentRoute: () => AuthedRoute,
-} as any)
-const AuthedExpensesRoute = AuthedExpensesRouteImport.update({
-  id: '/expenses',
-  path: '/expenses',
-  getParentRoute: () => AuthedRoute,
-} as any)
 const ApiRpcSplatRoute = ApiRpcSplatRouteImport.update({
   id: '/api/rpc/$',
   path: '/api/rpc/$',
@@ -60,8 +48,6 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
-  '/expenses': typeof AuthedExpensesRoute
-  '/todos': typeof AuthedTodosRoute
   '/api/inngest': typeof ApiInngestRoute
   '/': typeof AuthedIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -69,8 +55,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
-  '/expenses': typeof AuthedExpensesRoute
-  '/todos': typeof AuthedTodosRoute
   '/api/inngest': typeof ApiInngestRoute
   '/': typeof AuthedIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -80,8 +64,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authed': typeof AuthedRouteWithChildren
   '/login': typeof LoginRoute
-  '/_authed/expenses': typeof AuthedExpensesRoute
-  '/_authed/todos': typeof AuthedTodosRoute
   '/api/inngest': typeof ApiInngestRoute
   '/_authed/': typeof AuthedIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -89,29 +71,13 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/login'
-    | '/expenses'
-    | '/todos'
-    | '/api/inngest'
-    | '/'
-    | '/api/auth/$'
-    | '/api/rpc/$'
+  fullPaths: '/login' | '/api/inngest' | '/' | '/api/auth/$' | '/api/rpc/$'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/login'
-    | '/expenses'
-    | '/todos'
-    | '/api/inngest'
-    | '/'
-    | '/api/auth/$'
-    | '/api/rpc/$'
+  to: '/login' | '/api/inngest' | '/' | '/api/auth/$' | '/api/rpc/$'
   id:
     | '__root__'
     | '/_authed'
     | '/login'
-    | '/_authed/expenses'
-    | '/_authed/todos'
     | '/api/inngest'
     | '/_authed/'
     | '/api/auth/$'
@@ -156,20 +122,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiInngestRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authed/todos': {
-      id: '/_authed/todos'
-      path: '/todos'
-      fullPath: '/todos'
-      preLoaderRoute: typeof AuthedTodosRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/expenses': {
-      id: '/_authed/expenses'
-      path: '/expenses'
-      fullPath: '/expenses'
-      preLoaderRoute: typeof AuthedExpensesRouteImport
-      parentRoute: typeof AuthedRoute
-    }
     '/api/rpc/$': {
       id: '/api/rpc/$'
       path: '/api/rpc/$'
@@ -188,14 +140,10 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthedRouteChildren {
-  AuthedExpensesRoute: typeof AuthedExpensesRoute
-  AuthedTodosRoute: typeof AuthedTodosRoute
   AuthedIndexRoute: typeof AuthedIndexRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
-  AuthedExpensesRoute: AuthedExpensesRoute,
-  AuthedTodosRoute: AuthedTodosRoute,
   AuthedIndexRoute: AuthedIndexRoute,
 }
 

@@ -1,7 +1,8 @@
+import { randomUUID } from 'node:crypto'
 import { mysqlTable, varchar, timestamp, boolean } from 'drizzle-orm/mysql-core'
 
 export const users = mysqlTable('users', {
-  id: varchar('id', { length: 255 }).primaryKey(),
+  id: varchar('id', { length: 255 }).primaryKey().$defaultFn(() => randomUUID()),
   name: varchar('name', { length: 255 }).notNull(),
   email: varchar('email', { length: 255 }).notNull().unique(),
   emailVerified: boolean('email_verified').default(false).notNull(),
@@ -14,7 +15,7 @@ export const users = mysqlTable('users', {
 })
 
 export const sessions = mysqlTable('sessions', {
-  id: varchar('id', { length: 255 }).primaryKey(),
+  id: varchar('id', { length: 255 }).primaryKey().$defaultFn(() => randomUUID()),
   expiresAt: timestamp('expires_at').notNull(),
   token: varchar('token', { length: 255 }).notNull().unique(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -29,7 +30,7 @@ export const sessions = mysqlTable('sessions', {
 })
 
 export const accounts = mysqlTable('accounts', {
-  id: varchar('id', { length: 255 }).primaryKey(),
+  id: varchar('id', { length: 255 }).primaryKey().$defaultFn(() => randomUUID()),
   accountId: varchar('account_id', { length: 255 }).notNull(),
   providerId: varchar('provider_id', { length: 255 }).notNull(),
   userId: varchar('user_id', { length: 255 })
@@ -49,7 +50,7 @@ export const accounts = mysqlTable('accounts', {
 })
 
 export const verifications = mysqlTable('verifications', {
-  id: varchar('id', { length: 255 }).primaryKey(),
+  id: varchar('id', { length: 255 }).primaryKey().$defaultFn(() => randomUUID()),
   identifier: varchar('identifier', { length: 255 }).notNull(),
   value: varchar('value', { length: 255 }).notNull(),
   expiresAt: timestamp('expires_at').notNull(),

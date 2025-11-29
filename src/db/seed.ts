@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto'
 import { db, client } from './index'
 import { users } from './schema'
 import { eq } from 'drizzle-orm'
@@ -13,26 +12,21 @@ async function seed() {
     where: eq(users.email, SEED_USER_EMAIL),
   })
 
-  if (!user) {
-    const [newUser] = await db
-      .insert(users)
-      .values({
-        email: SEED_USER_EMAIL,
-        name: 'Demo User',
-        id: randomUUID().toString(),
-        emailVerified: true,
-      })
-      .returning()
-    user = newUser
-    console.log('✅ Created user:', user.email)
-  } else {
-    console.log('✅ User already exists:', user.email)
+  // Remove user if it exists
+  if (user) {
+    await db.delete(users).where(eq(users.id, user.id))
   }
 
-  console.log('🎉 Database seeded successfully!')
-  console.log('')
-  console.log('📋 Summary:')
-  console.log(`   User: ${user.email}`)
+  const newUser = await db
+    .insert(users)
+    .values({
+      email: SEED_USER_EMAIL,
+      name: 'Demo User',
+      emailVerified: true,
+    })
+    .$returningId()
+
+  console.log('✅ User created:', newUser)
 }
 
 seed()
