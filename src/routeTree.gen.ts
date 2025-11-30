@@ -18,6 +18,7 @@ import { Route as ApiRpcSplatRouteImport } from './routes/api/rpc.$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
 import { Route as AuthedDashboardSectorsRouteImport } from './routes/_authed/dashboard/sectors'
 import { Route as AuthedDashboardMacrosRouteImport } from './routes/_authed/dashboard/macros'
+import { Route as AuthedDashboardCompareRouteImport } from './routes/_authed/dashboard/compare'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -63,11 +64,17 @@ const AuthedDashboardMacrosRoute = AuthedDashboardMacrosRouteImport.update({
   path: '/dashboard/macros',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedDashboardCompareRoute = AuthedDashboardCompareRouteImport.update({
+  id: '/dashboard/compare',
+  path: '/dashboard/compare',
+  getParentRoute: () => AuthedRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/api/inngest': typeof ApiInngestRoute
   '/': typeof AuthedIndexRoute
+  '/dashboard/compare': typeof AuthedDashboardCompareRoute
   '/dashboard/macros': typeof AuthedDashboardMacrosRoute
   '/dashboard/sectors': typeof AuthedDashboardSectorsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -78,6 +85,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/api/inngest': typeof ApiInngestRoute
   '/': typeof AuthedIndexRoute
+  '/dashboard/compare': typeof AuthedDashboardCompareRoute
   '/dashboard/macros': typeof AuthedDashboardMacrosRoute
   '/dashboard/sectors': typeof AuthedDashboardSectorsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -90,6 +98,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/api/inngest': typeof ApiInngestRoute
   '/_authed/': typeof AuthedIndexRoute
+  '/_authed/dashboard/compare': typeof AuthedDashboardCompareRoute
   '/_authed/dashboard/macros': typeof AuthedDashboardMacrosRoute
   '/_authed/dashboard/sectors': typeof AuthedDashboardSectorsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -102,6 +111,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/api/inngest'
     | '/'
+    | '/dashboard/compare'
     | '/dashboard/macros'
     | '/dashboard/sectors'
     | '/api/auth/$'
@@ -112,6 +122,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/api/inngest'
     | '/'
+    | '/dashboard/compare'
     | '/dashboard/macros'
     | '/dashboard/sectors'
     | '/api/auth/$'
@@ -123,6 +134,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/api/inngest'
     | '/_authed/'
+    | '/_authed/dashboard/compare'
     | '/_authed/dashboard/macros'
     | '/_authed/dashboard/sectors'
     | '/api/auth/$'
@@ -203,11 +215,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedDashboardMacrosRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/dashboard/compare': {
+      id: '/_authed/dashboard/compare'
+      path: '/dashboard/compare'
+      fullPath: '/dashboard/compare'
+      preLoaderRoute: typeof AuthedDashboardCompareRouteImport
+      parentRoute: typeof AuthedRoute
+    }
   }
 }
 
 interface AuthedRouteChildren {
   AuthedIndexRoute: typeof AuthedIndexRoute
+  AuthedDashboardCompareRoute: typeof AuthedDashboardCompareRoute
   AuthedDashboardMacrosRoute: typeof AuthedDashboardMacrosRoute
   AuthedDashboardSectorsRoute: typeof AuthedDashboardSectorsRoute
   AuthedDashboardIndexRoute: typeof AuthedDashboardIndexRoute
@@ -215,6 +235,7 @@ interface AuthedRouteChildren {
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedIndexRoute: AuthedIndexRoute,
+  AuthedDashboardCompareRoute: AuthedDashboardCompareRoute,
   AuthedDashboardMacrosRoute: AuthedDashboardMacrosRoute,
   AuthedDashboardSectorsRoute: AuthedDashboardSectorsRoute,
   AuthedDashboardIndexRoute: AuthedDashboardIndexRoute,

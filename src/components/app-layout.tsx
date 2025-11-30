@@ -1,5 +1,6 @@
 import { Link, useLocation, useRouter } from '@tanstack/react-router'
 import { Home, Settings, Moon, Sun, Scan, LogOut, LayoutDashboard, ChevronRight, TrendingUp, PieChart } from 'lucide-react'
+import { SymbolSearchCommand } from '@/components/symbol-search-command'
 import {
   Sidebar,
   SidebarContent,
@@ -243,6 +244,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider>
+      <SymbolSearchCommand />
       <Sidebar collapsible="icon">
         <SidebarHeaderContent />
         <SidebarContent>
