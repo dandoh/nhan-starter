@@ -1,3 +1,4 @@
+import { useState, useMemo } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import dayjs from 'dayjs'
@@ -10,6 +11,8 @@ import { orpcQuery } from '@/orpc/client'
 import { ChartGridSection } from '@/components/dashboard/chart-grid-section'
 import { ALL_SYMBOLS, INDICATORS } from '@/config/indicators'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 
 // Get all sector symbols
 const SECTOR_SYMBOLS = ALL_SYMBOLS.filter(
@@ -21,9 +24,19 @@ export const Route = createFileRoute('/_authed/dashboard/sectors')({
 })
 
 function SectorsPage() {
+  const [relativeToSPY, setRelativeToSPY] = useState(false)
+
   const { data: latestData, isLoading } = useQuery(
     orpcQuery.market.getLatestDate.queryOptions({ input: {} })
   )
+
+  // Transform symbols to ratios when relative mode is enabled
+  const displaySymbols = useMemo(() => {
+    if (relativeToSPY) {
+      return SECTOR_SYMBOLS.map((symbol) => `${symbol}/SPY`)
+    }
+    return SECTOR_SYMBOLS
+  }, [relativeToSPY])
 
   if (isLoading) {
     return (
@@ -60,7 +73,18 @@ function SectorsPage() {
             )}
           </div>
 
-          <ChartGridSection title="" symbols={SECTOR_SYMBOLS} />
+          <div className="flex items-center gap-2">
+            <Switch
+              id="relative-mode"
+              checked={relativeToSPY}
+              onCheckedChange={setRelativeToSPY}
+            />
+            <Label htmlFor="relative-mode" className="text-sm cursor-pointer">
+              Relative to S&P 500
+            </Label>
+          </div>
+
+          <ChartGridSection key={relativeToSPY ? 'relative' : 'absolute'} title="" symbols={displaySymbols} />
         </div>
       </AppPageContentWrapper>
     </AppPageWrapper>

@@ -267,18 +267,20 @@ export function PriceChart({
     
     container.addEventListener('wheel', handleWheel, { passive: false })
 
-    // Handle resize
-    const handleResize = () => {
-      if (chartContainerRef.current) {
-        chart.applyOptions({ width: chartContainerRef.current.clientWidth })
+    // Handle resize using ResizeObserver to detect container size changes (e.g., grid column changes)
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const width = entry.contentRect.width
+        if (width > 0) {
+          chart.applyOptions({ width })
+        }
       }
-    }
-
-    window.addEventListener('resize', handleResize)
+    })
+    resizeObserver.observe(container)
 
     return () => {
       container.removeEventListener('wheel', handleWheel)
-      window.removeEventListener('resize', handleResize)
+      resizeObserver.disconnect()
       if (debounceTimer) clearTimeout(debounceTimer)
       chart.timeScale().unsubscribeVisibleTimeRangeChange(handleVisibleRangeChange)
       chart.remove()
