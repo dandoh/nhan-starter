@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
+import { useState, useMemo, useEffect } from 'react'
 import dayjs from 'dayjs'
 import {
   TopNav,
@@ -8,6 +9,7 @@ import {
 } from '@/components/app-page-wrapper'
 import { orpcQuery } from '@/orpc/client'
 import { PriceChart } from '@/components/dashboard/price-chart'
+import { RangeSelector } from '@/components/dashboard/range-selector'
 import { ALL_SYMBOLS, INDICATORS, type IndicatorSymbol } from '@/config/indicators'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -38,6 +40,49 @@ function DashboardPage() {
       staleTime: 5 * 60 * 1000, // 5 minutes
     })
   )
+
+  // Calculate time bounds from all data
+  const timeBounds = useMemo(() => {
+    let minTime = Infinity
+    let maxTime = -Infinity
+
+    historyQueries.forEach((query) => {
+      if (!query.data?.data) return
+      query.data.data.forEach((d) => {
+        if (d.time < minTime) minTime = d.time
+        if (d.time > maxTime) maxTime = d.time
+      })
+    })
+
+    // Default to 1 year view
+    const oneYearAgo = Math.floor(Date.now() / 1000) - 365 * 24 * 60 * 60
+    const now = Math.floor(Date.now() / 1000)
+
+    return {
+      min: minTime === Infinity ? oneYearAgo : minTime,
+      max: maxTime === -Infinity ? now : maxTime,
+      defaultStart: Math.max(minTime === Infinity ? oneYearAgo : minTime, oneYearAgo),
+      defaultEnd: maxTime === -Infinity ? now : maxTime,
+    }
+  // Only recalculate when loading state changes (not on every render)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historyQueries.every((q) => q.isSuccess)])
+
+  // Range state for each section - initialize with defaults
+  const oneYearAgo = Math.floor(Date.now() / 1000) - 365 * 24 * 60 * 60
+  const now = Math.floor(Date.now() / 1000)
+  const [macroRange, setMacroRange] = useState({ start: oneYearAgo, end: now })
+  const [sectorRange, setSectorRange] = useState({ start: oneYearAgo, end: now })
+
+  // Update ranges when timeBounds loads (only once)
+  const [rangesInitialized, setRangesInitialized] = useState(false)
+  useEffect(() => {
+    if (!rangesInitialized && timeBounds.min !== Infinity) {
+      setMacroRange({ start: timeBounds.defaultStart, end: timeBounds.defaultEnd })
+      setSectorRange({ start: timeBounds.defaultStart, end: timeBounds.defaultEnd })
+      setRangesInitialized(true)
+    }
+  }, [timeBounds, rangesInitialized])
 
   const isLoading = dashboardLoading || historyQueries.some((q) => q.isLoading)
 
@@ -77,8 +122,8 @@ function DashboardPage() {
     latestMap.set(indicator.symbol, indicator)
   })
 
-  // Helper to render a chart for a symbol
-  const renderChart = (symbol: IndicatorSymbol) => {
+  // Helper to render a chart for a symbol with synced range
+  const renderChart = (symbol: IndicatorSymbol, syncedRange: { start: number; end: number }) => {
     const history = historyMap.get(symbol)
     const latest = latestMap.get(symbol)
     if (!history) return null
@@ -94,6 +139,7 @@ function DashboardPage() {
         change1d={latest?.change1d}
         change1w={latest?.change1w}
         change1m={latest?.change1m}
+        syncedRange={syncedRange}
       />
     )
   }
@@ -113,17 +159,37 @@ function DashboardPage() {
 
           {/* Macro Indicators */}
           <section>
-            <h2 className="text-lg font-semibold mb-4">Macro Indicators</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Macro Indicators</h2>
+            </div>
+            <RangeSelector
+              minTime={timeBounds.min}
+              maxTime={timeBounds.max}
+              startTime={macroRange.start}
+              endTime={macroRange.end}
+              onRangeChange={(start, end) => setMacroRange({ start, end })}
+              className="mb-4"
+            />
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {MACRO_SYMBOLS.map(renderChart)}
+              {MACRO_SYMBOLS.map((symbol) => renderChart(symbol, macroRange))}
             </div>
           </section>
 
           {/* Sector ETFs */}
           <section>
-            <h2 className="text-lg font-semibold mb-4">Sector Performance</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Sector Performance</h2>
+            </div>
+            <RangeSelector
+              minTime={timeBounds.min}
+              maxTime={timeBounds.max}
+              startTime={sectorRange.start}
+              endTime={sectorRange.end}
+              onRangeChange={(start, end) => setSectorRange({ start, end })}
+              className="mb-4"
+            />
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {SECTOR_SYMBOLS.map(renderChart)}
+              {SECTOR_SYMBOLS.map((symbol) => renderChart(symbol, sectorRange))}
             </div>
           </section>
         </div>

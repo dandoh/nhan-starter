@@ -31,6 +31,7 @@ interface PriceChartProps {
   change1d?: number | null
   change1w?: number | null
   change1m?: number | null
+  syncedRange?: { start: number; end: number } | null
 }
 
 function formatValue(value: number | null | undefined): string {
@@ -55,9 +56,20 @@ export function PriceChart({
   change1d,
   change1w,
   change1m,
+  syncedRange,
 }: PriceChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
+
+  // Update visible range when syncedRange changes
+  useEffect(() => {
+    if (!chartRef.current || !syncedRange) return
+    
+    chartRef.current.timeScale().setVisibleRange({
+      from: syncedRange.start as UTCTimestamp,
+      to: syncedRange.end as UTCTimestamp,
+    })
+  }, [syncedRange])
 
   // Derive latest value from data if not provided
   const derivedLatestValue = useMemo(() => {
