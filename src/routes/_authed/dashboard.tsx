@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { useState, useMemo, useEffect } from 'react'
+import { useMemo } from 'react'
 import dayjs from 'dayjs'
 import {
   TopNav,
@@ -9,7 +9,7 @@ import {
 } from '@/components/app-page-wrapper'
 import { orpcQuery } from '@/orpc/client'
 import { PriceChart } from '@/components/dashboard/price-chart'
-import { RangeSelector } from '@/components/dashboard/range-selector'
+import { ChartGridSection } from '@/components/dashboard/chart-grid-section'
 import { ALL_SYMBOLS, INDICATORS, type IndicatorSymbol } from '@/config/indicators'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -67,22 +67,6 @@ function DashboardPage() {
   // Only recalculate when loading state changes (not on every render)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [historyQueries.every((q) => q.isSuccess)])
-
-  // Range state for each section - initialize with defaults
-  const oneYearAgo = Math.floor(Date.now() / 1000) - 365 * 24 * 60 * 60
-  const now = Math.floor(Date.now() / 1000)
-  const [macroRange, setMacroRange] = useState({ start: oneYearAgo, end: now })
-  const [sectorRange, setSectorRange] = useState({ start: oneYearAgo, end: now })
-
-  // Update ranges when timeBounds loads (only once)
-  const [rangesInitialized, setRangesInitialized] = useState(false)
-  useEffect(() => {
-    if (!rangesInitialized && timeBounds.min !== Infinity) {
-      setMacroRange({ start: timeBounds.defaultStart, end: timeBounds.defaultEnd })
-      setSectorRange({ start: timeBounds.defaultStart, end: timeBounds.defaultEnd })
-      setRangesInitialized(true)
-    }
-  }, [timeBounds, rangesInitialized])
 
   const isLoading = dashboardLoading || historyQueries.some((q) => q.isLoading)
 
@@ -157,41 +141,25 @@ function DashboardPage() {
             </p>
           </div>
 
-          {/* Macro Indicators */}
-          <section>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Macro Indicators</h2>
-            </div>
-            <RangeSelector
-              minTime={timeBounds.min}
-              maxTime={timeBounds.max}
-              startTime={macroRange.start}
-              endTime={macroRange.end}
-              onRangeChange={(start, end) => setMacroRange({ start, end })}
-              className="mb-4"
-            />
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {MACRO_SYMBOLS.map((symbol) => renderChart(symbol, macroRange))}
-            </div>
-          </section>
+          <ChartGridSection
+            title="Macro Indicators"
+            symbols={MACRO_SYMBOLS}
+            minTime={timeBounds.min}
+            maxTime={timeBounds.max}
+            defaultStart={timeBounds.defaultStart}
+            defaultEnd={timeBounds.defaultEnd}
+            renderChart={renderChart}
+          />
 
-          {/* Sector ETFs */}
-          <section>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Sector Performance</h2>
-            </div>
-            <RangeSelector
-              minTime={timeBounds.min}
-              maxTime={timeBounds.max}
-              startTime={sectorRange.start}
-              endTime={sectorRange.end}
-              onRangeChange={(start, end) => setSectorRange({ start, end })}
-              className="mb-4"
-            />
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {SECTOR_SYMBOLS.map((symbol) => renderChart(symbol, sectorRange))}
-            </div>
-          </section>
+          <ChartGridSection
+            title="Sector Performance"
+            symbols={SECTOR_SYMBOLS}
+            minTime={timeBounds.min}
+            maxTime={timeBounds.max}
+            defaultStart={timeBounds.defaultStart}
+            defaultEnd={timeBounds.defaultEnd}
+            renderChart={renderChart}
+          />
         </div>
       </AppPageContentWrapper>
     </AppPageWrapper>

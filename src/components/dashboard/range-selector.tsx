@@ -102,34 +102,67 @@ export function RangeSelector({
   const centerPct = startPct + widthPct / 2
 
   return (
-    <div className={cn('w-full px-2 py-8 bg-card border rounded-lg', className)}>
-      <div className="relative w-full" ref={sliderContainerRef}>
+    <div className={cn('w-full px-2 py-4 bg-card border rounded-lg select-none', className)}>
+      <div className="relative w-full h-12" ref={sliderContainerRef}>
         {/* Floating labels - always combined */}
         <div
-          className="absolute -top-7 transform -translate-x-1/2 text-xs font-medium bg-primary/10 px-2 py-0.5 rounded text-foreground whitespace-nowrap z-30 pointer-events-none"
+          className="absolute -top-7 transform -translate-x-1/2 text-xs font-medium bg-primary/10 px-2 py-0.5 rounded text-foreground whitespace-nowrap z-30 pointer-events-none transition-all"
           style={{ left: `${centerPct}%` }}
         >
           {formatDate(localRange[0])} - {formatDate(localRange[1])}
         </div>
 
+        {/* Background Track (Minimap placeholder) */}
+        <div className="absolute inset-0 top-1/2 -translate-y-1/2 h-1.5 w-full bg-muted rounded-full overflow-hidden">
+          {/* Optional: Add ticks here */}
+        </div>
+
+        {/* Visual Selection Window (Curtains) */}
+        <div className="absolute inset-0 h-full pointer-events-none">
+          {/* Left Curtain (Unselected) */}
+          <div 
+            className="absolute top-0 bottom-0 left-0 bg-background/80 z-10" 
+            style={{ width: `${startPct}%` }}
+          />
+          
+          {/* Right Curtain (Unselected) */}
+          <div 
+            className="absolute top-0 bottom-0 right-0 bg-background/80 z-10" 
+            style={{ width: `${100 - endPct}%` }}
+          />
+
+          {/* Selected Window */}
+          <div
+            className="absolute top-0 bottom-0 z-20 bg-primary/5"
+            style={{ 
+              left: `${startPct}%`, 
+              width: `${widthPct}%` 
+            }}
+          >
+            {/* Left Line */}
+            <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary cursor-ew-resize" />
+
+            {/* Right Line */}
+            <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-primary cursor-ew-resize" />
+          </div>
+        </div>
+
+        {/* Invisible Interactive Slider */}
         <Slider
           min={minTime}
           max={maxTime}
-          step={24 * 60 * 60} // 1 day step
+          step={24 * 60 * 60}
           value={localRange}
           onValueChange={handleValueChange}
-          className="w-full relative z-10"
+          className="absolute inset-0 z-30 opacity-0 [&_[role=slider]]:h-full [&_[role=slider]]:w-8 [&_[role=slider]]:cursor-ew-resize"
         />
 
-        {/* Draggable overlay for the range body */}
-        {/* Positioned slightly inside the thumbs to avoid blocking them */}
+        {/* Draggable overlay for the range body (middle part) */}
         <div
-          className="absolute top-0 h-full z-20 cursor-grab active:cursor-grabbing hover:bg-primary/10 transition-colors rounded-sm touch-none"
+          className="absolute top-0 bottom-0 z-40 cursor-grab active:cursor-grabbing touch-none"
           style={{
-            left: `calc(${startPct}% + 8px)`, 
-            width: `calc(${widthPct}% - 16px)`,
-            height: '20px', // Taller than slider track (usually ~6px) to be easily grabbable
-            top: '-7px' // Center vertically over the slider track
+            left: `calc(${startPct}% + 10px)`, // Offset to avoid blocking slider thumbs
+            width: `calc(${widthPct}% - 20px)`,
           }}
           onPointerDown={handleDragStart}
           onPointerMove={handleDragMove}
