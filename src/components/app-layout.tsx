@@ -1,6 +1,9 @@
 import { Link, useLocation, useRouter } from '@tanstack/react-router'
-import { Home, Settings, Moon, Sun, Scan, LogOut, LayoutDashboard, ChevronRight, TrendingUp, PieChart } from 'lucide-react'
+import { Home, Settings, Moon, Sun, Scan, LogOut, LayoutDashboard, ChevronRight, TrendingUp, PieChart, Folder } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import { SymbolSearchCommand } from '@/components/symbol-search-command'
+import { orpcQuery } from '@/orpc/client'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Sidebar,
   SidebarContent,
@@ -44,22 +47,18 @@ const mainNavigation = [
   },
 ]
 
-const dashboardNavigation = {
-  title: 'Dashboard',
-  icon: LayoutDashboard,
-  items: [
-    {
-      title: 'Macros',
-      icon: TrendingUp,
-      url: '/dashboard/macros',
-    },
-    {
-      title: 'Sectors',
-      icon: PieChart,
-      url: '/dashboard/sectors',
-    },
-  ],
-}
+const builtInDashboards = [
+  {
+    title: 'Macros',
+    icon: TrendingUp,
+    url: '/dashboard/macros',
+  },
+  {
+    title: 'Sectors',
+    icon: PieChart,
+    url: '/dashboard/sectors',
+  },
+]
 
 function SettingsMenu() {
   const { state } = useSidebar()
@@ -237,6 +236,64 @@ function SidebarHeaderContent() {
   )
 }
 
+// User Dashboards Section
+function UserDashboardsSection() {
+  const location = useLocation()
+  const { data, isLoading } = useQuery({
+    ...orpcQuery.dashboard.list.queryOptions({ input: {} }),
+    queryKey: ['dashboard', 'list'],
+  })
+
+  const dashboards = data?.items || []
+
+  if (isLoading) {
+    return (
+      <>
+        <Skeleton className="h-6 w-full mx-2" />
+        <Skeleton className="h-6 w-full mx-2" />
+      </>
+    )
+  }
+
+  if (dashboards.length === 0) {
+    return (
+      <SidebarMenuSubItem>
+        <SidebarMenuSubButton asChild isActive={location.pathname === '/dashboard'}>
+          <Link to="/dashboard">
+            <span className="text-muted-foreground text-xs">No dashboards yet</span>
+          </Link>
+        </SidebarMenuSubButton>
+      </SidebarMenuSubItem>
+    )
+  }
+
+  return (
+    <>
+      {dashboards.map((dashboard) => {
+        const url = `/dashboard/d/${dashboard.id}`
+        return (
+          <SidebarMenuSubItem key={dashboard.id}>
+            <SidebarMenuSubButton asChild isActive={location.pathname === url}>
+              <Link to="/dashboard/d/$id" params={{ id: dashboard.id }}>
+                <Folder className="size-4" />
+                <span className="truncate">{dashboard.name}</span>
+              </Link>
+            </SidebarMenuSubButton>
+          </SidebarMenuSubItem>
+        )
+      })}
+      {/* Link to see all / manage dashboards */}
+      <SidebarMenuSubItem>
+        <SidebarMenuSubButton asChild isActive={location.pathname === '/dashboard'}>
+          <Link to="/dashboard">
+            <span className="text-muted-foreground text-xs">Manage all...</span>
+          </Link>
+        </SidebarMenuSubButton>
+      </SidebarMenuSubItem>
+    </>
+  )
+}
+
 // App layout with sidebar for authenticated routes
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation()
@@ -274,15 +331,21 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 >
                   <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
-                      <SidebarMenuButton tooltip={dashboardNavigation.title}>
-                        <dashboardNavigation.icon />
-                        <span>{dashboardNavigation.title}</span>
+                      <SidebarMenuButton tooltip="Dashboard">
+                        <LayoutDashboard />
+                        <span>Dashboard</span>
                         <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                       </SidebarMenuButton>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <SidebarMenuSub>
-                        {dashboardNavigation.items.map((item) => (
+                        {/* Built-in Dashboards */}
+                        <div className="px-2 py-1.5">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            Built-in
+                          </span>
+                        </div>
+                        {builtInDashboards.map((item) => (
                           <SidebarMenuSubItem key={item.title}>
                             <SidebarMenuSubButton
                               asChild
@@ -295,6 +358,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                             </SidebarMenuSubButton>
                           </SidebarMenuSubItem>
                         ))}
+
+                        {/* Custom Dashboards */}
+                        <div className="px-2 py-1.5 mt-2">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            Custom
+                          </span>
+                        </div>
+                        <UserDashboardsSection />
                       </SidebarMenuSub>
                     </CollapsibleContent>
                   </SidebarMenuItem>

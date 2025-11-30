@@ -8,6 +8,7 @@ import {
   date,
   int,
   uniqueIndex,
+  json,
 } from 'drizzle-orm/mysql-core'
 import { randomUUID } from 'node:crypto'
 
@@ -70,4 +71,31 @@ export const syncMetadata = mysqlTable('sync_metadata', {
 
 export type SyncMetadata = typeof syncMetadata.$inferSelect
 export type NewSyncMetadata = typeof syncMetadata.$inferInsert
+
+// ============================================
+// User Dashboards
+// ============================================
+
+/**
+ * Stores user-created dashboards with symbol lists
+ */
+export const dashboards = mysqlTable('dashboards', {
+  id: varchar('id', { length: 255 })
+    .primaryKey()
+    .$defaultFn(() => randomUUID()),
+  userId: varchar('user_id', { length: 255 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: varchar('description', { length: 1000 }),
+  symbols: json('symbols').$type<string[]>().notNull().default([]),
+  rangeStart: int('range_start'), // Unix timestamp, null = auto
+  rangeEnd: int('range_end'), // Unix timestamp, null = auto
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+})
+
+export type Dashboard = typeof dashboards.$inferSelect
+export type NewDashboard = typeof dashboards.$inferInsert
 

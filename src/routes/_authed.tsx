@@ -4,6 +4,7 @@ import { getRequestHeaders } from '@tanstack/react-start/server'
 import { auth } from '@/auth/auth-config'
 import { authClient } from '@/auth/auth-client'
 import { AppLayout } from '@/components/app-layout'
+import { AIChatWidget } from '@/components/ai-chat-widget'
 
 type SessionData = NonNullable<Awaited<ReturnType<typeof auth.api.getSession>>>
 
@@ -53,6 +54,7 @@ function AuthedLayout() {
   return (
     <AppLayout>
       <Outlet />
+      <AIChatWidget />
     </AppLayout>
   )
 }
