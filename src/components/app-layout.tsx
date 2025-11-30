@@ -1,5 +1,5 @@
 import { Link, useLocation, useRouter } from '@tanstack/react-router'
-import { Home, Settings, Moon, Sun, Scan, LogOut } from 'lucide-react'
+import { Home, Settings, Moon, Sun, Scan, LogOut, LayoutDashboard } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -32,6 +32,11 @@ const mainNavigation = [
     title: 'Home',
     icon: Home,
     url: '/',
+  },
+  {
+    title: 'Dashboard',
+    icon: LayoutDashboard,
+    url: '/dashboard',
   },
 ]
 

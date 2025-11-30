@@ -2,6 +2,7 @@
 import { os } from '@orpc/server'
 import * as z from 'zod'
 import { authMiddleware } from '../middleware/auth'
+import market from './market'
 
 // Example: Simple hello world route
 export const hello = os
@@ -16,4 +17,5 @@ export const hello = os
 
 export default {
   hello,
+  market,
 }
