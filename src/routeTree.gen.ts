@@ -13,9 +13,11 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
 import { Route as ApiInngestRouteImport } from './routes/api/inngest'
-import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
+import { Route as AuthedDashboardIndexRouteImport } from './routes/_authed/dashboard/index'
 import { Route as ApiRpcSplatRouteImport } from './routes/api/rpc.$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
+import { Route as AuthedDashboardSectorsRouteImport } from './routes/_authed/dashboard/sectors'
+import { Route as AuthedDashboardMacrosRouteImport } from './routes/_authed/dashboard/macros'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -36,9 +38,9 @@ const ApiInngestRoute = ApiInngestRouteImport.update({
   path: '/api/inngest',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthedDashboardRoute = AuthedDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
+const AuthedDashboardIndexRoute = AuthedDashboardIndexRouteImport.update({
+  id: '/dashboard/',
+  path: '/dashboard/',
   getParentRoute: () => AuthedRoute,
 } as any)
 const ApiRpcSplatRoute = ApiRpcSplatRouteImport.update({
@@ -51,59 +53,81 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedDashboardSectorsRoute = AuthedDashboardSectorsRouteImport.update({
+  id: '/dashboard/sectors',
+  path: '/dashboard/sectors',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedDashboardMacrosRoute = AuthedDashboardMacrosRouteImport.update({
+  id: '/dashboard/macros',
+  path: '/dashboard/macros',
+  getParentRoute: () => AuthedRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
-  '/dashboard': typeof AuthedDashboardRoute
   '/api/inngest': typeof ApiInngestRoute
   '/': typeof AuthedIndexRoute
+  '/dashboard/macros': typeof AuthedDashboardMacrosRoute
+  '/dashboard/sectors': typeof AuthedDashboardSectorsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/dashboard': typeof AuthedDashboardIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
-  '/dashboard': typeof AuthedDashboardRoute
   '/api/inngest': typeof ApiInngestRoute
   '/': typeof AuthedIndexRoute
+  '/dashboard/macros': typeof AuthedDashboardMacrosRoute
+  '/dashboard/sectors': typeof AuthedDashboardSectorsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/dashboard': typeof AuthedDashboardIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authed': typeof AuthedRouteWithChildren
   '/login': typeof LoginRoute
-  '/_authed/dashboard': typeof AuthedDashboardRoute
   '/api/inngest': typeof ApiInngestRoute
   '/_authed/': typeof AuthedIndexRoute
+  '/_authed/dashboard/macros': typeof AuthedDashboardMacrosRoute
+  '/_authed/dashboard/sectors': typeof AuthedDashboardSectorsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/_authed/dashboard/': typeof AuthedDashboardIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/login'
-    | '/dashboard'
     | '/api/inngest'
     | '/'
+    | '/dashboard/macros'
+    | '/dashboard/sectors'
     | '/api/auth/$'
     | '/api/rpc/$'
+    | '/dashboard'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
-    | '/dashboard'
     | '/api/inngest'
     | '/'
+    | '/dashboard/macros'
+    | '/dashboard/sectors'
     | '/api/auth/$'
     | '/api/rpc/$'
+    | '/dashboard'
   id:
     | '__root__'
     | '/_authed'
     | '/login'
-    | '/_authed/dashboard'
     | '/api/inngest'
     | '/_authed/'
+    | '/_authed/dashboard/macros'
+    | '/_authed/dashboard/sectors'
     | '/api/auth/$'
     | '/api/rpc/$'
+    | '/_authed/dashboard/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -144,11 +168,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiInngestRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authed/dashboard': {
-      id: '/_authed/dashboard'
+    '/_authed/dashboard/': {
+      id: '/_authed/dashboard/'
       path: '/dashboard'
       fullPath: '/dashboard'
-      preLoaderRoute: typeof AuthedDashboardRouteImport
+      preLoaderRoute: typeof AuthedDashboardIndexRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/api/rpc/$': {
@@ -165,17 +189,35 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed/dashboard/sectors': {
+      id: '/_authed/dashboard/sectors'
+      path: '/dashboard/sectors'
+      fullPath: '/dashboard/sectors'
+      preLoaderRoute: typeof AuthedDashboardSectorsRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/dashboard/macros': {
+      id: '/_authed/dashboard/macros'
+      path: '/dashboard/macros'
+      fullPath: '/dashboard/macros'
+      preLoaderRoute: typeof AuthedDashboardMacrosRouteImport
+      parentRoute: typeof AuthedRoute
+    }
   }
 }
 
 interface AuthedRouteChildren {
-  AuthedDashboardRoute: typeof AuthedDashboardRoute
   AuthedIndexRoute: typeof AuthedIndexRoute
+  AuthedDashboardMacrosRoute: typeof AuthedDashboardMacrosRoute
+  AuthedDashboardSectorsRoute: typeof AuthedDashboardSectorsRoute
+  AuthedDashboardIndexRoute: typeof AuthedDashboardIndexRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
-  AuthedDashboardRoute: AuthedDashboardRoute,
   AuthedIndexRoute: AuthedIndexRoute,
+  AuthedDashboardMacrosRoute: AuthedDashboardMacrosRoute,
+  AuthedDashboardSectorsRoute: AuthedDashboardSectorsRoute,
+  AuthedDashboardIndexRoute: AuthedDashboardIndexRoute,
 }
 
 const AuthedRouteWithChildren =

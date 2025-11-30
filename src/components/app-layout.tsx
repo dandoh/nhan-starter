@@ -1,5 +1,5 @@
 import { Link, useLocation, useRouter } from '@tanstack/react-router'
-import { Home, Settings, Moon, Sun, Scan, LogOut, LayoutDashboard } from 'lucide-react'
+import { Home, Settings, Moon, Sun, Scan, LogOut, LayoutDashboard, ChevronRight, TrendingUp, PieChart } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -9,11 +9,19 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarProvider,
   SidebarInset,
   SidebarFooter,
   useSidebar,
 } from '@/components/ui/sidebar'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,12 +41,24 @@ const mainNavigation = [
     icon: Home,
     url: '/',
   },
-  {
-    title: 'Dashboard',
-    icon: LayoutDashboard,
-    url: '/dashboard',
-  },
 ]
+
+const dashboardNavigation = {
+  title: 'Dashboard',
+  icon: LayoutDashboard,
+  items: [
+    {
+      title: 'Macros',
+      icon: TrendingUp,
+      url: '/dashboard/macros',
+    },
+    {
+      title: 'Sectors',
+      icon: PieChart,
+      url: '/dashboard/sectors',
+    },
+  ],
+}
 
 function SettingsMenu() {
   const { state } = useSidebar()
@@ -219,6 +239,7 @@ function SidebarHeaderContent() {
 // App layout with sidebar for authenticated routes
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation()
+  const isDashboardActive = location.pathname.startsWith('/dashboard')
 
   return (
     <SidebarProvider>
@@ -242,6 +263,40 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
+
+                {/* Dashboard with sub-items */}
+                <Collapsible
+                  asChild
+                  defaultOpen={isDashboardActive}
+                  className="group/collapsible"
+                >
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton tooltip={dashboardNavigation.title}>
+                        <dashboardNavigation.icon />
+                        <span>{dashboardNavigation.title}</span>
+                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <SidebarMenuSub>
+                        {dashboardNavigation.items.map((item) => (
+                          <SidebarMenuSubItem key={item.title}>
+                            <SidebarMenuSubButton
+                              asChild
+                              isActive={location.pathname === item.url}
+                            >
+                              <Link to={item.url}>
+                                <item.icon className="size-4" />
+                                <span>{item.title}</span>
+                              </Link>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        ))}
+                      </SidebarMenuSub>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
+                </Collapsible>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

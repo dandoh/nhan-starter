@@ -88,7 +88,7 @@ export function AppPageContentWrapper({
   return (
     <div
       className={cn(
-        'flex-1 scrollbar scrollbar-thumb-interactive overflow-x-hidden overflow-y-auto p-6 md:p-8 bg-card',
+        'flex-1 scrollbar scrollbar-thumb-interactive overflow-x-hidden overflow-y-auto px-12 py-8 bg-card',
         className,
       )}
     >

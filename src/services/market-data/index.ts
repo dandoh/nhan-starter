@@ -8,12 +8,13 @@ import {
   type MarketSnapshotData,
   type HistoricalQuoteData,
   type HistoricalEconomicData,
-  calculateChanges,
 } from './types'
 import { getETFSymbols, getEconomicSymbols, type IndicatorSymbol } from '@/config/indicators'
 
 export * from './types'
 export { alphaVantage } from './alpha-vantage'
+export { fetchAndStoreSymbol, fetchAndStoreSymbols, fetchWithRetry } from './fetch'
+export { getStaleSymbols, isSymbolStale } from './staleness'
 
 /**
  * Fetch all market data and prepare for database insertion
@@ -54,21 +55,8 @@ export async function fetchAllMarketData(options?: {
   for (const symbol of economicSymbols) {
     try {
       console.log(`Fetching ${symbol}...`)
-      let data: HistoricalEconomicData
-
-      if (symbol === 'US10Y') {
-        data = await alphaVantage.fetchEconomicIndicator!('TREASURY_YIELD', '10year')
-      } else if (symbol === 'US02Y') {
-        data = await alphaVantage.fetchEconomicIndicator!('TREASURY_YIELD', '2year')
-      } else if (symbol === 'FED_FUNDS') {
-        data = await alphaVantage.fetchEconomicIndicator!('FEDERAL_FUNDS_RATE')
-      } else {
-        continue
-      }
-
-      const symbolSnapshots = processEconomicData(data)
+      const symbolSnapshots = await fetchEconomicData(symbol as EconomicSymbol)
       snapshots.push(...symbolSnapshots)
-
       await sleep(12500)
     } catch (error) {
       console.error(`Failed to fetch ${symbol}:`, error)
@@ -89,77 +77,68 @@ export async function fetchETFData(
   return processQuoteData(data)
 }
 
+/** Economic indicator symbols */
+export type EconomicSymbol = 'US10Y' | 'US02Y' | 'FED_FUNDS' | 'CPI' | 'UNEMPLOYMENT'
+
 /**
  * Fetch data for a single economic indicator
  */
-export async function fetchEconomicData(
-  symbol: 'US10Y' | 'US02Y' | 'FED_FUNDS'
-): Promise<MarketSnapshotData[]> {
+export async function fetchEconomicData(symbol: EconomicSymbol): Promise<MarketSnapshotData[]> {
   let data: HistoricalEconomicData
 
-  if (symbol === 'US10Y') {
-    data = await alphaVantage.fetchEconomicIndicator!('TREASURY_YIELD', '10year')
-  } else if (symbol === 'US02Y') {
-    data = await alphaVantage.fetchEconomicIndicator!('TREASURY_YIELD', '2year')
-  } else {
-    data = await alphaVantage.fetchEconomicIndicator!('FEDERAL_FUNDS_RATE')
+  switch (symbol) {
+    case 'US10Y':
+      data = await alphaVantage.fetchEconomicIndicator!('TREASURY_YIELD', '10year')
+      break
+    case 'US02Y':
+      data = await alphaVantage.fetchEconomicIndicator!('TREASURY_YIELD', '2year')
+      break
+    case 'FED_FUNDS':
+      data = await alphaVantage.fetchEconomicIndicator!('FEDERAL_FUNDS_RATE')
+      break
+    case 'CPI':
+      data = await alphaVantage.fetchEconomicIndicator!('CPI')
+      break
+    case 'UNEMPLOYMENT':
+      data = await alphaVantage.fetchEconomicIndicator!('UNEMPLOYMENT')
+      break
+    default:
+      throw new Error(`Unknown economic symbol: ${symbol}`)
   }
 
   return processEconomicData(data)
 }
 
 /**
- * Process quote data into snapshots with calculated changes
- * Includes full OHLCV data
+ * Process quote data into snapshots
+ * Uses adjustedClose as the close value (for accurate historical comparisons)
  */
 function processQuoteData(data: HistoricalQuoteData): MarketSnapshotData[] {
   const { symbol, data: quotes } = data
 
-  return quotes.map((quote) => {
-    const changes = calculateChanges(quotes, quote.date)
-
-    return {
-      date: quote.date,
-      symbol,
-      open: quote.open,
-      high: quote.high,
-      low: quote.low,
-      close: quote.close,
-      adjustedClose: quote.adjustedClose,
-      volume: quote.volume,
-      ...changes,
-    }
-  })
+  return quotes.map((quote) => ({
+    date: quote.date,
+    symbol,
+    open: quote.open,
+    high: quote.high,
+    low: quote.low,
+    close: quote.adjustedClose ?? quote.close, // Use adjusted close as close
+    volume: quote.volume,
+  }))
 }
 
 /**
- * Process economic indicator data into snapshots with calculated changes
+ * Process economic indicator data into snapshots
  * Economic data only has a single value (no OHLCV)
  */
 function processEconomicData(data: HistoricalEconomicData): MarketSnapshotData[] {
   const { symbol, data: indicators } = data
 
-  // Convert to quote-like format for change calculation
-  const asQuotes = indicators.map((i) => ({
-    symbol: i.symbol,
-    date: i.date,
-    open: i.value,
-    high: i.value,
-    low: i.value,
-    close: i.value,
-    volume: 0,
+  return indicators.map((indicator) => ({
+    date: indicator.date,
+    symbol,
+    close: indicator.value,
   }))
-
-  return indicators.map((indicator) => {
-    const changes = calculateChanges(asQuotes, indicator.date)
-
-    return {
-      date: indicator.date,
-      symbol,
-      close: indicator.value,
-      ...changes,
-    }
-  })
 }
 
 function sleep(ms: number): Promise<void> {

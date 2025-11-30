@@ -6,141 +6,176 @@ import * as z from 'zod'
 import dayjs from 'dayjs'
 import { db } from '@/db'
 import { marketSnapshots } from '@/db/schema'
-import { eq, desc, and, gte, lte, inArray } from 'drizzle-orm'
+import { desc, inArray } from 'drizzle-orm'
 import { authMiddleware } from '../middleware/auth'
 import {
   INDICATORS,
-  getSymbolsByCategory,
   getDisplayName,
   type IndicatorSymbol,
-  type IndicatorCategory,
-  INDICATOR_CATEGORIES,
 } from '@/config/indicators'
-
-// Date format used throughout the app
-const DATE_FORMAT = 'YYYY-MM-DD'
+import { getStaleSymbols, fetchAndStoreSymbol } from '@/services/market-data'
 
 /**
- * Get dashboard data for a specific date (or latest)
- * Returns all indicators grouped by category
+ * Get the latest date with data available
  */
-export const getDashboardData = os
+export const getLatestDate = os
   .use(authMiddleware)
-  .input(
-    z.object({
-      date: z.string().optional(), // YYYY-MM-DD, defaults to latest
-    })
-  )
-  .handler(async ({ input }) => {
-    // Get the target date - either specified or the most recent data point
-    let targetDate: string
-
-    if (!input.date) {
-      const latest = await db
-        .select({ date: marketSnapshots.date })
-        .from(marketSnapshots)
-        .orderBy(desc(marketSnapshots.date))
-        .limit(1)
-
-      if (!latest.length) {
-        return { date: null, categories: {}, indicators: [] }
-      }
-
-      targetDate = latest[0].date // Already a string with mode: 'string'
-    } else {
-      targetDate = input.date
-    }
-
-    // Fetch all snapshots for the target date (simple string comparison now!)
-    const snapshots = await db
-      .select()
+  .input(z.object({}).optional())
+  .handler(async () => {
+    const latest = await db
+      .select({ date: marketSnapshots.date })
       .from(marketSnapshots)
-      .where(eq(marketSnapshots.date, targetDate))
-
-    // Group by category
-    const categories: Record<string, typeof snapshots> = {}
-
-    for (const category of Object.keys(INDICATOR_CATEGORIES) as IndicatorCategory[]) {
-      const symbols = getSymbolsByCategory(category)
-      categories[category] = snapshots.filter((s) =>
-        symbols.includes(s.symbol as IndicatorSymbol)
-      )
-    }
-
-    // Helper to safely get display name
-    const safeGetDisplayName = (symbol: string): string => {
-      const config = INDICATORS[symbol as IndicatorSymbol]
-      return config?.name || symbol
-    }
-
-    // Helper to parse snapshot data
-    const parseSnapshot = (s: typeof snapshots[0]) => ({
-      ...s,
-      displayName: safeGetDisplayName(s.symbol),
-      category: INDICATORS[s.symbol as IndicatorSymbol]?.category,
-      open: s.open ? parseFloat(s.open) : null,
-      high: s.high ? parseFloat(s.high) : null,
-      low: s.low ? parseFloat(s.low) : null,
-      close: s.close ? parseFloat(s.close) : null,
-      adjustedClose: s.adjustedClose ? parseFloat(s.adjustedClose) : null,
-      volume: s.volume ? parseFloat(s.volume) : null,
-      change1d: s.change1d ? parseFloat(s.change1d) : null,
-      change1w: s.change1w ? parseFloat(s.change1w) : null,
-      change1m: s.change1m ? parseFloat(s.change1m) : null,
-    })
-
-    const indicators = snapshots.map(parseSnapshot)
+      .orderBy(desc(marketSnapshots.date))
+      .limit(1)
 
     return {
-      date: targetDate,
-      categories: Object.fromEntries(
-        Object.entries(categories).map(([cat, snaps]) => [
-          cat,
-          snaps.map(parseSnapshot),
-        ])
-      ),
-      indicators,
+      date: latest.length ? latest[0].date : null,
     }
   })
 
 /**
- * Get historical data for a specific indicator
- * Used for charts - returns full OHLCV data (all available history)
+ * Parse a symbol string - returns ratio parts if it's a ratio (e.g., "SPY/TLT")
  */
-export const getIndicatorHistory = os
+function parseSymbol(symbol: string): { isRatio: boolean; numerator: string; denominator?: string } {
+  if (symbol.includes('/')) {
+    const [numerator, denominator] = symbol.split('/')
+    return { isRatio: true, numerator: numerator.trim(), denominator: denominator.trim() }
+  }
+  return { isRatio: false, numerator: symbol }
+}
+
+/**
+ * Get historical data for multiple symbols
+ * Used for chart grids - returns full OHLCV data for requested symbols
+ * Automatically fetches stale or missing data from Alpha Vantage
+ * 
+ * Supports ratio symbols like "SPY/TLT" which computes the ratio of two symbols
+ */
+export const getSymbolsHistory = os
   .use(authMiddleware)
   .input(
     z.object({
-      symbol: z.string(),
-    })
+      symbols: z.array(z.string()),
+    }),
   )
   .handler(async ({ input }) => {
-    const { symbol } = input
+    const { symbols } = input
 
-    // Fetch all available history for the symbol
+    // Parse symbols to identify ratios and collect all base symbols needed
+    const parsedSymbols = symbols.map((s) => ({ original: s, ...parseSymbol(s) }))
+    const baseSymbols = new Set<string>()
+    for (const parsed of parsedSymbols) {
+      baseSymbols.add(parsed.numerator)
+      if (parsed.denominator) baseSymbols.add(parsed.denominator)
+    }
+    const baseSymbolsArray = Array.from(baseSymbols)
+
+    // Check for stale symbols and fetch them before querying
+    const staleSymbols = await getStaleSymbols(baseSymbolsArray as IndicatorSymbol[])
+    if (staleSymbols.length > 0) {
+      console.log(`[market] Fetching stale symbols: ${staleSymbols.join(', ')}`)
+      for (const symbol of staleSymbols) {
+        await fetchAndStoreSymbol(symbol)
+      }
+    }
+
+    // Fetch all available history for the base symbols
     const history = await db
       .select()
       .from(marketSnapshots)
-      .where(eq(marketSnapshots.symbol, symbol))
+      .where(inArray(marketSnapshots.symbol, baseSymbolsArray))
       .orderBy(marketSnapshots.date)
 
-    const config = INDICATORS[symbol as IndicatorSymbol]
-
-    return {
-      symbol,
-      displayName: config ? getDisplayName(symbol as IndicatorSymbol) : symbol,
-      category: config?.category,
-      data: history.map((h) => ({
-        date: h.date,
-        time: dayjs(h.date).unix(), // Unix timestamp for TradingView charts
-        open: h.open ? parseFloat(h.open) : null,
-        high: h.high ? parseFloat(h.high) : null,
-        low: h.low ? parseFloat(h.low) : null,
-        close: h.close ? parseFloat(h.close) : null,
-        value: h.close ? parseFloat(h.close) : null, // Alias for line charts
-        volume: h.volume ? parseFloat(h.volume) : null,
-      })),
+    // Group by symbol
+    const bySymbol: Record<string, typeof history> = {}
+    for (const row of history) {
+      if (!bySymbol[row.symbol]) {
+        bySymbol[row.symbol] = []
+      }
+      bySymbol[row.symbol].push(row)
     }
+
+    // Build results for each requested symbol (including ratios)
+    const items = parsedSymbols.map((parsed) => {
+      if (parsed.isRatio && parsed.denominator) {
+        // Compute ratio between two symbols
+        const numeratorData = bySymbol[parsed.numerator] || []
+        const denominatorData = bySymbol[parsed.denominator] || []
+
+        // Create lookup maps by date
+        const numByDate = new Map(numeratorData.map((r) => [r.date, r]))
+        const denByDate = new Map(denominatorData.map((r) => [r.date, r]))
+
+        // Find all dates where both have data
+        const commonDates = Array.from(numByDate.keys()).filter((date) => denByDate.has(date))
+        commonDates.sort()
+
+        const ratioHistory = commonDates.map((date) => {
+          const num = numByDate.get(date)!
+          const den = denByDate.get(date)!
+          const numClose = num.close ? parseFloat(num.close) : null
+          const denClose = den.close ? parseFloat(den.close) : null
+          const ratio = numClose && denClose ? numClose / denClose : null
+
+          return {
+            date,
+            time: dayjs(date).unix(),
+            open: null,
+            high: null,
+            low: null,
+            close: ratio,
+            value: ratio,
+            volume: null,
+          }
+        })
+
+        const latestRatio = ratioHistory[ratioHistory.length - 1]
+        const numConfig = INDICATORS[parsed.numerator as IndicatorSymbol]
+        const denConfig = INDICATORS[parsed.denominator as IndicatorSymbol]
+
+        return {
+          symbol: parsed.original,
+          displayName: `${numConfig ? getDisplayName(parsed.numerator as IndicatorSymbol) : parsed.numerator} / ${denConfig ? getDisplayName(parsed.denominator as IndicatorSymbol) : parsed.denominator}`,
+          description: `Ratio of ${parsed.numerator} to ${parsed.denominator}`,
+          detail: `Measures relative performance between ${numConfig?.description || parsed.numerator} and ${denConfig?.description || parsed.denominator}`,
+          category: 'ratio' as const,
+          history: ratioHistory,
+          latest: {
+            close: latestRatio?.close ?? null,
+          },
+        }
+      }
+
+      // Regular symbol
+      const rows = bySymbol[parsed.numerator] || []
+      const config = INDICATORS[parsed.numerator as IndicatorSymbol]
+      const latest = rows[rows.length - 1]
+
+      return {
+        symbol: parsed.original,
+        displayName: config
+          ? getDisplayName(parsed.numerator as IndicatorSymbol)
+          : parsed.numerator,
+        description: config?.description ?? null,
+        detail: config?.detail ?? null,
+        category: config?.category,
+        history: rows.map((h) => ({
+          date: h.date,
+          time: dayjs(h.date).unix(),
+          open: h.open ? parseFloat(h.open) : null,
+          high: h.high ? parseFloat(h.high) : null,
+          low: h.low ? parseFloat(h.low) : null,
+          close: h.close ? parseFloat(h.close) : null,
+          value: h.close ? parseFloat(h.close) : null,
+          volume: h.volume ? parseFloat(h.volume) : null,
+        })),
+        latest: {
+          close: latest?.close ? parseFloat(latest.close) : null,
+        },
+      }
+    })
+
+    return { items }
   })
 
 /**
@@ -161,63 +196,8 @@ export const getAvailableDates = os
     }
   })
 
-/**
- * Get sector comparison data
- * Returns all sector ETFs for a date range for comparison charts
- */
-export const getSectorComparison = os
-  .use(authMiddleware)
-  .input(
-    z.object({
-      days: z.number().optional().default(30),
-    })
-  )
-  .handler(async ({ input }) => {
-    const sectorSymbols = getSymbolsByCategory('sector')
-
-    // Calculate date range using dayjs
-    const endDate = dayjs().format(DATE_FORMAT)
-    const startDate = dayjs().subtract(input.days, 'day').format(DATE_FORMAT)
-
-    const data = await db
-      .select()
-      .from(marketSnapshots)
-      .where(
-        and(
-          inArray(marketSnapshots.symbol, sectorSymbols),
-          gte(marketSnapshots.date, startDate),
-          lte(marketSnapshots.date, endDate)
-        )
-      )
-      .orderBy(marketSnapshots.date)
-
-    // Group by symbol
-    const bySymbol: Record<string, typeof data> = {}
-    for (const row of data) {
-      if (!bySymbol[row.symbol]) {
-        bySymbol[row.symbol] = []
-      }
-      bySymbol[row.symbol].push(row)
-    }
-
-    return {
-      sectors: Object.entries(bySymbol).map(([symbol, history]) => ({
-        symbol,
-        displayName: getDisplayName(symbol as IndicatorSymbol),
-        data: history.map((h) => ({
-          date: h.date,
-          close: h.close ? parseFloat(h.close) : null,
-          change1d: h.change1d ? parseFloat(h.change1d) : null,
-        })),
-      })),
-    }
-  })
-
-
 export default {
-  getDashboardData,
-  getIndicatorHistory,
+  getLatestDate,
+  getSymbolsHistory,
   getAvailableDates,
-  getSectorComparison,
 }
-

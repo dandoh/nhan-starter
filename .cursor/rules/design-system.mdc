@@ -1,0 +1,22 @@
+---
+alwaysApply: true
+---
+
+# Design System: Engineering Clarity
+
+## Core Principles
+
+- **Clarity over Decoration**: Interfaces should be clean, high-contrast, and free of unnecessary visual noise.
+- **Data First**: The content is the UI. Frame data effectively without heavy containers.
+- **Consistency**: Strict adherence to the color system and spacing scale.
+
+## Visual Style
+
+### Shadows
+- **NO SHADOWS**: Do not use box shadows (`shadow-*` classes) on any elements unless explicitly requested by the user.
+- Use borders and background color differences to define hierarchy and depth instead.
+- This applies to cards, buttons, inputs, and all other UI components.
+
+### Layout
+- Prefer `flex` and `grid` for layouts.
+- Use standard spacing variables (Tailwind default spacing scale).

@@ -31,6 +31,7 @@ export type NewVerification = typeof verifications.$inferInsert
 
 /**
  * Stores daily snapshots of market indicators (ETFs, economic data, etc.)
+ * For ETFs, we store adjusted close as the close value
  */
 export const marketSnapshots = mysqlTable(
   'market_snapshots',
@@ -38,17 +39,12 @@ export const marketSnapshots = mysqlTable(
     id: int('id').primaryKey().autoincrement(),
     date: date('date', { mode: 'string' }).notNull(),
     symbol: varchar('symbol', { length: 20 }).notNull(),
-    // OHLCV data
+    // OHLCV data (close stores adjusted close for ETFs)
     open: decimal('open', { precision: 18, scale: 6 }),
     high: decimal('high', { precision: 18, scale: 6 }),
     low: decimal('low', { precision: 18, scale: 6 }),
     close: decimal('close', { precision: 18, scale: 6 }).notNull(),
-    adjustedClose: decimal('adjusted_close', { precision: 18, scale: 6 }), // For adjusted data
-    volume: decimal('volume', { precision: 18, scale: 0 }), // Volume as integer
-    // Calculated changes
-    change1d: decimal('change_1d', { precision: 10, scale: 4 }),
-    change1w: decimal('change_1w', { precision: 10, scale: 4 }),
-    change1m: decimal('change_1m', { precision: 10, scale: 4 }),
+    volume: decimal('volume', { precision: 18, scale: 0 }),
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
   (table) => [uniqueIndex('market_snapshots_date_symbol_idx').on(table.date, table.symbol)]
@@ -65,11 +61,11 @@ export const syncMetadata = mysqlTable('sync_metadata', {
     .primaryKey()
     .$defaultFn(() => randomUUID()),
   symbol: varchar('symbol', { length: 20 }).notNull().unique(),
-  lastSyncedDate: date('last_synced_date', { mode: 'string' }).notNull(), // Use string mode
-  updatedAt: timestamp('updated_at')
+  lastDataDate: date('last_data_date', { mode: 'string' }).notNull(), // Date of latest data point
+  lastSyncAt: timestamp('last_sync_at')
     .defaultNow()
     .$onUpdate(() => new Date())
-    .notNull(),
+    .notNull(), // When we last attempted to sync
 })
 
 export type SyncMetadata = typeof syncMetadata.$inferSelect

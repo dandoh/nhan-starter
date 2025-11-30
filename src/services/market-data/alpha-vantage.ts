@@ -9,6 +9,7 @@ import type {
   HistoricalEconomicData,
   QuoteData,
   EconomicIndicatorData,
+  EconomicIndicatorFunction,
 } from './types'
 
 const ALPHA_VANTAGE_BASE_URL = 'https://www.alphavantage.co/query'
@@ -121,14 +122,20 @@ export class AlphaVantageProvider implements MarketDataProvider {
   }
 
   async fetchEconomicIndicator(
-    indicator: 'TREASURY_YIELD' | 'FEDERAL_FUNDS_RATE',
+    indicator: EconomicIndicatorFunction,
     maturity?: '3month' | '2year' | '5year' | '10year' | '30year'
   ): Promise<HistoricalEconomicData> {
     const params = new URLSearchParams({
       function: indicator,
-      interval: 'daily',
       apikey: getApiKey(),
     })
+
+    // Set interval based on indicator type
+    if (indicator === 'TREASURY_YIELD' || indicator === 'FEDERAL_FUNDS_RATE') {
+      params.set('interval', 'daily')
+    } else if (indicator === 'CPI' || indicator === 'UNEMPLOYMENT') {
+      params.set('interval', 'monthly')
+    }
 
     if (indicator === 'TREASURY_YIELD' && maturity) {
       params.set('maturity', maturity)
@@ -145,10 +152,21 @@ export class AlphaVantageProvider implements MarketDataProvider {
 
     // Map to our internal symbol format
     let symbol: string
-    if (indicator === 'TREASURY_YIELD') {
-      symbol = maturity === '2year' ? 'US02Y' : maturity === '10year' ? 'US10Y' : `US_${maturity}`
-    } else {
-      symbol = 'FED_FUNDS'
+    switch (indicator) {
+      case 'TREASURY_YIELD':
+        symbol = maturity === '2year' ? 'US02Y' : maturity === '10year' ? 'US10Y' : `US_${maturity}`
+        break
+      case 'FEDERAL_FUNDS_RATE':
+        symbol = 'FED_FUNDS'
+        break
+      case 'CPI':
+        symbol = 'CPI'
+        break
+      case 'UNEMPLOYMENT':
+        symbol = 'UNEMPLOYMENT'
+        break
+      default:
+        symbol = indicator
     }
 
     const indicators: EconomicIndicatorData[] = data.data
